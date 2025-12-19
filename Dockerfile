@@ -1,14 +1,13 @@
-FROM node:22-alpine
+FROM oven/bun:1.3.5
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev
+COPY package.json bun.lock ./
+RUN bun install --production
 
 COPY src ./src
 COPY .env.example ./
 
-ENV NODE_ENV=production
 EXPOSE 8088
 
-CMD ["node", "src/server.js"]
+CMD ["bun", "run", "src/index.ts"]

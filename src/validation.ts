@@ -1,6 +1,6 @@
-const { z } = require('zod');
+import { z } from 'zod';
 
-const optionalTrimmed = (schema) =>
+const optionalTrimmed = (schema: z.ZodString) =>
   schema
     .optional()
     .transform((value) => (typeof value === 'string' ? value.trim() : value))
@@ -9,7 +9,7 @@ const optionalTrimmed = (schema) =>
     })
     .transform((value) => (value === '' ? undefined : value));
 
-const interestSchema = z.object({
+export const interestSchema = z.object({
   name: z.string().trim().min(2).max(80),
   organization: optionalTrimmed(z.string().max(120)),
   role: optionalTrimmed(z.string().max(80)),
@@ -23,18 +23,18 @@ const interestSchema = z.object({
   honey: optionalTrimmed(z.string().max(100)).optional(),
 });
 
-function validateInterest(payload) {
+export type InterestInput = z.infer<typeof interestSchema>;
+
+export function validateInterest(payload: unknown) {
   const result = interestSchema.safeParse(payload);
   if (!result.success) {
-    return { ok: false, errors: result.error.flatten() };
+    return { ok: false as const, errors: result.error.flatten() };
   }
 
   if (result.data.honey) {
-    return { ok: false, errors: { formErrors: ['Spam detected.'] } };
+    return { ok: false as const, errors: { formErrors: ['Spam detected.'] } };
   }
 
   const { honey, ...data } = result.data;
-  return { ok: true, data };
+  return { ok: true as const, data };
 }
-
-module.exports = { validateInterest, interestSchema };

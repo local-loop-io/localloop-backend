@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 WorkingDirectory=/root/code/local-loop-io/localloop-backend
 EnvironmentFile=/root/code/local-loop-io/localloop-backend/.env
-ExecStart=/root/.volta/bin/node /root/code/local-loop-io/localloop-backend/src/server.js
+ExecStart=/root/.bun/bin/bun /root/code/local-loop-io/localloop-backend/src/index.ts
 Restart=on-failure
 RestartSec=5
 
