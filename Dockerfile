@@ -9,6 +9,6 @@ COPY src ./src
 COPY .env.example ./
 
 ENV NODE_ENV=production
-EXPOSE 8080
+EXPOSE 8088
 
 CMD ["node", "src/server.js"]
