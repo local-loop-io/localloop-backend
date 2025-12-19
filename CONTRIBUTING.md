@@ -9,9 +9,9 @@ Thanks for your interest in contributing! This backend is intentionally small an
 
 ## Development Setup
 ```bash
-npm install
-npm test
-npm start
+bun install
+bun test
+bun run dev
 ```
 
 ## Pull Request Checklist

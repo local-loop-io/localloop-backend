@@ -4,10 +4,20 @@ Backend service for collecting and publishing Expressions of Interest for the Lo
 
 > This project is an early, low-TRL concept. There are no public pilots or deployments yet.
 
+## Stack
+- **Runtime**: Bun
+- **API**: Fastify
+- **Database**: PostgreSQL 18.1 (with PostGIS + pgvector provisioned)
+- **Cache/Queue**: Redis + BullMQ
+- **Object Storage**: MinIO (S3 compatible)
+- **Auth**: Better Auth (disabled by default)
+
 ## Features
 - Accepts Expression of Interest submissions.
 - Publishes a public list for transparency.
-- SQLite storage with rate limiting and input validation.
+- Full-text search powered by Postgres materialized views.
+- Real-time interest stream via Server-Sent Events.
+- OpenAPI + Redoc docs.
 
 ## API
 
@@ -35,26 +45,62 @@ Request body:
 
 ### `GET /api/interest`
 Returns public entries (default limit 100). Use `?limit=50` to override within max limit.
+Use `?search=term` to query the materialized search view.
+
+### `GET /api/interest/stream`
+Server-Sent Events feed that pushes new interest submissions.
+
+### `GET /api/cities`
+Returns demo city records (seeded with `DEMO City`).
+
+### `GET /openapi.json`
+OpenAPI JSON schema.
+
+### `GET /docs`
+Redoc HTML viewer for the OpenAPI spec.
 
 ## Local Development
 ```bash
-npm install
-npm test
-npm start
+bun install
+cp .env.example .env
+bun run dev
 ```
 
+## Docker Compose (Postgres + Redis + MinIO)
+```bash
+cp .env.docker.example .env.docker
+docker compose --env-file .env.docker up -d
+```
+Update `.env` if you want to run the API on the host instead of Docker.
+
 ## Configuration
-Copy `.env.example` and adjust:
-- `PORT`
-- `DATABASE_PATH`
-- `PUBLIC_LIMIT`
+Key variables (see `.env.example`):
+- `DATABASE_URL`
+- `REDIS_URL`
+- `MINIO_*`
 - `ALLOWED_ORIGINS`
-- `RATE_LIMIT_MAX`
+- `PUBLIC_BASE_URL`
+
+## Migrations
+Migrations run on startup by default. You can also run them manually:
+```bash
+bun run migrate
+```
+
+## SQLite import
+```bash
+bun run import:sqlite
+```
+Use this once to migrate legacy SQLite data into Postgres.
+
+## Auth (Better Auth)
+Auth routes are mounted at `/api/auth/*` and are disabled by default. Set `AUTH_ENABLED=true`
+and configure `BETTER_AUTH_SECRET` before enabling.
 
 ## Deployment
-- Run behind a reverse proxy with TLS (Nginx or Caddy).
-- Keep `ALLOWED_ORIGINS` restricted to `https://local-loop-io.github.io`.
-- Use `deploy/localloop-backend.service` if you want a systemd unit.
+- Run behind a reverse proxy with TLS (Traefik or Nginx).
+- Keep `ALLOWED_ORIGINS` restricted to the public site.
+- Use `deploy/localloop-backend.service` for systemd (Bun runtime).
 
 ## License
 MIT (c) 2025-2026 Alphin Tom.
