@@ -1,0 +1,17 @@
+[Unit]
+Description=LocalLoop Backend API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/code/local-loop-io/localloop-backend
+EnvironmentFile=/root/code/local-loop-io/localloop-backend/.env
+ExecStart=/usr/bin/node /root/code/local-loop-io/localloop-backend/src/server.js
+Restart=on-failure
+RestartSec=5
+
+# Update to a non-root user that owns the repo and data directory.
+User=root
+
+[Install]
+WantedBy=multi-user.target
