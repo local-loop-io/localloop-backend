@@ -7,7 +7,7 @@ Backend service for collecting and publishing Expressions of Interest for the Lo
 ## Stack
 - **Runtime**: Bun
 - **API**: Fastify
-- **Database**: PostgreSQL 18.1 (with PostGIS + pgvector provisioned)
+- **Database**: PostgreSQL 18.x (PostGIS-enabled image; pgvector provisioned when available)
 - **Cache/Queue**: Redis + BullMQ
 - **Object Storage**: MinIO (S3 compatible)
 - **Auth**: Better Auth (disabled by default)
