@@ -11,6 +11,9 @@ const { validateInterest } = require('./validation');
 const app = express();
 const database = createDatabase(config.databasePath);
 
+// Trust reverse proxy headers when deployed behind Nginx/Caddy.
+app.set('trust proxy', 1);
+
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(
   cors({
