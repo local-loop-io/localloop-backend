@@ -58,3 +58,19 @@ Copy `.env.example` and adjust:
 
 ## License
 MIT (c) 2025-2026 Alphin Tom.
+
+## How to Cite
+
+If you reference this repository, please cite:
+Alphin Tom. "LocalLoop Backend API." LocalLoop, GitHub repository, 2025-2026. https://github.com/local-loop-io/localloop-backend
+
+```bibtex
+@misc{localloop_backend_2025,
+  author = {Alphin Tom},
+  title = {LocalLoop Backend API},
+  year = {2025},
+  howpublished = {GitHub repository},
+  url = {https://github.com/local-loop-io/localloop-backend},
+  note = {Accessed 2025-12-19}
+}
+```
