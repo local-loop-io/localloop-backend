@@ -19,11 +19,12 @@ const insertQuery = `
     website,
     email,
     message,
+    is_demo,
     share_email,
     public_listing,
     consent_public,
     created_at
-  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
   ON CONFLICT (id) DO NOTHING;
 `;
 
@@ -56,6 +57,7 @@ const importSqlite = async () => {
         row.website,
         row.email,
         row.message,
+        false,
         Boolean(row.share_email),
         row.public_listing === null ? true : Boolean(row.public_listing),
         true,

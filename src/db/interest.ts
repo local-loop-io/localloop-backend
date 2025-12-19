@@ -12,6 +12,7 @@ export type InterestRecord = {
   website: string | null;
   email: string | null;
   message: string | null;
+  is_demo: boolean;
   created_at: string;
 };
 
@@ -62,14 +63,14 @@ export async function insertInterest(input: InterestInput) {
 export async function listInterests(limit: number, search?: string) {
   if (search) {
     const query = `
-      SELECT id, name, organization, role, country, city, website, email, message, created_at
+      SELECT id, name, organization, role, country, city, website, email, message, is_demo, created_at
       FROM interests_search
       WHERE document @@ plainto_tsquery('simple', $1)
       ORDER BY ts_rank(document, plainto_tsquery('simple', $1)) DESC, created_at DESC
       LIMIT $2;
     `;
     const result = await pool.query<InterestRecord>(query, [search, limit]);
-    return result.rows;
+    return result.rows.map((row) => ({ ...row, is_demo: Boolean(row.is_demo) }));
   }
 
   const query = `
@@ -83,6 +84,7 @@ export async function listInterests(limit: number, search?: string) {
       website,
       CASE WHEN share_email THEN email ELSE NULL END AS email,
       message,
+      is_demo,
       created_at
     FROM interests
     WHERE public_listing = TRUE
@@ -91,7 +93,7 @@ export async function listInterests(limit: number, search?: string) {
   `;
 
   const result = await pool.query<InterestRecord>(query, [limit]);
-  return result.rows;
+  return result.rows.map((row) => ({ ...row, is_demo: Boolean(row.is_demo) }));
 }
 
 export async function countInterests(search?: string) {

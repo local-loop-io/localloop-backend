@@ -14,6 +14,7 @@ const buildApp = () => {
     website: null,
     email: null,
     message: null,
+    is_demo: true,
     created_at: new Date().toISOString(),
   }];
 
