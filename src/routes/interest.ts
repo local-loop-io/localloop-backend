@@ -48,6 +48,7 @@ const listResponseSchema = {
           website: { type: ['string', 'null'] },
           email: { type: ['string', 'null'] },
           message: { type: ['string', 'null'] },
+          is_demo: { type: 'boolean' },
           created_at: { type: 'string' },
         },
       },
