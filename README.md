@@ -2,7 +2,7 @@
 
 Backend service for collecting and publishing Expressions of Interest for the LocalLoop protocol.
 
-> This project is an early, low‑TRL concept. There are no public pilots or deployments yet.
+> This project is an early, low-TRL concept. There are no public pilots or deployments yet.
 
 ## Features
 - Accepts Expression of Interest submissions.
