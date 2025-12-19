@@ -10,9 +10,12 @@
     "start": "bun run src/index.ts",
     "migrate": "bun run src/db/migrate.ts",
     "test": "bun test",
-    "import:sqlite": "bun run scripts/import-sqlite.ts"
+    "import:sqlite": "bun run scripts/import-sqlite.ts",
+    "prisma:generate": "prisma generate"
   },
   "dependencies": {
+    "@prisma/client": "^7.0.0",
+    "@prisma/adapter-pg": "^7.0.0",
     "@aws-sdk/client-s3": "^3.909.0",
     "@fastify/cors": "^10.0.2",
     "@fastify/helmet": "^13.0.2",
@@ -23,6 +26,7 @@
     "fastify": "^5.6.1",
     "ioredis": "^5.6.2",
     "pg": "^8.14.1",
+    "prisma": "^7.0.0",
     "zod": "^4.2.1"
   },
   "devDependencies": {

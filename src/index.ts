@@ -15,6 +15,7 @@ import { registerPaymentRoutes } from './routes/payments';
 import { handleAuth } from './auth';
 import { startWorkers } from './queue';
 import { pool } from './db/pool';
+import { prisma } from './db/prisma';
 
 async function buildServer() {
   const app = Fastify({
@@ -43,7 +44,7 @@ async function buildServer() {
       info: {
         title: 'LocalLoop API',
         description: 'Public API for LocalLoop interest capture and city portal data.',
-        version: '0.2.0',
+        version: '0.2.2',
       },
       servers: [{ url: config.publicBaseUrl }],
     },
@@ -84,6 +85,7 @@ async function start() {
   const shutdown = async () => {
     await app.close();
     await pool.end();
+    await prisma.$disconnect();
     if (worker) {
       await worker.close();
     }
