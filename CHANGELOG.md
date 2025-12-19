@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 - 2025-12-19
+### Added
+- City GIS filters (bbox/near/radius) and GeoJSON FeatureCollection endpoint.
+- Route-level validation for city query parameters.
+
 ## 0.2.0 - 2025-12-19
 ### Added
 - Bun + Fastify API stack with Postgres, Redis, MinIO scaffolding.

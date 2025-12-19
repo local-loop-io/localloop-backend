@@ -51,7 +51,16 @@ Use `?search=term` to query the materialized search view.
 Server-Sent Events feed that pushes new interest submissions.
 
 ### `GET /api/cities`
-Returns demo city records (seeded with `DEMO City`).
+Returns city records (seeded with `DEMO City`).
+- Optional filters:
+  - `bbox=minLon,minLat,maxLon,maxLat`
+  - `near=lon,lat`
+  - `radiusKm=50` (used with `near`, max 500)
+  - `limit=50`
+
+### `GET /api/cities/geojson`
+Returns a GeoJSON FeatureCollection for mapping. Supports the same filters as
+`/api/cities` and includes `distance_m` when `near` is provided.
 
 ### `GET /openapi.json`
 OpenAPI JSON schema.
