@@ -40,7 +40,10 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/api/interest', (req, res) => {
-  const limit = Math.min(Number(req.query.limit || config.publicLimit), config.publicLimit);
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0
+    ? Math.min(rawLimit, config.publicLimit)
+    : config.publicLimit;
   const results = database.listInterests(limit);
   const total = database.countInterests();
   res.json({ results, total });
