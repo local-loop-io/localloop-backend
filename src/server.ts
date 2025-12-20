@@ -28,12 +28,16 @@ export async function buildServer(options: BuildOptions = {}) {
   const app = Fastify({
     logger: options.logger ?? true,
     trustProxy: true,
+    bodyLimit: config.bodyLimit,
   });
 
   await app.register(cors, {
     origin: config.allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Request-Id'],
+    exposedHeaders: ['X-Request-Id'],
+    maxAge: 600,
   });
 
   await app.register(helmet, {
@@ -82,15 +86,16 @@ export async function buildServer(options: BuildOptions = {}) {
 
   app.setErrorHandler((error, request, reply) => {
     const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
+    const message = error instanceof Error ? error.message : 'Request failed';
     if (statusCode >= 400 && statusCode < 500) {
       reply.code(statusCode).send({
-        error: error.message,
+        error: message,
         details: (error as { validation?: unknown }).validation,
       });
       return;
     }
 
-    request.log.error(error);
+    request.log.error({ err: error }, 'Unhandled error');
     reply.code(500).send({ error: 'Internal server error' });
   });
 

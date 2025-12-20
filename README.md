@@ -111,6 +111,10 @@ Key variables (see `.env.example`):
 - `MINIO_*`
 - `ALLOWED_ORIGINS`
 - `PUBLIC_BASE_URL`
+- `RATE_LIMIT_MAX`
+- `BODY_LIMIT`
+- `AUTH_ENABLED`
+- `BETTER_AUTH_SECRET`
 - `PAYMENTS_ENABLED`
 
 ## Migrations
