@@ -16,9 +16,12 @@
     "simulate:lab": "bun run scripts/simulate-lab.ts",
     "lab:demo": "bun run scripts/lab-demo.ts",
     "simulate:federation": "bun run scripts/simulate-federation.ts",
-    "lab:federation": "bun run scripts/lab-federation.ts"
+    "lab:federation": "bun run scripts/lab-federation.ts",
+    "prisma:generate": "prisma generate"
   },
   "dependencies": {
+    "@prisma/client": "^7.0.0",
+    "@prisma/adapter-pg": "^7.0.0",
     "@aws-sdk/client-s3": "^3.956.0",
     "@fastify/cors": "^11.2.0",
     "@fastify/helmet": "^13.0.2",
@@ -29,6 +32,7 @@
     "fastify": "^5.6.1",
     "ioredis": "^5.6.2",
     "pg": "^8.14.1",
+    "prisma": "^7.0.0",
     "zod": "^4.2.1"
   },
   "devDependencies": {

@@ -144,12 +144,12 @@ model LoopTransfer {
 }
 
 model LoopEvent {
-  id        BigInt   @id @default(autoincrement()) @db.BigInt
-  eventType String   @map("event_type") @db.Text
-  entityType String  @map("entity_type") @db.Text
-  entityId  String   @map("entity_id") @db.Text
-  payload   Json     @db.JsonB
-  createdAt DateTime @default(now()) @map("created_at")
+  id         BigInt   @id @default(autoincrement()) @db.BigInt
+  eventType  String   @map("event_type") @db.Text
+  entityType String   @map("entity_type") @db.Text
+  entityId   String   @map("entity_id") @db.Text
+  payload    Json     @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at")
 
   @@map("loop_events")
 }

@@ -6,15 +6,17 @@
 - API body size limit configuration (`BODY_LIMIT`).
 - Typecheck step in CI plus SSE stream test coverage.
 
-## 0.1.1-demo - 2025-12-20
+## 0.2.2 - 2025-12-19
 ### Added
-- Minimal interop lab demo endpoints (MaterialDNA → Offer → Match → Transfer).
-- Loop event log + SSE stream for demo state updates.
-- Lab demo scripts (seed + simulate + one-command runner).
-- Privacy notice endpoint and in-memory metrics snapshot.
+- Prisma v7 ORM client and schema mappings for core tables.
 
-### Notes
-- Lab-only demo. No public pilots or deployments.
+### Changed
+- Interest and city data access now go through Prisma (raw SQL for PostGIS/search).
+
+## 0.2.1 - 2025-12-19
+### Added
+- City GIS filters (bbox/near/radius) and GeoJSON FeatureCollection endpoint.
+- Route-level validation for city query parameters.
 
 ## 0.2.0 - 2025-12-19
 ### Added
@@ -30,3 +32,13 @@
 
 ### Notes
 - Auth is disabled by default; enable with `AUTH_ENABLED=true` and `BETTER_AUTH_SECRET`.
+
+## 0.1.1-demo - 2025-12-20
+### Added
+- Minimal interop lab demo endpoints (MaterialDNA → Offer → Match → Transfer).
+- Loop event log + SSE stream for demo state updates.
+- Lab demo scripts (seed + simulate + one-command runner).
+- Privacy notice endpoint and in-memory metrics snapshot.
+
+### Notes
+- Lab-only demo. No public pilots or deployments.

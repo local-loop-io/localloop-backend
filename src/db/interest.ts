@@ -1,6 +1,7 @@
-import { pool } from './pool';
+import { Prisma } from '@prisma/client';
 import { config } from '../config';
 import type { InterestInput } from '../validation';
+import { prisma } from './prisma';
 
 export type InterestRecord = {
   id: number;
@@ -16,99 +17,124 @@ export type InterestRecord = {
   created_at: string;
 };
 
+type InterestRow = {
+  id: number | bigint;
+  name: string;
+  organization: string | null;
+  role: string | null;
+  country: string | null;
+  city: string | null;
+  website: string | null;
+  email: string | null;
+  message: string | null;
+  is_demo: boolean;
+  created_at: string | Date;
+};
+
+const mapInterestRow = (row: InterestRow): InterestRecord => ({
+  id: Number(row.id),
+  name: row.name,
+  organization: row.organization,
+  role: row.role,
+  country: row.country,
+  city: row.city,
+  website: row.website,
+  email: row.email,
+  message: row.message,
+  is_demo: Boolean(row.is_demo),
+  created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
+});
+
 export async function refreshInterestSearch() {
-  await pool.query('REFRESH MATERIALIZED VIEW interests_search');
+  await prisma.$executeRaw`REFRESH MATERIALIZED VIEW interests_search`;
 }
 
 export async function insertInterest(input: InterestInput) {
-  const query = `
-    INSERT INTO interests (
-      name,
-      organization,
-      role,
-      country,
-      city,
-      website,
-      email,
-      message,
-      share_email,
-      public_listing,
-      consent_public
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,TRUE,$10)
-    RETURNING id, created_at;
-  `;
-
-  const values = [
-    input.name,
-    input.organization ?? null,
-    input.role ?? null,
-    input.country ?? null,
-    input.city ?? null,
-    input.website ?? null,
-    input.email ?? null,
-    input.message ?? null,
-    Boolean(input.shareEmail),
-    true,
-  ];
-
-  const result = await pool.query<{ id: number; created_at: string }>(query, values);
+  const created = await prisma.interest.create({
+    data: {
+      name: input.name,
+      organization: input.organization ?? null,
+      role: input.role ?? null,
+      country: input.country ?? null,
+      city: input.city ?? null,
+      website: input.website ?? null,
+      email: input.email ?? null,
+      message: input.message ?? null,
+      shareEmail: Boolean(input.shareEmail),
+      publicListing: true,
+      consentPublic: true,
+    },
+    select: {
+      id: true,
+      createdAt: true,
+    },
+  });
 
   if (config.refreshSearchOnWrite) {
     await refreshInterestSearch();
   }
 
-  return result.rows[0];
+  return { id: Number(created.id), created_at: created.createdAt.toISOString() };
 }
 
 export async function listInterests(limit: number, search?: string) {
   if (search) {
-    const query = `
+    const query = Prisma.sql`
       SELECT id, name, organization, role, country, city, website, email, message, is_demo, created_at
       FROM interests_search
-      WHERE document @@ plainto_tsquery('simple', $1)
-      ORDER BY ts_rank(document, plainto_tsquery('simple', $1)) DESC, created_at DESC
-      LIMIT $2;
+      WHERE document @@ plainto_tsquery('simple', ${search})
+      ORDER BY ts_rank(document, plainto_tsquery('simple', ${search})) DESC, created_at DESC
+      LIMIT ${limit};
     `;
-    const result = await pool.query<InterestRecord>(query, [search, limit]);
-    return result.rows.map((row) => ({ ...row, is_demo: Boolean(row.is_demo) }));
+    const result = await prisma.$queryRaw<InterestRow[]>(query);
+    return result.map(mapInterestRow);
   }
 
-  const query = `
-    SELECT
-      id,
-      name,
-      organization,
-      role,
-      country,
-      city,
-      website,
-      CASE WHEN share_email THEN email ELSE NULL END AS email,
-      message,
-      is_demo,
-      created_at
-    FROM interests
-    WHERE public_listing = TRUE
-    ORDER BY created_at DESC
-    LIMIT $1;
-  `;
+  const results = await prisma.interest.findMany({
+    where: { publicListing: true },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    select: {
+      id: true,
+      name: true,
+      organization: true,
+      role: true,
+      country: true,
+      city: true,
+      website: true,
+      email: true,
+      message: true,
+      shareEmail: true,
+      isDemo: true,
+      createdAt: true,
+    },
+  });
 
-  const result = await pool.query<InterestRecord>(query, [limit]);
-  return result.rows.map((row) => ({ ...row, is_demo: Boolean(row.is_demo) }));
+  return results.map((record) => ({
+    id: Number(record.id),
+    name: record.name,
+    organization: record.organization,
+    role: record.role,
+    country: record.country,
+    city: record.city,
+    website: record.website,
+    email: record.shareEmail ? record.email : null,
+    message: record.message,
+    is_demo: record.isDemo,
+    created_at: record.createdAt.toISOString(),
+  }));
 }
 
 export async function countInterests(search?: string) {
   if (search) {
-    const query = `
+    const query = Prisma.sql`
       SELECT COUNT(*)::int AS total
       FROM interests_search
-      WHERE document @@ plainto_tsquery('simple', $1);
+      WHERE document @@ plainto_tsquery('simple', ${search});
     `;
-    const result = await pool.query<{ total: number }>(query, [search]);
-    return result.rows[0]?.total ?? 0;
+    const result = await prisma.$queryRaw<{ total: number | bigint }[]>(query);
+    return result[0]?.total ? Number(result[0].total) : 0;
   }
 
-  const result = await pool.query<{ total: number }>(
-    'SELECT COUNT(*)::int AS total FROM interests WHERE public_listing = TRUE'
-  );
-  return result.rows[0]?.total ?? 0;
+  return prisma.interest.count({ where: { publicListing: true } });
 }

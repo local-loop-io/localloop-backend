@@ -8,6 +8,7 @@ Backend service for collecting and publishing Expressions of Interest for the Lo
 - **Runtime**: Bun
 - **API**: Fastify
 - **Database**: PostgreSQL 18.x (PostGIS-enabled image; pgvector provisioned when available)
+- **ORM**: Prisma v7
 - **Cache/Queue**: Redis + BullMQ
 - **Object Storage**: MinIO (S3 compatible)
 - **Auth**: Better Auth (disabled by default)
@@ -85,7 +86,16 @@ In-memory counters for lab demo activity.
 Lab demo privacy and data-minimization notice.
 
 ### `GET /api/cities`
-Returns demo city records (seeded with `DEMO City`).
+Returns city records (seeded with `DEMO City`).
+- Optional filters:
+  - `bbox=minLon,minLat,maxLon,maxLat`
+  - `near=lon,lat`
+  - `radiusKm=50` (used with `near`, max 500)
+  - `limit=50`
+
+### `GET /api/cities/geojson`
+Returns a GeoJSON FeatureCollection for mapping. Supports the same filters as
+`/api/cities` and includes `distance_m` when `near` is provided.
 
 ### `POST /api/payments/intent`
 When `PAYMENTS_ENABLED=true`, records a payment intent request for manual follow-up.
@@ -103,6 +113,7 @@ Redoc HTML viewer for the OpenAPI spec.
 ```bash
 bun install
 cp .env.example .env
+bun run prisma:generate
 bun run dev
 ```
 
@@ -130,6 +141,14 @@ Key variables (see `.env.example`):
 Migrations run on startup by default. You can also run them manually:
 ```bash
 bun run migrate
+```
+
+## Prisma
+The Prisma schema lives in `prisma/schema.prisma` and maps to the existing SQL
+migrations (custom SQL). Prisma CLI configuration lives in `prisma.config.ts`.
+Generate the Prisma client after installing dependencies:
+```bash
+bun run prisma:generate
 ```
 
 ## SQLite import
