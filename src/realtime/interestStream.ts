@@ -1,13 +1,23 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { config } from '../config';
 
 const clients = new Set<FastifyReply>();
 
 export function registerInterestStream(request: FastifyRequest, reply: FastifyReply) {
-  reply.raw.writeHead(200, {
+  const headers: Record<string, string> = {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
-  });
+  };
+
+  const origin = request.headers.origin;
+  if (origin && config.allowedOrigins.includes(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+    headers['Access-Control-Allow-Credentials'] = 'true';
+    headers.Vary = 'Origin';
+  }
+
+  reply.raw.writeHead(200, headers);
   reply.raw.write('\n');
 
   clients.add(reply);
