@@ -37,6 +37,8 @@ const defaultDeps: PaymentDeps = {
   insertPaymentWebhook,
 };
 
+const apiKeySecurity = [{ ApiKeyAuth: [] }];
+
 const writeRateLimit = {
   max: config.rateLimitWriteMax,
   timeWindow: '15 minutes',
@@ -50,6 +52,7 @@ export async function registerPaymentRoutes(
   app.post('/api/payments/intent', {
     config: { rateLimit: writeRateLimit },
     schema: {
+      security: apiKeySecurity,
       body: intentBodySchema,
       response: {
         201: intentResponseSchema,
@@ -101,6 +104,7 @@ export async function registerPaymentRoutes(
   app.post('/api/payments/webhook', {
     config: { rateLimit: writeRateLimit },
     schema: {
+      security: apiKeySecurity,
       querystring: {
         type: 'object',
         properties: {

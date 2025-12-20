@@ -66,6 +66,8 @@ const listResponseSchema = {
   },
 };
 
+const apiKeySecurity = [{ ApiKeyAuth: [] }];
+
 const writeRateLimit = {
   max: config.rateLimitWriteMax,
   timeWindow: '15 minutes',
@@ -119,6 +121,7 @@ export async function registerInterestRoutes(app: FastifyInstance, deps: Interes
   app.post('/api/interest', {
     config: { rateLimit: writeRateLimit },
     schema: {
+      security: apiKeySecurity,
       body: interestBodySchema,
       response: {
         201: interestResponseSchema,
