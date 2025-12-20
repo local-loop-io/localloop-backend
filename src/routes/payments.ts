@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { config } from '../config';
 import { insertPaymentIntent, insertPaymentWebhook } from '../db/payments';
 import { validatePaymentIntent } from '../validation';
+import { requireApiKey } from '../security/apiKey';
 
 const intentBodySchema = {
   type: 'object',
@@ -36,12 +37,18 @@ const defaultDeps: PaymentDeps = {
   insertPaymentWebhook,
 };
 
+const writeRateLimit = {
+  max: config.rateLimitWriteMax,
+  timeWindow: '15 minutes',
+};
+
 export async function registerPaymentRoutes(
   app: FastifyInstance,
   deps: PaymentDeps = defaultDeps,
   enabled = config.paymentsEnabled
 ) {
   app.post('/api/payments/intent', {
+    config: { rateLimit: writeRateLimit },
     schema: {
       body: intentBodySchema,
       response: {
@@ -67,6 +74,10 @@ export async function registerPaymentRoutes(
       return;
     }
 
+    if (!requireApiKey(request, reply)) {
+      return;
+    }
+
     const validation = validatePaymentIntent(request.body);
     if (!validation.ok) {
       reply.code(400).send({ error: 'Invalid request', details: validation.errors });
@@ -88,6 +99,7 @@ export async function registerPaymentRoutes(
   });
 
   app.post('/api/payments/webhook', {
+    config: { rateLimit: writeRateLimit },
     schema: {
       querystring: {
         type: 'object',
@@ -113,6 +125,10 @@ export async function registerPaymentRoutes(
   }, async (request, reply) => {
     if (!enabled) {
       reply.code(503).send({ error: 'Payments are disabled' });
+      return;
+    }
+
+    if (!requireApiKey(request, reply)) {
       return;
     }
 

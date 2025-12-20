@@ -132,9 +132,12 @@ Key variables (see `.env.example`):
 - `ALLOWED_ORIGINS`
 - `PUBLIC_BASE_URL`
 - `RATE_LIMIT_MAX`
+- `RATE_LIMIT_WRITE_MAX`
 - `BODY_LIMIT`
 - `AUTH_ENABLED`
 - `BETTER_AUTH_SECRET`
+- `API_KEY_ENABLED`
+- `API_KEY`
 - `PAYMENTS_ENABLED`
 
 ## Migrations
@@ -175,6 +178,14 @@ convenience; no production claims are made.
 ## Auth (Better Auth)
 Auth routes are mounted at `/api/auth/*` and are disabled by default. Set `AUTH_ENABLED=true`
 and configure `BETTER_AUTH_SECRET` before enabling.
+
+## API key protection (optional)
+Enable a shared API key for write endpoints (interest submissions, loop demo writes, payments,
+federation handshakes) by setting:
+- `API_KEY_ENABLED=true`
+- `API_KEY=your-secret`
+
+Supply the key via `x-api-key` or `Authorization: Bearer <key>`.
 
 ## Deployment
 - Run behind a reverse proxy with TLS (Traefik or Nginx).
