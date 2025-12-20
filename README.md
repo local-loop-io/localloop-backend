@@ -72,6 +72,12 @@ Server-Sent Events feed for lab demo events.
 ### `POST /api/loop/relay`
 Accepts lab-only federated events from another node (writes to the event log).
 
+### `GET /api/federation/nodes`
+Returns lab-only node registry entries for the federation demo.
+
+### `POST /api/federation/handshake`
+Accepts a lab-only federation handshake payload and registers the node.
+
 ### `GET /api/metrics`
 In-memory counters for lab demo activity.
 

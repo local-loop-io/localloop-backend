@@ -24,6 +24,9 @@ const envSchema = z.object({
   MINIO_BUCKET: z.string().default('localloop-assets'),
   MINIO_USE_SSL: z.string().optional(),
   PUBLIC_BASE_URL: z.string().default('https://loop-api.urbnia.com'),
+  NODE_ID: z.string().default('lab-hub.loop'),
+  NODE_NAME: z.string().default('LocalLoop Lab Hub'),
+  NODE_CAPABILITIES: z.string().default('material-registry,lab-relay'),
   AUTH_TRUSTED_ORIGINS: z.string().optional(),
   BETTER_AUTH_SECRET: z.string().optional(),
   AUTH_ENABLED: z.string().optional(),
@@ -59,6 +62,13 @@ export const config = {
     secret: parsed.BETTER_AUTH_SECRET,
     trustedOrigins: (parsed.AUTH_TRUSTED_ORIGINS || parsed.ALLOWED_ORIGINS)
       .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean),
+  },
+  node: {
+    id: parsed.NODE_ID,
+    name: parsed.NODE_NAME,
+    capabilities: parsed.NODE_CAPABILITIES.split(',')
       .map((value) => value.trim())
       .filter(Boolean),
   },
