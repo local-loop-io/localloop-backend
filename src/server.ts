@@ -15,6 +15,7 @@ import { registerPaymentRoutes } from './routes/payments';
 import { registerLoopRoutes } from './routes/loop';
 import { registerMetricsRoutes } from './routes/metrics';
 import { registerPrivacyRoutes } from './routes/privacy';
+import { registerFederationRoutes } from './routes/federation';
 import { handleAuth } from './auth';
 import { startWorkers } from './queue';
 import { pool } from './db/pool';
@@ -72,6 +73,7 @@ export async function buildServer(options: BuildOptions = {}) {
   await registerCityRoutes(app);
   await registerPaymentRoutes(app);
   await registerLoopRoutes(app);
+  await registerFederationRoutes(app);
   await registerMetricsRoutes(app);
   await registerPrivacyRoutes(app);
   await registerDocsRoutes(app);

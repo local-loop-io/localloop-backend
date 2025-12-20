@@ -6,7 +6,9 @@ export type MetricKey =
   | 'loop_offer_created'
   | 'loop_match_created'
   | 'loop_transfer_created'
-  | 'loop_event_emitted';
+  | 'loop_event_emitted'
+  | 'loop_event_relayed'
+  | 'federation_handshake';
 
 export function incrementMetric(key: MetricKey, amount = 1) {
   const current = counters.get(key) ?? 0;
