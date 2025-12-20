@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { config } from '../config';
 import {
   insertLoopMaterial,
   insertLoopOffer,
@@ -17,6 +18,7 @@ import {
 import { broadcastLoopEvent, registerLoopStream } from '../realtime/loopStream';
 import { incrementMetric } from '../metrics';
 import { loopSchemaIds } from '../schemas/loopSchemas';
+import { requireApiKey } from '../security/apiKey';
 
 const createResponseSchema = {
   type: 'object',
@@ -73,6 +75,11 @@ const listEventsSchema = {
   },
 };
 
+const writeRateLimit = {
+  max: config.rateLimitWriteMax,
+  timeWindow: '15 minutes',
+};
+
 type LoopDeps = {
   insertLoopMaterial: typeof insertLoopMaterial;
   insertLoopOffer: typeof insertLoopOffer;
@@ -101,11 +108,16 @@ const defaultDeps: LoopDeps = {
 
 export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = defaultDeps) {
   app.post('/api/loop/materials', {
+    config: { rateLimit: writeRateLimit },
     schema: {
       body: { $ref: `${loopSchemaIds.material}#` },
       response: { 201: createResponseSchema, 400: errorResponseSchema },
     },
   }, async (request, reply) => {
+    if (!requireApiKey(request, reply)) {
+      return;
+    }
+
     const payload = request.body as LoopMaterialPayload;
     const created = await deps.insertLoopMaterial(payload);
 
@@ -131,11 +143,16 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   });
 
   app.post('/api/loop/offers', {
+    config: { rateLimit: writeRateLimit },
     schema: {
       body: { $ref: `${loopSchemaIds.offer}#` },
       response: { 201: createResponseSchema, 400: errorResponseSchema },
     },
   }, async (request, reply) => {
+    if (!requireApiKey(request, reply)) {
+      return;
+    }
+
     const payload = request.body as LoopOfferPayload;
     const material = await deps.getLoopMaterial(payload.material_id);
     if (!material) {
@@ -166,11 +183,16 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   });
 
   app.post('/api/loop/matches', {
+    config: { rateLimit: writeRateLimit },
     schema: {
       body: { $ref: `${loopSchemaIds.match}#` },
       response: { 201: createResponseSchema, 400: errorResponseSchema },
     },
   }, async (request, reply) => {
+    if (!requireApiKey(request, reply)) {
+      return;
+    }
+
     const payload = request.body as LoopMatchPayload;
     const material = await deps.getLoopMaterial(payload.material_id);
     if (!material) {
@@ -210,11 +232,16 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   });
 
   app.post('/api/loop/transfers', {
+    config: { rateLimit: writeRateLimit },
     schema: {
       body: { $ref: `${loopSchemaIds.transfer}#` },
       response: { 201: createResponseSchema, 400: errorResponseSchema },
     },
   }, async (request, reply) => {
+    if (!requireApiKey(request, reply)) {
+      return;
+    }
+
     const payload = request.body as LoopTransferPayload;
     const material = await deps.getLoopMaterial(payload.material_id);
     if (!material) {
@@ -277,6 +304,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   });
 
   app.post('/api/loop/relay', {
+    config: { rateLimit: writeRateLimit },
     schema: {
       body: relayBodySchema,
       response: {
@@ -285,6 +313,10 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       },
     },
   }, async (request, reply) => {
+    if (!requireApiKey(request, reply)) {
+      return;
+    }
+
     const payload = request.body as {
       event_type: string;
       entity_type: string;

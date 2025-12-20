@@ -1,6 +1,8 @@
 import type { FastifyInstance } from 'fastify';
+import { config } from '../config';
 import { incrementMetric } from '../metrics';
 import { getLocalNode, listNodes, upsertNode, type NodeRecord } from '../federation/registry';
+import { requireApiKey } from '../security/apiKey';
 
 const handshakeBodySchema = {
   type: 'object',
@@ -56,6 +58,11 @@ const listResponseSchema = {
   },
 };
 
+const writeRateLimit = {
+  max: config.rateLimitWriteMax,
+  timeWindow: '15 minutes',
+};
+
 type FederationDeps = {
   listNodes: typeof listNodes;
   upsertNode: typeof upsertNode;
@@ -84,6 +91,7 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
   });
 
   app.post('/api/federation/handshake', {
+    config: { rateLimit: writeRateLimit },
     schema: {
       body: handshakeBodySchema,
       response: {
@@ -91,6 +99,10 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
       },
     },
   }, async (request, reply) => {
+    if (!requireApiKey(request, reply)) {
+      return;
+    }
+
     const payload = request.body as {
       node_id: string;
       name: string;

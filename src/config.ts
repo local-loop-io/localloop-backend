@@ -13,6 +13,7 @@ const envSchema = z.object({
   PUBLIC_LIMIT: z.coerce.number().default(100),
   ALLOWED_ORIGINS: z.string().default('https://local-loop-io.github.io'),
   RATE_LIMIT_MAX: z.coerce.number().default(60),
+  RATE_LIMIT_WRITE_MAX: z.coerce.number().default(20),
   BODY_LIMIT: z.coerce.number().default(1048576),
   RUN_MIGRATIONS: z.string().optional(),
   SEARCH_REFRESH_ON_WRITE: z.string().optional(),
@@ -30,6 +31,8 @@ const envSchema = z.object({
   AUTH_TRUSTED_ORIGINS: z.string().optional(),
   BETTER_AUTH_SECRET: z.string().optional(),
   AUTH_ENABLED: z.string().optional(),
+  API_KEY: z.string().optional(),
+  API_KEY_ENABLED: z.string().optional(),
   WORKER_ENABLED: z.string().optional(),
   PAYMENTS_ENABLED: z.string().optional(),
 });
@@ -44,6 +47,7 @@ export const config = {
   publicLimit: parsed.PUBLIC_LIMIT,
   allowedOrigins: parsed.ALLOWED_ORIGINS.split(',').map((value) => value.trim()).filter(Boolean),
   rateLimitMax: parsed.RATE_LIMIT_MAX,
+  rateLimitWriteMax: parsed.RATE_LIMIT_WRITE_MAX,
   bodyLimit: parsed.BODY_LIMIT,
   runMigrations: booleanFromEnv(parsed.RUN_MIGRATIONS, true),
   refreshSearchOnWrite: booleanFromEnv(parsed.SEARCH_REFRESH_ON_WRITE, true),
@@ -64,6 +68,8 @@ export const config = {
       .split(',')
       .map((value) => value.trim())
       .filter(Boolean),
+    apiKey: parsed.API_KEY,
+    apiKeyEnabled: booleanFromEnv(parsed.API_KEY_ENABLED, false),
   },
   node: {
     id: parsed.NODE_ID,
