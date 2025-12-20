@@ -10,7 +10,10 @@
     "start": "bun run src/index.ts",
     "migrate": "bun run src/db/migrate.ts",
     "test": "bun test",
-    "import:sqlite": "bun run scripts/import-sqlite.ts"
+    "import:sqlite": "bun run scripts/import-sqlite.ts",
+    "seed:lab": "bun run scripts/seed-lab.ts",
+    "simulate:lab": "bun run scripts/simulate-lab.ts",
+    "lab:demo": "bun run scripts/lab-demo.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.956.0",

@@ -69,3 +69,87 @@ model PaymentWebhook {
 
   @@map("payment_webhooks")
 }
+
+model LoopMaterial {
+  id            String   @id @db.Text
+  category      String   @db.Text
+  quantityValue Decimal  @map("quantity_value")
+  quantityUnit  String   @map("quantity_unit") @db.Text
+  originCity    String   @map("origin_city") @db.Text
+  currentCity   String   @map("current_city") @db.Text
+  availableFrom DateTime @map("available_from")
+  expiresAt     DateTime? @map("expires_at")
+  quality       Decimal?
+  payload       Json     @db.JsonB
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  offers    LoopOffer[]
+  matches   LoopMatch[]
+  transfers LoopTransfer[]
+
+  @@map("loop_materials")
+}
+
+model LoopOffer {
+  id             String   @id @db.Text
+  materialId     String   @map("material_id") @db.Text
+  fromCity       String   @map("from_city") @db.Text
+  toCity         String   @map("to_city") @db.Text
+  status         String   @db.Text
+  quantityValue  Decimal  @map("quantity_value")
+  quantityUnit   String   @map("quantity_unit") @db.Text
+  availableUntil DateTime @map("available_until")
+  terms          String?  @db.Text
+  payload        Json     @db.JsonB
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  material LoopMaterial @relation(fields: [materialId], references: [id])
+  matches  LoopMatch[]
+
+  @@map("loop_offers")
+}
+
+model LoopMatch {
+  id         String   @id @db.Text
+  materialId String   @map("material_id") @db.Text
+  offerId    String   @map("offer_id") @db.Text
+  fromCity   String   @map("from_city") @db.Text
+  toCity     String   @map("to_city") @db.Text
+  status     String   @db.Text
+  matchedAt  DateTime @map("matched_at")
+  payload    Json     @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  material  LoopMaterial @relation(fields: [materialId], references: [id])
+  offer     LoopOffer    @relation(fields: [offerId], references: [id])
+  transfers LoopTransfer[]
+
+  @@map("loop_matches")
+}
+
+model LoopTransfer {
+  id         String   @id @db.Text
+  materialId String   @map("material_id") @db.Text
+  matchId    String   @map("match_id") @db.Text
+  status     String   @db.Text
+  handoffAt  DateTime @map("handoff_at")
+  receivedAt DateTime? @map("received_at")
+  payload    Json     @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  material LoopMaterial @relation(fields: [materialId], references: [id])
+  match    LoopMatch    @relation(fields: [matchId], references: [id])
+
+  @@map("loop_transfers")
+}
+
+model LoopEvent {
+  id        BigInt   @id @default(autoincrement()) @db.BigInt
+  eventType String   @map("event_type") @db.Text
+  entityType String  @map("entity_type") @db.Text
+  entityId  String   @map("entity_id") @db.Text
+  payload   Json     @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("loop_events")
+}
