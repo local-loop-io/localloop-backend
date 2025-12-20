@@ -18,6 +18,7 @@ Backend service for collecting and publishing Expressions of Interest for the Lo
 - Full-text search powered by Postgres materialized views.
 - Real-time interest stream via Server-Sent Events.
 - OpenAPI + Redoc docs.
+- Minimal LOOP lab demo endpoints (MaterialDNA → Offer → Match → Transfer).
 
 ## API
 
@@ -49,6 +50,30 @@ Use `?search=term` to query the materialized search view.
 
 ### `GET /api/interest/stream`
 Server-Sent Events feed that pushes new interest submissions.
+
+### `POST /api/loop/materials`
+Create a MaterialDNA record (lab demo).
+
+### `POST /api/loop/offers`
+Publish an offer for a MaterialDNA record (lab demo).
+
+### `POST /api/loop/matches`
+Accept a match between two demo cities (lab demo).
+
+### `POST /api/loop/transfers`
+Record a transfer completion (lab demo).
+
+### `GET /api/loop/events`
+List recent lab demo events.
+
+### `GET /api/loop/stream`
+Server-Sent Events feed for lab demo events.
+
+### `GET /api/metrics`
+In-memory counters for lab demo activity.
+
+### `GET /api/privacy`
+Lab demo privacy and data-minimization notice.
 
 ### `GET /api/cities`
 Returns demo city records (seeded with `DEMO City`).
@@ -99,6 +124,13 @@ bun run migrate
 bun run import:sqlite
 ```
 Use this once to migrate legacy SQLite data into Postgres.
+
+## Lab demo (one command)
+```bash
+bun run lab:demo
+```
+Runs migrations, seeds demo data, spins up a local server, and executes a two-city
+interop simulation. Output is a timeline log of the flow.
 
 ## Auth (Better Auth)
 Auth routes are mounted at `/api/auth/*` and are disabled by default. Set `AUTH_ENABLED=true`
