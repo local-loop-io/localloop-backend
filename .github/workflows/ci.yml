@@ -18,5 +18,7 @@ jobs:
         run: bun install
       - name: Generate Prisma client
         run: bun run prisma:generate
+      - name: Run typecheck
+        run: bun run typecheck
       - name: Run tests
         run: bun test

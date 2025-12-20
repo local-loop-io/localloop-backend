@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://loop-protocol.org/schemas/v0.1.1/transfer.schema.json",
+  "title": "Transfer",
+  "description": "Minimal interop transfer for LOOP Protocol v0.1.1",
+  "type": "object",
+  "required": [
+    "@context",
+    "@type",
+    "schema_version",
+    "id",
+    "material_id",
+    "match_id",
+    "status",
+    "handoff_at"
+  ],
+  "properties": {
+    "@context": {
+      "description": "JSON-LD context",
+      "type": "string",
+      "const": "https://loop-protocol.org/v0.1.1"
+    },
+    "@type": {
+      "description": "Object type identifier",
+      "type": "string",
+      "const": "Transfer"
+    },
+    "schema_version": {
+      "description": "Schema version for the minimal interop flow",
+      "type": "string",
+      "const": "0.1.1"
+    },
+    "id": {
+      "description": "Transfer identifier",
+      "type": "string",
+      "pattern": "^[A-Z0-9-]{8,}$",
+      "examples": ["TRF-5D8A23F1"]
+    },
+    "material_id": {
+      "description": "MaterialDNA identifier",
+      "type": "string",
+      "pattern": "^[A-Z]{2}-[A-Z]{3}-\\d{4}-[A-Z]+-[A-Z0-9]{6,}$",
+      "examples": ["DE-MUC-2025-PLASTIC-B847F3"]
+    },
+    "match_id": {
+      "description": "Match identifier",
+      "type": "string",
+      "pattern": "^[A-Z0-9-]{8,}$",
+      "examples": ["MCH-9B3C8A12"]
+    },
+    "status": {
+      "description": "Transfer status",
+      "type": "string",
+      "enum": ["scheduled", "in_transit", "completed", "cancelled"]
+    },
+    "handoff_at": {
+      "description": "Handoff timestamp (ISO 8601)",
+      "type": "string",
+      "format": "date-time",
+      "examples": ["2025-06-02T09:00:00Z"]
+    },
+    "received_at": {
+      "description": "Receipt timestamp (ISO 8601)",
+      "type": "string",
+      "format": "date-time",
+      "examples": ["2025-06-02T18:00:00Z"]
+    },
+    "route": {
+      "description": "Optional route metadata",
+      "type": "object",
+      "properties": {
+        "from_city": { "type": "string", "examples": ["Munich"] },
+        "to_city": { "type": "string", "examples": ["Berlin"] },
+        "mode": { "type": "string", "examples": ["road"] }
+      }
+    },
+    "metadata": {
+      "description": "Additional metadata",
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

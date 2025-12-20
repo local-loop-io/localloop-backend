@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://loop-protocol.org/schemas/v0.1.1/match.schema.json",
+  "title": "Match",
+  "description": "Minimal interop match for LOOP Protocol v0.1.1",
+  "type": "object",
+  "required": [
+    "@context",
+    "@type",
+    "schema_version",
+    "id",
+    "material_id",
+    "offer_id",
+    "from_city",
+    "to_city",
+    "status",
+    "matched_at"
+  ],
+  "properties": {
+    "@context": {
+      "description": "JSON-LD context",
+      "type": "string",
+      "const": "https://loop-protocol.org/v0.1.1"
+    },
+    "@type": {
+      "description": "Object type identifier",
+      "type": "string",
+      "const": "Match"
+    },
+    "schema_version": {
+      "description": "Schema version for the minimal interop flow",
+      "type": "string",
+      "const": "0.1.1"
+    },
+    "id": {
+      "description": "Match identifier",
+      "type": "string",
+      "pattern": "^[A-Z0-9-]{8,}$",
+      "examples": ["MCH-9B3C8A12"]
+    },
+    "material_id": {
+      "description": "MaterialDNA identifier",
+      "type": "string",
+      "pattern": "^[A-Z]{2}-[A-Z]{3}-\\d{4}-[A-Z]+-[A-Z0-9]{6,}$",
+      "examples": ["DE-MUC-2025-PLASTIC-B847F3"]
+    },
+    "offer_id": {
+      "description": "Offer identifier",
+      "type": "string",
+      "pattern": "^[A-Z0-9-]{8,}$",
+      "examples": ["OFR-2F7A6B9C"]
+    },
+    "from_city": {
+      "description": "City providing the material",
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 80,
+      "examples": ["Munich"]
+    },
+    "to_city": {
+      "description": "City receiving the material",
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 80,
+      "examples": ["Berlin"]
+    },
+    "status": {
+      "description": "Match status",
+      "type": "string",
+      "enum": ["proposed", "accepted", "rejected", "expired"]
+    },
+    "matched_at": {
+      "description": "Match timestamp (ISO 8601)",
+      "type": "string",
+      "format": "date-time",
+      "examples": ["2025-06-01T12:15:00Z"]
+    },
+    "metadata": {
+      "description": "Additional metadata",
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

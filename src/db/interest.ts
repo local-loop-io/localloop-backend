@@ -13,6 +13,7 @@ export type InterestRecord = {
   website: string | null;
   email: string | null;
   message: string | null;
+  is_demo: boolean;
   created_at: string;
 };
 
@@ -26,6 +27,7 @@ type InterestRow = {
   website: string | null;
   email: string | null;
   message: string | null;
+  is_demo: boolean;
   created_at: string | Date;
 };
 
@@ -39,6 +41,7 @@ const mapInterestRow = (row: InterestRow): InterestRecord => ({
   website: row.website,
   email: row.email,
   message: row.message,
+  is_demo: Boolean(row.is_demo),
   created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
 });
 
@@ -77,7 +80,7 @@ export async function insertInterest(input: InterestInput) {
 export async function listInterests(limit: number, search?: string) {
   if (search) {
     const query = Prisma.sql`
-      SELECT id, name, organization, role, country, city, website, email, message, created_at
+      SELECT id, name, organization, role, country, city, website, email, message, is_demo, created_at
       FROM interests_search
       WHERE document @@ plainto_tsquery('simple', ${search})
       ORDER BY ts_rank(document, plainto_tsquery('simple', ${search})) DESC, created_at DESC
@@ -102,6 +105,7 @@ export async function listInterests(limit: number, search?: string) {
       email: true,
       message: true,
       shareEmail: true,
+      isDemo: true,
       createdAt: true,
     },
   });
@@ -116,6 +120,7 @@ export async function listInterests(limit: number, search?: string) {
     website: record.website,
     email: record.shareEmail ? record.email : null,
     message: record.message,
+    is_demo: record.isDemo,
     created_at: record.createdAt.toISOString(),
   }));
 }

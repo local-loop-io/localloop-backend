@@ -13,6 +13,7 @@ const envSchema = z.object({
   PUBLIC_LIMIT: z.coerce.number().default(100),
   ALLOWED_ORIGINS: z.string().default('https://local-loop-io.github.io'),
   RATE_LIMIT_MAX: z.coerce.number().default(60),
+  BODY_LIMIT: z.coerce.number().default(1048576),
   RUN_MIGRATIONS: z.string().optional(),
   SEARCH_REFRESH_ON_WRITE: z.string().optional(),
   REDIS_URL: z.string().default('redis://localhost:6381'),
@@ -23,10 +24,14 @@ const envSchema = z.object({
   MINIO_BUCKET: z.string().default('localloop-assets'),
   MINIO_USE_SSL: z.string().optional(),
   PUBLIC_BASE_URL: z.string().default('https://loop-api.urbnia.com'),
+  NODE_ID: z.string().default('lab-hub.loop'),
+  NODE_NAME: z.string().default('LocalLoop Lab Hub'),
+  NODE_CAPABILITIES: z.string().default('material-registry,lab-relay'),
   AUTH_TRUSTED_ORIGINS: z.string().optional(),
   BETTER_AUTH_SECRET: z.string().optional(),
   AUTH_ENABLED: z.string().optional(),
   WORKER_ENABLED: z.string().optional(),
+  PAYMENTS_ENABLED: z.string().optional(),
 });
 
 const parsed = envSchema.parse(process.env);
@@ -39,6 +44,7 @@ export const config = {
   publicLimit: parsed.PUBLIC_LIMIT,
   allowedOrigins: parsed.ALLOWED_ORIGINS.split(',').map((value) => value.trim()).filter(Boolean),
   rateLimitMax: parsed.RATE_LIMIT_MAX,
+  bodyLimit: parsed.BODY_LIMIT,
   runMigrations: booleanFromEnv(parsed.RUN_MIGRATIONS, true),
   refreshSearchOnWrite: booleanFromEnv(parsed.SEARCH_REFRESH_ON_WRITE, true),
   redisUrl: parsed.REDIS_URL,
@@ -59,5 +65,13 @@ export const config = {
       .map((value) => value.trim())
       .filter(Boolean),
   },
+  node: {
+    id: parsed.NODE_ID,
+    name: parsed.NODE_NAME,
+    capabilities: parsed.NODE_CAPABILITIES.split(',')
+      .map((value) => value.trim())
+      .filter(Boolean),
+  },
   workerEnabled: booleanFromEnv(parsed.WORKER_ENABLED, false),
+  paymentsEnabled: booleanFromEnv(parsed.PAYMENTS_ENABLED, false),
 };

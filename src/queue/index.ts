@@ -1,6 +1,7 @@
 import { Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import { config } from '../config';
+import { insertInterestEvent } from '../db/interestEvents';
 
 let connection: IORedis | null = null;
 let queue: Queue | null = null;
@@ -33,6 +34,43 @@ export function enqueueInterest(payload: unknown) {
   });
 }
 
+type InterestJobPayload = {
+  id?: number;
+  created_at?: string;
+};
+
+type QueueDeps = {
+  insertInterestEvent: typeof insertInterestEvent;
+};
+
+const defaultDeps: QueueDeps = {
+  insertInterestEvent,
+};
+
+export function createInterestJobHandler(deps: QueueDeps = defaultDeps) {
+  return async (job: { name: string; data: InterestJobPayload }) => {
+    if (job.name !== 'interest:created') {
+      return { status: 'ignored' };
+    }
+
+    const interestId = Number(job.data?.id);
+    if (!Number.isFinite(interestId)) {
+      return { status: 'invalid' };
+    }
+
+    await deps.insertInterestEvent({
+      interestId,
+      eventType: 'created',
+      payload: {
+        id: interestId,
+        created_at: job.data?.created_at,
+      },
+    });
+
+    return { status: 'logged' };
+  };
+}
+
 export function startWorkers() {
   if (!config.workerEnabled) {
     return null;
@@ -40,13 +78,7 @@ export function startWorkers() {
 
   const worker = new Worker(
     'interest',
-    async (job) => {
-      if (job.name === 'interest:created') {
-        // Placeholder for notifications, emails, or analytics hooks.
-        return { status: 'queued' };
-      }
-      return { status: 'ignored' };
-    },
+    createInterestJobHandler(),
     { connection: getConnection() }
   );
 
