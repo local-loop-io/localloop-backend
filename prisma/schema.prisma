@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Interest {
+  id            BigInt   @id @default(autoincrement()) @db.BigInt
+  name          String
+  organization  String?  @db.Text
+  role          String?  @db.Text
+  country       String?  @db.Text
+  city          String?  @db.Text
+  website       String?  @db.Text
+  email         String?  @db.Text
+  message       String?  @db.Text
+  isDemo        Boolean  @default(false) @map("is_demo")
+  shareEmail    Boolean  @default(false) @map("share_email")
+  publicListing Boolean  @default(true) @map("public_listing")
+  consentPublic Boolean  @default(true) @map("consent_public")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("interests")
+}
+
+model City {
+  id        BigInt   @id @default(autoincrement()) @db.BigInt
+  slug      String   @unique
+  name      String
+  country   String?  @db.Text
+  center    Unsupported("geometry")?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("cities")
+}
