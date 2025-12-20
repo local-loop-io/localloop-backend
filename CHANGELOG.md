@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+### Added
+- Lab federation relay endpoint and two-node demo scripts.
+- API body size limit configuration (`BODY_LIMIT`).
+- Typecheck step in CI plus SSE stream test coverage.
+
 ## 0.1.1-demo - 2025-12-20
 ### Added
 - Minimal interop lab demo endpoints (MaterialDNA → Offer → Match → Transfer).
