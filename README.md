@@ -53,6 +53,12 @@ Server-Sent Events feed that pushes new interest submissions.
 ### `GET /api/cities`
 Returns demo city records (seeded with `DEMO City`).
 
+### `POST /api/payments/intent`
+When `PAYMENTS_ENABLED=true`, records a payment intent request for manual follow-up.
+
+### `POST /api/payments/webhook`
+When `PAYMENTS_ENABLED=true`, accepts provider webhook payloads for auditing.
+
 ### `GET /openapi.json`
 OpenAPI JSON schema.
 
@@ -80,6 +86,7 @@ Key variables (see `.env.example`):
 - `MINIO_*`
 - `ALLOWED_ORIGINS`
 - `PUBLIC_BASE_URL`
+- `PAYMENTS_ENABLED`
 
 ## Migrations
 Migrations run on startup by default. You can also run them manually:

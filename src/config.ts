@@ -27,6 +27,7 @@ const envSchema = z.object({
   BETTER_AUTH_SECRET: z.string().optional(),
   AUTH_ENABLED: z.string().optional(),
   WORKER_ENABLED: z.string().optional(),
+  PAYMENTS_ENABLED: z.string().optional(),
 });
 
 const parsed = envSchema.parse(process.env);
@@ -60,4 +61,5 @@ export const config = {
       .filter(Boolean),
   },
   workerEnabled: booleanFromEnv(parsed.WORKER_ENABLED, false),
+  paymentsEnabled: booleanFromEnv(parsed.PAYMENTS_ENABLED, false),
 };
