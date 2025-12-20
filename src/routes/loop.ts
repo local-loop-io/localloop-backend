@@ -26,6 +26,13 @@ const createResponseSchema = {
   },
 };
 
+const errorResponseSchema = {
+  type: 'object',
+  properties: {
+    error: { type: 'string' },
+  },
+};
+
 const listEventsSchema = {
   type: 'object',
   properties: {
@@ -76,7 +83,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   app.post('/api/loop/materials', {
     schema: {
       body: { $ref: `${loopSchemaIds.material}#` },
-      response: { 201: createResponseSchema },
+      response: { 201: createResponseSchema, 400: errorResponseSchema },
     },
   }, async (request, reply) => {
     const payload = request.body as LoopMaterialPayload;
@@ -106,7 +113,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   app.post('/api/loop/offers', {
     schema: {
       body: { $ref: `${loopSchemaIds.offer}#` },
-      response: { 201: createResponseSchema },
+      response: { 201: createResponseSchema, 400: errorResponseSchema },
     },
   }, async (request, reply) => {
     const payload = request.body as LoopOfferPayload;
@@ -141,7 +148,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   app.post('/api/loop/matches', {
     schema: {
       body: { $ref: `${loopSchemaIds.match}#` },
-      response: { 201: createResponseSchema },
+      response: { 201: createResponseSchema, 400: errorResponseSchema },
     },
   }, async (request, reply) => {
     const payload = request.body as LoopMatchPayload;
@@ -185,7 +192,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   app.post('/api/loop/transfers', {
     schema: {
       body: { $ref: `${loopSchemaIds.transfer}#` },
-      response: { 201: createResponseSchema },
+      response: { 201: createResponseSchema, 400: errorResponseSchema },
     },
   }, async (request, reply) => {
     const payload = request.body as LoopTransferPayload;

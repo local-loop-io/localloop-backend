@@ -46,7 +46,7 @@ export const paymentIntentSchema = z.object({
   amount: z.number().positive(),
   currency: z.string().trim().min(3).max(3).transform((value) => value.toUpperCase()),
   note: optionalTrimmed(z.string().max(280)),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type PaymentIntentInput = z.infer<typeof paymentIntentSchema>;

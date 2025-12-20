@@ -11,7 +11,7 @@ const buildApp = (enabled: boolean) => {
       currency: string;
     };
     webhook?: {
-      provider?: string;
+      provider?: string | null;
       payload: Record<string, unknown>;
     };
   } = {};
@@ -25,7 +25,7 @@ const buildApp = (enabled: boolean) => {
       calls.intent = input;
       return { id: 99, status: 'received', created_at: new Date().toISOString() };
     },
-    insertPaymentWebhook: async (input: { provider?: string; payload: Record<string, unknown> }) => {
+    insertPaymentWebhook: async (input: { provider?: string | null; payload: Record<string, unknown> }) => {
       calls.webhook = input;
       return { id: 12, created_at: new Date().toISOString() };
     },

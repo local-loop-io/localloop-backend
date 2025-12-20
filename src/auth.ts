@@ -1,9 +1,7 @@
 import { betterAuth } from 'better-auth';
-import pg from 'pg';
+import { Pool } from 'pg';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { config } from './config';
-
-const { Pool } = pg;
 
 const authEnabled = config.auth.enabled && Boolean(config.auth.secret);
 if (config.auth.enabled && !config.auth.secret) {

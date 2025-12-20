@@ -31,6 +31,14 @@ const interestResponseSchema = {
   },
 };
 
+const errorResponseSchema = {
+  type: 'object',
+  properties: {
+    error: { type: 'string' },
+    details: { type: 'object' },
+  },
+};
+
 const listResponseSchema = {
   type: 'object',
   properties: {
@@ -107,6 +115,7 @@ export async function registerInterestRoutes(app: FastifyInstance, deps: Interes
       body: interestBodySchema,
       response: {
         201: interestResponseSchema,
+        400: errorResponseSchema,
       },
     },
   }, async (request, reply) => {
