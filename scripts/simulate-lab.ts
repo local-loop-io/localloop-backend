@@ -7,7 +7,12 @@ type TimelineEvent = {
 };
 
 const buildId = (prefix: string) =>
-  `${prefix}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
+  `${prefix}-${crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+
+const buildMaterialId = (year: number) => {
+  const unique = crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
+  return `DE-MUC-${year}-PLASTIC-${unique}`;
+};
 
 export async function runLabSimulation(baseUrl = `http://localhost:${config.port}`) {
   const timeline: TimelineEvent[] = [];
@@ -17,7 +22,7 @@ export async function runLabSimulation(baseUrl = `http://localhost:${config.port
     '@context': 'https://loop-protocol.org/v0.1.1',
     '@type': 'MaterialDNA',
     schema_version: '0.1.1',
-    id: `DE-MUC-${now.getUTCFullYear()}-PLASTIC-${buildId('MAT')}`,
+    id: buildMaterialId(now.getUTCFullYear()),
     category: 'plastic-pet',
     quantity: { value: 120, unit: 'kg' },
     quality: 0.94,

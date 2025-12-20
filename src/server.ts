@@ -81,6 +81,15 @@ export async function buildServer(options: BuildOptions = {}) {
   });
 
   app.setErrorHandler((error, request, reply) => {
+    const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
+    if (statusCode >= 400 && statusCode < 500) {
+      reply.code(statusCode).send({
+        error: error.message,
+        details: (error as { validation?: unknown }).validation,
+      });
+      return;
+    }
+
     request.log.error(error);
     reply.code(500).send({ error: 'Internal server error' });
   });
