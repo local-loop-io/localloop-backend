@@ -58,6 +58,15 @@ export async function buildServer(options: BuildOptions = {}) {
         description: 'Public API for LocalLoop lab demo, interest capture, and city portal data.',
         version: '0.1.1-demo',
       },
+      components: {
+        securitySchemes: {
+          ApiKeyAuth: {
+            type: 'apiKey',
+            in: 'header',
+            name: 'x-api-key',
+          },
+        },
+      },
       servers: [{ url: config.publicBaseUrl }],
     },
   });

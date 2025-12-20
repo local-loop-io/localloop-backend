@@ -75,6 +75,8 @@ const listEventsSchema = {
   },
 };
 
+const apiKeySecurity = [{ ApiKeyAuth: [] }];
+
 const writeRateLimit = {
   max: config.rateLimitWriteMax,
   timeWindow: '15 minutes',
@@ -110,6 +112,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   app.post('/api/loop/materials', {
     config: { rateLimit: writeRateLimit },
     schema: {
+      security: apiKeySecurity,
       body: { $ref: `${loopSchemaIds.material}#` },
       response: { 201: createResponseSchema, 400: errorResponseSchema },
     },
@@ -145,6 +148,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   app.post('/api/loop/offers', {
     config: { rateLimit: writeRateLimit },
     schema: {
+      security: apiKeySecurity,
       body: { $ref: `${loopSchemaIds.offer}#` },
       response: { 201: createResponseSchema, 400: errorResponseSchema },
     },
@@ -185,6 +189,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   app.post('/api/loop/matches', {
     config: { rateLimit: writeRateLimit },
     schema: {
+      security: apiKeySecurity,
       body: { $ref: `${loopSchemaIds.match}#` },
       response: { 201: createResponseSchema, 400: errorResponseSchema },
     },
@@ -234,6 +239,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   app.post('/api/loop/transfers', {
     config: { rateLimit: writeRateLimit },
     schema: {
+      security: apiKeySecurity,
       body: { $ref: `${loopSchemaIds.transfer}#` },
       response: { 201: createResponseSchema, 400: errorResponseSchema },
     },
@@ -306,6 +312,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   app.post('/api/loop/relay', {
     config: { rateLimit: writeRateLimit },
     schema: {
+      security: apiKeySecurity,
       body: relayBodySchema,
       response: {
         202: relayResponseSchema,

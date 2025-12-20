@@ -58,6 +58,8 @@ const listResponseSchema = {
   },
 };
 
+const apiKeySecurity = [{ ApiKeyAuth: [] }];
+
 const writeRateLimit = {
   max: config.rateLimitWriteMax,
   timeWindow: '15 minutes',
@@ -93,6 +95,7 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
   app.post('/api/federation/handshake', {
     config: { rateLimit: writeRateLimit },
     schema: {
+      security: apiKeySecurity,
       body: handshakeBodySchema,
       response: {
         202: handshakeResponseSchema,
