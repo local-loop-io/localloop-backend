@@ -1,7 +1,5 @@
-import pg from 'pg';
+import { Pool } from 'pg';
 import { config } from '../config';
-
-const { Pool } = pg;
 
 export const pool = new Pool({
   connectionString: config.databaseUrl,
@@ -9,6 +7,6 @@ export const pool = new Pool({
   ssl: config.databaseSsl ? { rejectUnauthorized: false } : undefined,
 });
 
-pool.on('error', (err) => {
+pool.on('error', (err: Error) => {
   console.error('Postgres pool error', err);
 });

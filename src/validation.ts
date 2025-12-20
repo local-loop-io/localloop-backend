@@ -38,3 +38,24 @@ export function validateInterest(payload: unknown) {
   const { honey, ...data } = result.data;
   return { ok: true as const, data };
 }
+
+export const paymentIntentSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  organization: optionalTrimmed(z.string().max(120)),
+  email: optionalTrimmed(z.string().email().max(120)),
+  amount: z.number().positive(),
+  currency: z.string().trim().min(3).max(3).transform((value) => value.toUpperCase()),
+  note: optionalTrimmed(z.string().max(280)),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+export type PaymentIntentInput = z.infer<typeof paymentIntentSchema>;
+
+export function validatePaymentIntent(payload: unknown) {
+  const result = paymentIntentSchema.safeParse(payload);
+  if (!result.success) {
+    return { ok: false as const, errors: result.error.flatten() };
+  }
+
+  return { ok: true as const, data: result.data };
+}

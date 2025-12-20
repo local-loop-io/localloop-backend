@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Interest {
+  id            BigInt   @id @default(autoincrement()) @db.BigInt
+  name          String
+  organization  String?  @db.Text
+  role          String?  @db.Text
+  country       String?  @db.Text
+  city          String?  @db.Text
+  website       String?  @db.Text
+  email         String?  @db.Text
+  message       String?  @db.Text
+  isDemo        Boolean  @default(false) @map("is_demo")
+  shareEmail    Boolean  @default(false) @map("share_email")
+  publicListing Boolean  @default(true) @map("public_listing")
+  consentPublic Boolean  @default(true) @map("consent_public")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("interests")
+}
+
+model InterestEvent {
+  id         BigInt   @id @default(autoincrement()) @db.BigInt
+  interestId BigInt   @map("interest_id") @db.BigInt
+  eventType  String   @map("event_type") @db.Text
+  payload    Json     @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("interest_events")
+}
+
+model City {
+  id        BigInt   @id @default(autoincrement()) @db.BigInt
+  slug      String   @unique
+  name      String
+  country   String?  @db.Text
+  center    Unsupported("geometry")?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("cities")
+}
+
+model PaymentIntent {
+  id           BigInt   @id @default(autoincrement()) @db.BigInt
+  name         String
+  organization String?  @db.Text
+  email        String?  @db.Text
+  amountCents  Int      @map("amount_cents")
+  currency     String   @db.Text
+  note         String?  @db.Text
+  metadata     Json?    @db.JsonB
+  status       String   @default("received") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("payment_intents")
+}
+
+model PaymentWebhook {
+  id        BigInt   @id @default(autoincrement()) @db.BigInt
+  provider  String?  @db.Text
+  payload   Json     @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("payment_webhooks")
+}
+
+model LoopMaterial {
+  id            String   @id @db.Text
+  category      String   @db.Text
+  quantityValue Decimal  @map("quantity_value")
+  quantityUnit  String   @map("quantity_unit") @db.Text
+  originCity    String   @map("origin_city") @db.Text
+  currentCity   String   @map("current_city") @db.Text
+  availableFrom DateTime @map("available_from")
+  expiresAt     DateTime? @map("expires_at")
+  quality       Decimal?
+  payload       Json     @db.JsonB
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  offers    LoopOffer[]
+  matches   LoopMatch[]
+  transfers LoopTransfer[]
+
+  @@map("loop_materials")
+}
+
+model LoopOffer {
+  id             String   @id @db.Text
+  materialId     String   @map("material_id") @db.Text
+  fromCity       String   @map("from_city") @db.Text
+  toCity         String   @map("to_city") @db.Text
+  status         String   @db.Text
+  quantityValue  Decimal  @map("quantity_value")
+  quantityUnit   String   @map("quantity_unit") @db.Text
+  availableUntil DateTime @map("available_until")
+  terms          String?  @db.Text
+  payload        Json     @db.JsonB
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  material LoopMaterial @relation(fields: [materialId], references: [id])
+  matches  LoopMatch[]
+
+  @@map("loop_offers")
+}
+
+model LoopMatch {
+  id         String   @id @db.Text
+  materialId String   @map("material_id") @db.Text
+  offerId    String   @map("offer_id") @db.Text
+  fromCity   String   @map("from_city") @db.Text
+  toCity     String   @map("to_city") @db.Text
+  status     String   @db.Text
+  matchedAt  DateTime @map("matched_at")
+  payload    Json     @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  material  LoopMaterial @relation(fields: [materialId], references: [id])
+  offer     LoopOffer    @relation(fields: [offerId], references: [id])
+  transfers LoopTransfer[]
+
+  @@map("loop_matches")
+}
+
+model LoopTransfer {
+  id         String   @id @db.Text
+  materialId String   @map("material_id") @db.Text
+  matchId    String   @map("match_id") @db.Text
+  status     String   @db.Text
+  handoffAt  DateTime @map("handoff_at")
+  receivedAt DateTime? @map("received_at")
+  payload    Json     @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  material LoopMaterial @relation(fields: [materialId], references: [id])
+  match    LoopMatch    @relation(fields: [matchId], references: [id])
+
+  @@map("loop_transfers")
+}
+
+model LoopEvent {
+  id         BigInt   @id @default(autoincrement()) @db.BigInt
+  eventType  String   @map("event_type") @db.Text
+  entityType String   @map("entity_type") @db.Text
+  entityId   String   @map("entity_id") @db.Text
+  payload    Json     @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("loop_events")
+}

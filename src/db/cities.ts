@@ -1,4 +1,5 @@
-import { pool } from './pool';
+import { Prisma } from '@prisma/client';
+import { prisma } from './prisma';
 
 export type CityRecord = {
   slug: string;
@@ -36,124 +37,117 @@ export type CityFilters = {
 };
 
 type QueryParts = {
-  where: string;
-  values: Array<string | number>;
-  orderBy: string;
-  distanceExpr: string;
+  where: Prisma.Sql;
+  orderBy: Prisma.Sql;
+  distanceExpr: Prisma.Sql;
 };
 
 const buildQueryParts = (filters: CityFilters = {}): QueryParts => {
-  const clauses: string[] = [];
-  const values: Array<string | number> = [];
-  let orderBy = 'created_at DESC';
-  let distanceExpr = 'NULL';
+  const clauses: Prisma.Sql[] = [];
+  let orderBy = Prisma.sql`ORDER BY created_at DESC`;
+  let distanceExpr = Prisma.sql`NULL`;
 
   if (filters.bbox) {
     const { minLon, minLat, maxLon, maxLat } = filters.bbox;
-    const minLonIndex = values.push(minLon);
-    const minLatIndex = values.push(minLat);
-    const maxLonIndex = values.push(maxLon);
-    const maxLatIndex = values.push(maxLat);
     clauses.push(
-      `ST_Within(center, ST_MakeEnvelope($${minLonIndex}, $${minLatIndex}, $${maxLonIndex}, $${maxLatIndex}, 4326))`
+      Prisma.sql`ST_Within(center, ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326))`
     );
   }
 
   if (filters.near) {
     const { lon, lat, radiusKm } = filters.near;
-    const lonIndex = values.push(lon);
-    const latIndex = values.push(lat);
-    const radiusIndex = values.push(radiusKm * 1000);
-    const pointExpr = `ST_SetSRID(ST_MakePoint($${lonIndex}, $${latIndex}), 4326)`;
+    const pointExpr = Prisma.sql`ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)`;
     clauses.push(
-      `ST_DWithin(center::geography, ${pointExpr}::geography, $${radiusIndex})`
+      Prisma.sql`ST_DWithin(center::geography, ${pointExpr}::geography, ${radiusKm * 1000})`
     );
-    orderBy = `ST_Distance(center::geography, ${pointExpr}::geography) ASC`;
-    distanceExpr = `ST_Distance(center::geography, ${pointExpr}::geography)`;
+    distanceExpr = Prisma.sql`ST_Distance(center::geography, ${pointExpr}::geography)`;
+    orderBy = Prisma.sql`ORDER BY ${distanceExpr} ASC`;
   }
 
   return {
-    where: clauses.length ? `WHERE ${clauses.join(' AND ')}` : '',
-    values,
+    where: clauses.length
+      ? Prisma.sql`WHERE ${Prisma.join(clauses, Prisma.raw(' AND '))}`
+      : Prisma.empty,
     orderBy,
     distanceExpr,
   };
 };
 
 export async function listCities(filters: CityFilters = {}) {
-  const { where, values, orderBy } = buildQueryParts(filters);
   const limit = filters.limit ?? 100;
-  const limitIndex = values.push(limit);
+  const { where, orderBy } = buildQueryParts(filters);
 
-  const result = await pool.query<{
+  const query = Prisma.sql`
+    SELECT slug, name, country, ST_AsGeoJSON(center) AS center, created_at
+    FROM cities
+    ${where}
+    ${orderBy}
+    LIMIT ${limit};
+  `;
+
+  const result = await prisma.$queryRaw<{
     slug: string;
     name: string;
     country: string | null;
     center: string | null;
-    created_at: string;
-  }>(
-    `SELECT slug, name, country, ST_AsGeoJSON(center) AS center, created_at
-     FROM cities
-     ${where}
-     ORDER BY ${orderBy}
-     LIMIT $${limitIndex};`,
-    values
-  );
+    created_at: string | Date;
+  }[]>(query);
 
-  return result.rows.map((row) => ({
+  return result.map((row) => ({
     slug: row.slug,
     name: row.name,
     country: row.country,
     center: row.center ? JSON.parse(row.center) : null,
-    created_at: row.created_at,
+    created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
   }));
 }
 
 export async function listCitiesGeoJson(filters: CityFilters = {}) {
-  const { where, values, orderBy, distanceExpr } = buildQueryParts(filters);
   const limit = filters.limit ?? 100;
-  const limitIndex = values.push(limit);
+  const { where, orderBy, distanceExpr } = buildQueryParts(filters);
 
-  const result = await pool.query<{ feature: CityGeoFeature }>(
-    `SELECT json_build_object(
-        'type', 'Feature',
-        'geometry', ST_AsGeoJSON(center)::json,
-        'properties', json_build_object(
-          'slug', slug,
-          'name', name,
-          'country', country,
-          'created_at', created_at,
-          'distance_m', ${distanceExpr}
-        )
-      ) AS feature
-     FROM cities
-     ${where}
-     ORDER BY ${orderBy}
-     LIMIT $${limitIndex};`,
-    values
-  );
+  const query = Prisma.sql`
+    SELECT json_build_object(
+      'type', 'Feature',
+      'geometry', ST_AsGeoJSON(center)::json,
+      'properties', json_build_object(
+        'slug', slug,
+        'name', name,
+        'country', country,
+        'created_at', created_at,
+        'distance_m', ${distanceExpr}
+      )
+    ) AS feature
+    FROM cities
+    ${where}
+    ${orderBy}
+    LIMIT ${limit};
+  `;
+
+  const result = await prisma.$queryRaw<{ feature: CityGeoFeature }[]>(query);
 
   return {
     type: 'FeatureCollection' as const,
-    features: result.rows.map((row) => row.feature),
+    features: result.map((row) => row.feature),
   };
 }
 
 export async function getCity(slug: string) {
-  const result = await pool.query<{
+  const query = Prisma.sql`
+    SELECT slug, name, country, ST_AsGeoJSON(center) AS center, created_at
+    FROM cities
+    WHERE slug = ${slug};
+  `;
+
+  const result = await prisma.$queryRaw<{
     slug: string;
     name: string;
     country: string | null;
     center: string | null;
-    created_at: string;
-  }>(
-    `SELECT slug, name, country, ST_AsGeoJSON(center) AS center, created_at
-     FROM cities
-     WHERE slug = $1;`,
-    [slug]
-  );
+    created_at: string | Date;
+  }[]>(query);
 
-  const row = result.rows[0];
+  const row = result[0];
   if (!row) return null;
 
   return {
@@ -161,6 +155,6 @@ export async function getCity(slug: string) {
     name: row.name,
     country: row.country,
     center: row.center ? JSON.parse(row.center) : null,
-    created_at: row.created_at,
+    created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
   };
 }

@@ -98,7 +98,7 @@ const parseNear = (value: string | undefined, radiusKm: number) => {
   if (!value) return { ok: true as const, value: null };
   const parts = value.split(',').map((part) => Number(part.trim()));
   if (parts.length !== 2 || parts.some((part) => !Number.isFinite(part))) {
-    return { ok: false as const, error: 'near must be "lon,lat".' };
+    return { ok: false as const, error: 'near must be \"lon,lat\".' };
   }
   const [lon, lat] = parts;
   if (!isValidLon(lon) || !isValidLat(lat)) {

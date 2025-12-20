@@ -8,6 +8,7 @@ Backend service for collecting and publishing Expressions of Interest for the Lo
 - **Runtime**: Bun
 - **API**: Fastify
 - **Database**: PostgreSQL 18.x (PostGIS-enabled image; pgvector provisioned when available)
+- **ORM**: Prisma v7
 - **Cache/Queue**: Redis + BullMQ
 - **Object Storage**: MinIO (S3 compatible)
 - **Auth**: Better Auth (disabled by default)
@@ -18,6 +19,7 @@ Backend service for collecting and publishing Expressions of Interest for the Lo
 - Full-text search powered by Postgres materialized views.
 - Real-time interest stream via Server-Sent Events.
 - OpenAPI + Redoc docs.
+- Minimal LOOP lab demo endpoints (MaterialDNA → Offer → Match → Transfer).
 
 ## API
 
@@ -50,6 +52,39 @@ Use `?search=term` to query the materialized search view.
 ### `GET /api/interest/stream`
 Server-Sent Events feed that pushes new interest submissions.
 
+### `POST /api/loop/materials`
+Create a MaterialDNA record (lab demo).
+
+### `POST /api/loop/offers`
+Publish an offer for a MaterialDNA record (lab demo).
+
+### `POST /api/loop/matches`
+Accept a match between two demo cities (lab demo).
+
+### `POST /api/loop/transfers`
+Record a transfer completion (lab demo).
+
+### `GET /api/loop/events`
+List recent lab demo events.
+
+### `GET /api/loop/stream`
+Server-Sent Events feed for lab demo events.
+
+### `POST /api/loop/relay`
+Accepts lab-only federated events from another node (writes to the event log).
+
+### `GET /api/federation/nodes`
+Returns lab-only node registry entries for the federation demo.
+
+### `POST /api/federation/handshake`
+Accepts a lab-only federation handshake payload and registers the node.
+
+### `GET /api/metrics`
+In-memory counters for lab demo activity.
+
+### `GET /api/privacy`
+Lab demo privacy and data-minimization notice.
+
 ### `GET /api/cities`
 Returns city records (seeded with `DEMO City`).
 - Optional filters:
@@ -62,6 +97,12 @@ Returns city records (seeded with `DEMO City`).
 Returns a GeoJSON FeatureCollection for mapping. Supports the same filters as
 `/api/cities` and includes `distance_m` when `near` is provided.
 
+### `POST /api/payments/intent`
+When `PAYMENTS_ENABLED=true`, records a payment intent request for manual follow-up.
+
+### `POST /api/payments/webhook`
+When `PAYMENTS_ENABLED=true`, accepts provider webhook payloads for auditing.
+
 ### `GET /openapi.json`
 OpenAPI JSON schema.
 
@@ -72,6 +113,7 @@ Redoc HTML viewer for the OpenAPI spec.
 ```bash
 bun install
 cp .env.example .env
+bun run prisma:generate
 bun run dev
 ```
 
@@ -89,6 +131,11 @@ Key variables (see `.env.example`):
 - `MINIO_*`
 - `ALLOWED_ORIGINS`
 - `PUBLIC_BASE_URL`
+- `RATE_LIMIT_MAX`
+- `BODY_LIMIT`
+- `AUTH_ENABLED`
+- `BETTER_AUTH_SECRET`
+- `PAYMENTS_ENABLED`
 
 ## Migrations
 Migrations run on startup by default. You can also run them manually:
@@ -96,11 +143,34 @@ Migrations run on startup by default. You can also run them manually:
 bun run migrate
 ```
 
+## Prisma
+The Prisma schema lives in `prisma/schema.prisma` and maps to the existing SQL
+migrations (custom SQL). Prisma CLI configuration lives in `prisma.config.ts`.
+Generate the Prisma client after installing dependencies:
+```bash
+bun run prisma:generate
+```
+
 ## SQLite import
 ```bash
 bun run import:sqlite
 ```
 Use this once to migrate legacy SQLite data into Postgres.
+
+## Lab demo (one command)
+```bash
+bun run lab:demo
+```
+Runs migrations, seeds demo data, spins up a local server, and executes a two-city
+interop simulation. Output is a timeline log of the flow.
+
+## Lab federation demo (two nodes, shared lab database)
+```bash
+bun run lab:federation
+```
+Spins up two local node instances and relays events between them to demonstrate
+lab-only federation messaging. The nodes share a single lab database for
+convenience; no production claims are made.
 
 ## Auth (Better Auth)
 Auth routes are mounted at `/api/auth/*` and are disabled by default. Set `AUTH_ENABLED=true`

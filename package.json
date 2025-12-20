@@ -10,23 +10,35 @@
     "start": "bun run src/index.ts",
     "migrate": "bun run src/db/migrate.ts",
     "test": "bun test",
-    "import:sqlite": "bun run scripts/import-sqlite.ts"
+    "typecheck": "tsc --noEmit",
+    "import:sqlite": "bun run scripts/import-sqlite.ts",
+    "seed:lab": "bun run scripts/seed-lab.ts",
+    "simulate:lab": "bun run scripts/simulate-lab.ts",
+    "lab:demo": "bun run scripts/lab-demo.ts",
+    "simulate:federation": "bun run scripts/simulate-federation.ts",
+    "lab:federation": "bun run scripts/lab-federation.ts",
+    "prisma:generate": "prisma generate"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.909.0",
-    "@fastify/cors": "^10.0.2",
+    "@prisma/client": "^7.0.0",
+    "@prisma/adapter-pg": "^7.0.0",
+    "@aws-sdk/client-s3": "^3.956.0",
+    "@fastify/cors": "^11.2.0",
     "@fastify/helmet": "^13.0.2",
     "@fastify/rate-limit": "^10.2.0",
     "@fastify/swagger": "^9.4.1",
     "better-auth": "^1.0.0",
-    "bullmq": "^5.58.5",
+    "bullmq": "^5.66.2",
     "fastify": "^5.6.1",
     "ioredis": "^5.6.2",
     "pg": "^8.14.1",
+    "prisma": "^7.0.0",
     "zod": "^4.2.1"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "bun-types": "^1.1.0"
+    "@types/pg": "^8.11.10",
+    "bun-types": "^1.1.0",
+    "typescript": "^5.6.3"
   }
 }
