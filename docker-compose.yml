@@ -11,7 +11,17 @@ services:
       - minio
     ports:
       - "8088:8088"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.localloop-api.rule=Host(`loop-api.urbnia.com`)"
+      - "traefik.http.routers.localloop-api.entrypoints=websecure"
+      - "traefik.http.routers.localloop-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.localloop-api.loadbalancer.server.port=8088"
     restart: unless-stopped
+    networks:
+      - default
+      - proxy
 
   postgres:
     image: postgis/postgis:18-3.6
@@ -43,3 +53,7 @@ services:
     volumes:
       - ./data/minio:/data
     restart: unless-stopped
+
+networks:
+  proxy:
+    external: true
