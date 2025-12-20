@@ -14,7 +14,9 @@
     "import:sqlite": "bun run scripts/import-sqlite.ts",
     "seed:lab": "bun run scripts/seed-lab.ts",
     "simulate:lab": "bun run scripts/simulate-lab.ts",
-    "lab:demo": "bun run scripts/lab-demo.ts"
+    "lab:demo": "bun run scripts/lab-demo.ts",
+    "simulate:federation": "bun run scripts/simulate-federation.ts",
+    "lab:federation": "bun run scripts/lab-federation.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.956.0",

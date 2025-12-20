@@ -120,4 +120,31 @@ describe('loop routes', () => {
     const payload = response.json();
     expect(payload.results.length).toBeGreaterThan(0);
   });
+
+  it('relays loop events', async () => {
+    const { app, deps } = buildApp();
+    const calls: { event?: { event_type: string; entity_type: string; entity_id: string } } = {};
+    await registerLoopRoutes(app, {
+      ...deps,
+      insertLoopEvent: async (input) => {
+        calls.event = input;
+        return { id: 2, created_at: new Date().toISOString() };
+      },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/loop/relay',
+      payload: {
+        event_type: 'material.created',
+        entity_type: 'material',
+        entity_id: materialPayload.id,
+        payload: { hello: 'world' },
+        source_node: 'node-a',
+      },
+    });
+
+    expect(response.statusCode).toBe(202);
+    expect(calls.event?.event_type).toBe('material.created');
+  });
 });

@@ -33,6 +33,26 @@ const errorResponseSchema = {
   },
 };
 
+const relayBodySchema = {
+  type: 'object',
+  required: ['event_type', 'entity_type', 'entity_id', 'payload'],
+  properties: {
+    event_type: { type: 'string' },
+    entity_type: { type: 'string' },
+    entity_id: { type: 'string' },
+    payload: { type: 'object' },
+    source_node: { type: 'string' },
+  },
+};
+
+const relayResponseSchema = {
+  type: 'object',
+  properties: {
+    status: { type: 'string' },
+    id: { type: 'number' },
+  },
+};
+
 const listEventsSchema = {
   type: 'object',
   properties: {
@@ -254,5 +274,49 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
 
   app.get('/api/loop/stream', async (request, reply) => {
     registerLoopStream(request, reply);
+  });
+
+  app.post('/api/loop/relay', {
+    schema: {
+      body: relayBodySchema,
+      response: {
+        202: relayResponseSchema,
+        400: errorResponseSchema,
+      },
+    },
+  }, async (request, reply) => {
+    const payload = request.body as {
+      event_type: string;
+      entity_type: string;
+      entity_id: string;
+      payload: Record<string, unknown>;
+      source_node?: string;
+    };
+
+    const eventPayload = {
+      ...payload.payload,
+      source_node: payload.source_node ?? 'remote',
+      relayed_at: new Date().toISOString(),
+    };
+
+    const created = await deps.insertLoopEvent({
+      event_type: payload.event_type,
+      entity_type: payload.entity_type,
+      entity_id: payload.entity_id,
+      payload: eventPayload,
+    });
+
+    deps.broadcastLoopEvent({
+      type: payload.event_type,
+      entity: payload.entity_type,
+      entity_id: payload.entity_id,
+      data: payload.payload,
+      source_node: payload.source_node ?? 'remote',
+      relayed_at: eventPayload.relayed_at,
+      created_at: created.created_at,
+    });
+    incrementMetric('loop_event_relayed');
+
+    reply.code(202).send({ status: 'accepted', id: created.id });
   });
 }

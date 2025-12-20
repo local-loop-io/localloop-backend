@@ -69,6 +69,9 @@ List recent lab demo events.
 ### `GET /api/loop/stream`
 Server-Sent Events feed for lab demo events.
 
+### `POST /api/loop/relay`
+Accepts lab-only federated events from another node (writes to the event log).
+
 ### `GET /api/metrics`
 In-memory counters for lab demo activity.
 
@@ -135,6 +138,14 @@ bun run lab:demo
 ```
 Runs migrations, seeds demo data, spins up a local server, and executes a two-city
 interop simulation. Output is a timeline log of the flow.
+
+## Lab federation demo (two nodes, shared lab database)
+```bash
+bun run lab:federation
+```
+Spins up two local node instances and relays events between them to demonstrate
+lab-only federation messaging. The nodes share a single lab database for
+convenience; no production claims are made.
 
 ## Auth (Better Auth)
 Auth routes are mounted at `/api/auth/*` and are disabled by default. Set `AUTH_ENABLED=true`
