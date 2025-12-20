@@ -25,6 +25,16 @@ model Interest {
   @@map("interests")
 }
 
+model InterestEvent {
+  id         BigInt   @id @default(autoincrement()) @db.BigInt
+  interestId BigInt   @map("interest_id") @db.BigInt
+  eventType  String   @map("event_type") @db.Text
+  payload    Json     @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("interest_events")
+}
+
 model City {
   id        BigInt   @id @default(autoincrement()) @db.BigInt
   slug      String   @unique
