@@ -66,7 +66,7 @@ const buildQueryParts = (filters: CityFilters = {}): QueryParts => {
 
   return {
     where: clauses.length
-      ? Prisma.sql`WHERE ${Prisma.join(clauses, Prisma.raw(' AND '))}`
+      ? Prisma.sql`WHERE ${Prisma.join(clauses, ' AND ')}`
       : Prisma.empty,
     orderBy,
     distanceExpr,

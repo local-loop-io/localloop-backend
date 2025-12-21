@@ -79,9 +79,22 @@ describe('api key guard on write routes', () => {
 
   it('blocks federation handshake without api key', async () => {
     const app = Fastify({ logger: false });
+    const now = new Date().toISOString();
     await registerFederationRoutes(app, {
-      listFederationNodes: async () => ([]),
-      insertFederationHandshake: async () => ({ id: 1, created_at: new Date().toISOString() }),
+      listNodes: () => ([]),
+      upsertNode: (input) => ({
+        ...input,
+        last_seen: now,
+        lab_only: true,
+      }),
+      getLocalNode: () => ({
+        node_id: 'local-node',
+        name: 'Local Node',
+        endpoint: 'https://example.com',
+        capabilities: [],
+        last_seen: now,
+        lab_only: true,
+      }),
     });
 
     const response = await app.inject({
