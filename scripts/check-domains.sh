@@ -18,7 +18,7 @@ if command -v rg >/dev/null 2>&1; then
     exit 1
   fi
 else
-  if grep -RIn -E "(${pattern})" --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude=DOMAIN-POLICY.md --exclude=scripts/check-domains.sh . ; then
+  if grep -RIn -E "(${pattern})" --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude=DOMAIN-POLICY.md --exclude=check-domains.sh . ; then
     echo "Banned domains found."
     exit 1
   fi
