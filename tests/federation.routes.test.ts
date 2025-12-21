@@ -3,7 +3,7 @@ import Fastify from 'fastify';
 import { registerFederationRoutes } from '../src/routes/federation';
 
 const handshakePayload = {
-  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/v0.1.1',
+  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
   '@type': 'NodeHandshake',
   schema_version: '0.1.1',
   node_id: 'munich.loop',

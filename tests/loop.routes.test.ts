@@ -4,7 +4,7 @@ import { registerLoopRoutes } from '../src/routes/loop';
 import { registerLoopSchemas } from '../src/schemas/loopSchemas';
 
 const materialPayload = {
-  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/v0.1.1',
+  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
   '@type': 'MaterialDNA',
   schema_version: '0.1.1',
   id: 'DE-MUC-2025-PLASTIC-B847F3',
@@ -16,7 +16,7 @@ const materialPayload = {
 };
 
 const offerPayload = {
-  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/v0.1.1',
+  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
   '@type': 'Offer',
   schema_version: '0.1.1',
   id: 'OFR-2F7A6B9C',
@@ -29,7 +29,7 @@ const offerPayload = {
 };
 
 const matchPayload = {
-  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/v0.1.1',
+  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
   '@type': 'Match',
   schema_version: '0.1.1',
   id: 'MCH-9B3C8A12',
@@ -42,7 +42,7 @@ const matchPayload = {
 };
 
 const transferPayload = {
-  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/v0.1.1',
+  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
   '@type': 'Transfer',
   schema_version: '0.1.1',
   id: 'TRF-5D8A23F1',
