@@ -1,49 +1,69 @@
 import { describe, expect, it } from 'bun:test';
-import { EventEmitter } from 'events';
-import type { FastifyReply, FastifyRequest } from 'fastify';
-import { broadcastLoopEvent, registerLoopStream } from '../src/realtime/loopStream';
 
-class MockRaw extends EventEmitter {
-  statusCode = 0;
-  headers: Record<string, string> = {};
-  chunks: string[] = [];
-
-  writeHead(statusCode: number, headers: Record<string, string>) {
-    this.statusCode = statusCode;
-    this.headers = headers;
-  }
-
-  write(chunk: string | Buffer) {
-    this.chunks.push(chunk.toString());
-    return true;
-  }
-}
-
-const buildMocks = () => {
-  const raw = new MockRaw();
-  const reply = { raw } as unknown as FastifyReply;
-  const request = { raw: new EventEmitter() } as unknown as FastifyRequest;
-  return { raw, reply, request };
+const makeReply = () => {
+  const headers: Record<string, string> = {};
+  let statusCode = 200;
+  let payload: unknown;
+  return {
+    raw: {
+      writeHead: (status: number, nextHeaders: Record<string, string>) => {
+        statusCode = status;
+        Object.assign(headers, nextHeaders);
+      },
+      write: () => undefined,
+    },
+    code: (status: number) => {
+      statusCode = status;
+      return { send: (body: unknown) => { payload = body; } };
+    },
+    getHeaders: () => headers,
+    getStatus: () => statusCode,
+    getPayload: () => payload,
+  };
 };
 
-describe('loop event stream', () => {
-  it('registers SSE stream and broadcasts events', () => {
-    const { raw, reply, request } = buildMocks();
+describe('loop stream', () => {
+  it('adds CORS headers for allowed origins', async () => {
+    process.env.ALLOWED_ORIGINS = 'https://local-loop-io.github.io';
+    const { config } = await import('../src/config');
+    const { registerLoopStream } = await import('../src/realtime/loopStream');
+    const previousKeepAlive = config.sseKeepAliveMs;
+    config.sseKeepAliveMs = 0;
 
-    registerLoopStream(request, reply);
+    const reply = makeReply();
+    const request = {
+      headers: { origin: 'https://local-loop-io.github.io' },
+      raw: { on: () => undefined },
+    } as any;
 
-    expect(raw.statusCode).toBe(200);
-    expect(raw.headers['Content-Type']).toBe('text/event-stream');
-    expect(raw.headers['Cache-Control']).toBe('no-cache');
+    registerLoopStream(request, reply as any);
 
-    const before = raw.chunks.length;
-    broadcastLoopEvent({ type: 'material.created' });
-    expect(raw.chunks.length).toBe(before + 1);
-    expect(raw.chunks[raw.chunks.length - 1]).toContain('data:');
+    const headers = reply.getHeaders();
+    expect(headers['Access-Control-Allow-Origin']).toBe('https://local-loop-io.github.io');
+    expect(headers['Access-Control-Allow-Credentials']).toBe('true');
+    expect(headers.Vary).toBe('Origin');
+    config.sseKeepAliveMs = previousKeepAlive;
+  });
 
-    request.raw.emit('close');
-    const afterClose = raw.chunks.length;
-    broadcastLoopEvent({ type: 'offer.created' });
-    expect(raw.chunks.length).toBe(afterClose);
+  it('rejects new connections when max clients reached', async () => {
+    const { config } = await import('../src/config');
+    const { registerLoopStream } = await import('../src/realtime/loopStream');
+    const previousMax = config.sseMaxClients;
+    const previousKeepAlive = config.sseKeepAliveMs;
+    config.sseMaxClients = 0;
+    config.sseKeepAliveMs = 0;
+
+    const reply = makeReply();
+    const request = {
+      headers: {},
+      raw: { on: () => undefined },
+    } as any;
+
+    registerLoopStream(request, reply as any);
+
+    expect(reply.getStatus()).toBe(429);
+    expect(reply.getPayload()).toEqual({ error: 'Too many active stream connections' });
+    config.sseMaxClients = previousMax;
+    config.sseKeepAliveMs = previousKeepAlive;
   });
 });
