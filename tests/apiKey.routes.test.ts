@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 const materialPayload = {
-  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/v0.1.1',
+  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
   '@type': 'MaterialDNA',
   schema_version: '0.1.1',
   id: 'DE-MUC-2025-PLASTIC-B847F3',
@@ -34,7 +34,7 @@ const materialPayload = {
 };
 
 const handshakePayload = {
-  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/v0.1.1',
+  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
   '@type': 'NodeHandshake',
   schema_version: '0.1.1',
   node_id: 'node-a',

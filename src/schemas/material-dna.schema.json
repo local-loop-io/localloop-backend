@@ -19,7 +19,7 @@
     "@context": {
       "description": "JSON-LD context",
       "type": "string",
-      "const": "https://local-loop-io.github.io/projects/loop-protocol/v0.1.1"
+      "const": "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld"
     },
     "@type": {
       "description": "Object type identifier",
@@ -35,38 +35,79 @@
       "description": "Unique MaterialDNA identifier",
       "type": "string",
       "pattern": "^[A-Z]{2}-[A-Z]{3}-\\d{4}-[A-Z]+-[A-Z0-9]{6,}$",
-      "examples": ["DE-MUC-2025-PLASTIC-B847F3"]
+      "examples": [
+        "DE-MUC-2025-PLASTIC-B847F3"
+      ]
     },
     "category": {
       "description": "Standardized material category",
       "type": "string",
       "enum": [
-        "plastic-pet", "plastic-hdpe", "plastic-pvc", "plastic-ldpe", 
-        "plastic-pp", "plastic-ps", "plastic-mixed",
-        "metal-steel", "metal-aluminum", "metal-copper", "metal-mixed",
-        "organic-food", "organic-garden", "organic-wood",
-        "glass-clear", "glass-brown", "glass-green", "glass-mixed",
-        "paper-clean", "paper-newsprint", "cardboard", "paper-mixed",
-        "textile-cotton", "textile-wool", "textile-synthetic", "textile-mixed",
-        "ewaste-computers", "ewaste-phones", "ewaste-batteries", "ewaste-mixed"
+        "plastic-pet",
+        "plastic-hdpe",
+        "plastic-pvc",
+        "plastic-ldpe",
+        "plastic-pp",
+        "plastic-ps",
+        "plastic-mixed",
+        "metal-steel",
+        "metal-aluminum",
+        "metal-copper",
+        "metal-mixed",
+        "organic-food",
+        "organic-garden",
+        "organic-wood",
+        "glass-clear",
+        "glass-brown",
+        "glass-green",
+        "glass-mixed",
+        "paper-clean",
+        "paper-newsprint",
+        "cardboard",
+        "paper-mixed",
+        "textile-cotton",
+        "textile-wool",
+        "textile-synthetic",
+        "textile-mixed",
+        "ewaste-computers",
+        "ewaste-phones",
+        "ewaste-batteries",
+        "ewaste-mixed"
       ]
     },
     "quantity": {
       "description": "Amount of material",
       "type": "object",
-      "required": ["value", "unit"],
+      "required": [
+        "value",
+        "unit"
+      ],
       "properties": {
         "value": {
           "description": "Numeric quantity",
           "type": "number",
           "minimum": 0,
-          "examples": [1000, 500.5]
+          "examples": [
+            1000,
+            500.5
+          ]
         },
         "unit": {
           "description": "Unit of measurement",
           "type": "string",
-          "enum": ["kg", "g", "t", "l", "ml", "m3", "piece", "bundle"],
-          "examples": ["kg"]
+          "enum": [
+            "kg",
+            "g",
+            "t",
+            "l",
+            "ml",
+            "m3",
+            "piece",
+            "bundle"
+          ],
+          "examples": [
+            "kg"
+          ]
         }
       }
     },
@@ -75,45 +116,60 @@
       "type": "number",
       "minimum": 0,
       "maximum": 1,
-      "examples": [0.95]
+      "examples": [
+        0.95
+      ]
     },
     "origin_city": {
       "description": "City that registered the material",
       "type": "string",
       "minLength": 2,
       "maxLength": 80,
-      "examples": ["Munich"]
+      "examples": [
+        "Munich"
+      ]
     },
     "current_city": {
       "description": "City currently holding custody of the material",
       "type": "string",
       "minLength": 2,
       "maxLength": 80,
-      "examples": ["Munich"]
+      "examples": [
+        "Munich"
+      ]
     },
     "location": {
       "description": "Geographic location of material",
       "type": "object",
-      "required": ["lat", "lon"],
+      "required": [
+        "lat",
+        "lon"
+      ],
       "properties": {
         "lat": {
           "description": "Latitude",
           "type": "number",
           "minimum": -90,
           "maximum": 90,
-          "examples": [48.1351]
+          "examples": [
+            48.1351
+          ]
         },
         "lon": {
           "description": "Longitude",
           "type": "number",
           "minimum": -180,
           "maximum": 180,
-          "examples": [11.5820]
+          "examples": [
+            11.582
+          ]
         },
         "address": {
           "description": "Human-readable address",
           "type": "string",
-          "examples": ["Recycling Center Munich, Sachsenstraße 25"]
+          "examples": [
+            "Recycling Center Munich, Sachsenstra\u00dfe 25"
+          ]
         }
       }
     },
@@ -121,20 +177,28 @@
       "description": "When material becomes available (ISO 8601)",
       "type": "string",
       "format": "date-time",
-      "examples": ["2025-05-27T10:00:00Z"]
+      "examples": [
+        "2025-05-27T10:00:00Z"
+      ]
     },
     "expires": {
       "description": "When material expires or must be collected (ISO 8601)",
       "type": "string",
       "format": "date-time",
-      "examples": ["2025-06-03T10:00:00Z"]
+      "examples": [
+        "2025-06-03T10:00:00Z"
+      ]
     },
     "certifications": {
       "description": "List of certifications",
       "type": "array",
       "items": {
         "type": "string",
-        "examples": ["food-grade", "iso-14001", "organic-eu"]
+        "examples": [
+          "food-grade",
+          "iso-14001",
+          "organic-eu"
+        ]
       }
     },
     "images": {
@@ -143,7 +207,9 @@
       "items": {
         "type": "string",
         "format": "uri",
-        "examples": ["https://example.com/material-photo.jpg"]
+        "examples": [
+          "https://example.com/material-photo.jpg"
+        ]
       },
       "maxItems": 10
     },
@@ -153,17 +219,23 @@
       "properties": {
         "name": {
           "type": "string",
-          "examples": ["Munich Recycling Center"]
+          "examples": [
+            "Munich Recycling Center"
+          ]
         },
         "email": {
           "type": "string",
           "format": "email",
-          "examples": ["materials@munich.loop"]
+          "examples": [
+            "materials@munich.loop"
+          ]
         },
         "phone": {
           "type": "string",
           "pattern": "^\\+?[0-9\\s\\-\\(\\)]+$",
-          "examples": ["+49-89-123456"]
+          "examples": [
+            "+49-89-123456"
+          ]
         }
       }
     },
@@ -173,16 +245,24 @@
       "properties": {
         "source": {
           "type": "string",
-          "examples": ["consumer-collection", "industrial", "commercial"]
+          "examples": [
+            "consumer-collection",
+            "industrial",
+            "commercial"
+          ]
         },
         "batch_number": {
           "type": "string",
-          "examples": ["2025-W22-01"]
+          "examples": [
+            "2025-W22-01"
+          ]
         },
         "notes": {
           "type": "string",
           "maxLength": 500,
-          "examples": ["Clean, sorted PET bottles"]
+          "examples": [
+            "Clean, sorted PET bottles"
+          ]
         }
       }
     }

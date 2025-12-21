@@ -19,7 +19,7 @@ export async function runLabSimulation(baseUrl = `http://localhost:${config.port
   const now = new Date();
 
   const material = {
-    '@context': 'https://local-loop-io.github.io/projects/loop-protocol/v0.1.1',
+    '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
     '@type': 'MaterialDNA',
     schema_version: '0.1.1',
     id: buildMaterialId(now.getUTCFullYear()),
@@ -43,7 +43,7 @@ export async function runLabSimulation(baseUrl = `http://localhost:${config.port
   timeline.push({ label: 'MaterialDNA registered', id: materialCreated.id, createdAt: materialCreated.created_at });
 
   const offer = {
-    '@context': 'https://local-loop-io.github.io/projects/loop-protocol/v0.1.1',
+    '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
     '@type': 'Offer',
     schema_version: '0.1.1',
     id: buildId('OFR'),
@@ -68,7 +68,7 @@ export async function runLabSimulation(baseUrl = `http://localhost:${config.port
   timeline.push({ label: 'Offer published', id: offerCreated.id, createdAt: offerCreated.created_at });
 
   const match = {
-    '@context': 'https://local-loop-io.github.io/projects/loop-protocol/v0.1.1',
+    '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
     '@type': 'Match',
     schema_version: '0.1.1',
     id: buildId('MCH'),
@@ -92,7 +92,7 @@ export async function runLabSimulation(baseUrl = `http://localhost:${config.port
   timeline.push({ label: 'Match accepted', id: matchCreated.id, createdAt: matchCreated.created_at });
 
   const transfer = {
-    '@context': 'https://local-loop-io.github.io/projects/loop-protocol/v0.1.1',
+    '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
     '@type': 'Transfer',
     schema_version: '0.1.1',
     id: buildId('TRF'),

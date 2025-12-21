@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Domain consistency check
+        run: ./scripts/check-domains.sh
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
