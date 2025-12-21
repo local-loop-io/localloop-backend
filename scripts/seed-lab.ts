@@ -58,7 +58,7 @@ export async function seedLab() {
     const id = `DE-${city.code}-2025-${category.toUpperCase().split('-')[0]}-${randomHex(random, 6)}`;
 
     const materialPayload = {
-      '@context': 'https://loop-protocol.org/v0.1.1',
+      '@context': 'https://local-loop-io.github.io/projects/loop-protocol/v0.1.1',
       '@type': 'MaterialDNA',
       schema_version: '0.1.1',
       id,
@@ -83,7 +83,7 @@ export async function seedLab() {
     });
 
     const offerPayload = {
-      '@context': 'https://loop-protocol.org/v0.1.1',
+      '@context': 'https://local-loop-io.github.io/projects/loop-protocol/v0.1.1',
       '@type': 'Offer',
       schema_version: '0.1.1',
       id: `OFR-${randomHex(random, 8)}`,

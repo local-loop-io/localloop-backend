@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://loop-protocol.org/schemas/v0.1.1/material-dna.schema.json",
+  "$id": "https://local-loop-io.github.io/projects/loop-protocol/schemas/v0.1.1/material-dna.schema.json",
   "title": "MaterialDNA",
   "description": "Universal identifier and metadata for any material item or batch in the LOOP Protocol (v0.1.1 minimal interop)",
   "type": "object",
@@ -19,7 +19,7 @@
     "@context": {
       "description": "JSON-LD context",
       "type": "string",
-      "const": "https://loop-protocol.org/v0.1.1"
+      "const": "https://local-loop-io.github.io/projects/loop-protocol/v0.1.1"
     },
     "@type": {
       "description": "Object type identifier",

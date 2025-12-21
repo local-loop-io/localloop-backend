@@ -124,7 +124,7 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
 
     const local = deps.getLocalNode();
     reply.code(202).send({
-      '@context': 'https://loop-protocol.org/v0.1.1',
+      '@context': 'https://local-loop-io.github.io/projects/loop-protocol/v0.1.1',
       '@type': 'NodeHandshakeResponse',
       schema_version: '0.1.1',
       status: 'accepted',
