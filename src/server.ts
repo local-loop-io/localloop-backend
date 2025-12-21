@@ -16,6 +16,7 @@ import { registerLoopRoutes } from './routes/loop';
 import { registerMetricsRoutes } from './routes/metrics';
 import { registerPrivacyRoutes } from './routes/privacy';
 import { registerFederationRoutes } from './routes/federation';
+import { registerAuthStatusRoutes } from './routes/auth';
 import { handleAuth } from './auth';
 import { startWorkers } from './queue';
 import { pool } from './db/pool';
@@ -48,7 +49,7 @@ export async function buildServer(options: BuildOptions = {}) {
 
   await app.register(rateLimit, {
     max: config.rateLimitMax,
-    timeWindow: '15 minutes',
+    timeWindow: config.rateLimitWindow,
   });
 
   await app.register(swagger, {
@@ -83,6 +84,7 @@ export async function buildServer(options: BuildOptions = {}) {
   await registerPaymentRoutes(app);
   await registerLoopRoutes(app);
   await registerFederationRoutes(app);
+  await registerAuthStatusRoutes(app);
   await registerMetricsRoutes(app);
   await registerPrivacyRoutes(app);
   await registerDocsRoutes(app);
