@@ -12,9 +12,16 @@ banned=(
 
 pattern=$(IFS='|'; echo "${banned[*]//./\\.}")
 
-if rg -n "(${pattern})" --hidden --glob '!node_modules/**' --glob '!.git/**' --glob '!dist/**' ; then
-  echo "Banned domains found."
-  exit 1
+if command -v rg >/dev/null 2>&1; then
+  if rg -n "(${pattern})" --hidden --glob '!node_modules/**' --glob '!.git/**' --glob '!dist/**' ; then
+    echo "Banned domains found."
+    exit 1
+  fi
+else
+  if grep -RIn -E "(${pattern})" --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist . ; then
+    echo "Banned domains found."
+    exit 1
+  fi
 fi
 
 echo "Domain check passed."
