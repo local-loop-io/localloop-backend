@@ -133,6 +133,8 @@ Key variables (see `.env.example`):
 - `PUBLIC_BASE_URL`
 - `RATE_LIMIT_MAX`
 - `RATE_LIMIT_WRITE_MAX`
+- `RATE_LIMIT_WINDOW`
+- `RATE_LIMIT_WRITE_WINDOW`
 - `BODY_LIMIT`
 - `AUTH_ENABLED`
 - `BETTER_AUTH_SECRET`
@@ -178,6 +180,7 @@ convenience; no production claims are made.
 ## Auth (Better Auth)
 Auth routes are mounted at `/api/auth/*` and are disabled by default. Set `AUTH_ENABLED=true`
 and configure `BETTER_AUTH_SECRET` before enabling.
+`GET /api/auth/status` reports whether auth is enabled and active.
 
 ## API key protection (optional)
 Enable a shared API key for write endpoints (interest submissions, loop demo writes, payments,

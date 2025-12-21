@@ -70,7 +70,7 @@ const apiKeySecurity = [{ ApiKeyAuth: [] }];
 
 const writeRateLimit = {
   max: config.rateLimitWriteMax,
-  timeWindow: '15 minutes',
+  timeWindow: config.rateLimitWriteWindow,
 };
 
 type InterestDeps = {
