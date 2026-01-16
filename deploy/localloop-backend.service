@@ -10,8 +10,9 @@ ExecStart=/root/.bun/bin/bun /root/code/local-loop-io/localloop-backend/src/inde
 Restart=on-failure
 RestartSec=5
 
-# Update to a non-root user that owns the repo and data directory.
-User=root
+# Use a non-root user that owns the repo and data directory.
+User=localloop
+Group=localloop
 
 [Install]
 WantedBy=multi-user.target
