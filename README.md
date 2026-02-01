@@ -28,6 +28,7 @@ bun test
 - `GET /api/interest`: list Expressions of Interest.
 - `GET /api/interest/stream`: SSE stream for new interest.
 - `GET /api/loop/stream`: SSE stream for lab demo flow.
+- `POST /api/loop/material-status`: record a material status update (lab demo).
 - `GET /api/metrics`: service metrics.
 
 ## Repo layout
