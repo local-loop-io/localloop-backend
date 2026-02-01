@@ -82,6 +82,21 @@ const writeRateLimit = {
   timeWindow: config.rateLimitWriteWindow,
 };
 
+type LoopMaterialStatusPayload = {
+  '@context'?: string;
+  '@type'?: string;
+  schema_version: string;
+  id: string;
+  material_id: string;
+  status: 'available' | 'reserved' | 'withdrawn';
+  updated_at: string;
+  reason?: string;
+  notes?: string;
+  source_node?: string;
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
 type LoopDeps = {
   insertLoopMaterial: typeof insertLoopMaterial;
   insertLoopOffer: typeof insertLoopOffer;
@@ -284,6 +299,50 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     request.log.info({ transferId: created.id, matchId: payload.match_id }, 'Loop transfer created');
 
     reply.code(201).send(created);
+  });
+
+  app.post('/api/loop/material-status', {
+    config: { rateLimit: writeRateLimit },
+    schema: {
+      security: apiKeySecurity,
+      body: { $ref: `${loopSchemaIds.materialStatus}#` },
+      response: { 201: createResponseSchema, 400: errorResponseSchema },
+    },
+  }, async (request, reply) => {
+    if (!requireApiKey(request, reply)) {
+      return;
+    }
+
+    const payload = request.body as LoopMaterialStatusPayload;
+    const material = await deps.getLoopMaterial(payload.material_id);
+    if (!material) {
+      reply.code(400).send({ error: 'Unknown material_id' });
+      return;
+    }
+
+    const eventPayload = {
+      type: 'material.status_updated',
+      entity: 'material',
+      entity_id: payload.material_id,
+      data: payload,
+    };
+
+    const created = await deps.insertLoopEvent({
+      event_type: eventPayload.type,
+      entity_type: eventPayload.entity,
+      entity_id: eventPayload.entity_id,
+      payload: eventPayload,
+    });
+
+    deps.broadcastLoopEvent({
+      ...eventPayload,
+      created_at: created.created_at,
+    });
+    incrementMetric('loop_material_status_updated');
+    incrementMetric('loop_event_emitted');
+    request.log.info({ materialId: payload.material_id, status: payload.status }, 'Loop material status updated');
+
+    reply.code(201).send({ id: payload.id, created_at: created.created_at });
   });
 
   app.get('/api/loop/events', {

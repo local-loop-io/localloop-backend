@@ -3,6 +3,7 @@ const startedAt = new Date();
 
 export type MetricKey =
   | 'loop_material_created'
+  | 'loop_material_status_updated'
   | 'loop_offer_created'
   | 'loop_match_created'
   | 'loop_transfer_created'

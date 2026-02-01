@@ -2,216 +2,48 @@
 
 Backend service for collecting and publishing Expressions of Interest for the LocalLoop protocol.
 
-> This project is an early, low-TRL concept. There are no public pilots or deployments yet.
+> This project is an early, low-TRL concept. There are no public pilots or deployments. Lab demo only.
 
-## Stack
-- **Runtime**: Bun
-- **API**: Fastify
-- **Database**: PostgreSQL 18.x (PostGIS-enabled image; pgvector provisioned when available)
-- **ORM**: Prisma v7
-- **Cache/Queue**: Redis + BullMQ
-- **Object Storage**: MinIO (S3 compatible)
-- **Auth**: Better Auth (disabled by default)
+## At a glance
+| Item | Details |
+| --- | --- |
+| Runtime | Bun + Fastify |
+| Data | PostgreSQL, Redis, MinIO |
+| API base | https://loop-api.urbnia.com |
+| Docs | Swagger at `/docs` |
 
-## Features
-- Accepts Expression of Interest submissions.
-- Publishes a public list for transparency.
-- Full-text search powered by Postgres materialized views.
-- Real-time interest stream via Server-Sent Events.
-- OpenAPI + Redoc docs.
-- Minimal LOOP lab demo endpoints (MaterialDNA → Offer → Match → Transfer).
-
-## API
-
-### `GET /health`
-Returns service status.
-
-### `POST /api/interest`
-Create a new expression of interest.
-
-Request body:
-```json
-{
-  "name": "Jane Doe",
-  "organization": "Circular Labs",
-  "role": "Ops Lead",
-  "country": "DE",
-  "city": "Munich",
-  "website": "https://example.com",
-  "email": "jane@example.com",
-  "message": "Interested in pilots",
-  "shareEmail": true,
-  "consentPublic": true
-}
-```
-
-### `GET /api/interest`
-Returns public entries (default limit 100). Use `?limit=50` to override within max limit.
-Use `?search=term` to query the materialized search view.
-
-### `GET /api/interest/stream`
-Server-Sent Events feed that pushes new interest submissions.
-
-### `POST /api/loop/materials`
-Create a MaterialDNA record (lab demo).
-
-### `POST /api/loop/offers`
-Publish an offer for a MaterialDNA record (lab demo).
-
-### `POST /api/loop/matches`
-Accept a match between two demo cities (lab demo).
-
-### `POST /api/loop/transfers`
-Record a transfer completion (lab demo).
-
-### `GET /api/loop/events`
-List recent lab demo events.
-
-### `GET /api/loop/stream`
-Server-Sent Events feed for lab demo events.
-
-### `POST /api/loop/relay`
-Accepts lab-only federated events from another node (writes to the event log).
-
-### `GET /api/federation/nodes`
-Returns lab-only node registry entries for the federation demo.
-
-### `POST /api/federation/handshake`
-Accepts a lab-only federation handshake payload and registers the node.
-
-### `GET /api/metrics`
-In-memory counters for lab demo activity.
-
-### `GET /api/privacy`
-Lab demo privacy and data-minimization notice.
-
-### `GET /api/cities`
-Returns city records (seeded with `DEMO City`).
-- Optional filters:
-  - `bbox=minLon,minLat,maxLon,maxLat`
-  - `near=lon,lat`
-  - `radiusKm=50` (used with `near`, max 500)
-  - `limit=50`
-
-### `GET /api/cities/geojson`
-Returns a GeoJSON FeatureCollection for mapping. Supports the same filters as
-`/api/cities` and includes `distance_m` when `near` is provided.
-
-### `POST /api/payments/intent`
-When `PAYMENTS_ENABLED=true`, records a payment intent request for manual follow-up.
-
-### `POST /api/payments/webhook`
-When `PAYMENTS_ENABLED=true`, accepts provider webhook payloads for auditing.
-
-### `GET /openapi.json`
-OpenAPI JSON schema.
-
-### `GET /docs`
-Redoc HTML viewer for the OpenAPI spec.
-
-## Local Development
+## Quickstart (local)
 ```bash
+# from repo root
 bun install
-cp .env.example .env
-bun run prisma:generate
-bun run dev
+bun test
+
+# optional: run with Docker Compose
+# docker compose up -d --build
 ```
 
-## Docker Compose (Postgres + Redis + MinIO)
-```bash
-cp .env.docker.example .env.docker
-docker compose --env-file .env.docker up -d
-```
-Update `.env` if you want to run the API on the host instead of Docker.
+## API highlights
+- `GET /health`: service status.
+- `POST /api/interest`: submit an Expression of Interest.
+- `GET /api/interest`: list Expressions of Interest.
+- `GET /api/interest/stream`: SSE stream for new interest.
+- `GET /api/loop/stream`: SSE stream for lab demo flow.
+- `POST /api/loop/material-status`: record a material status update (lab demo).
+- `GET /api/metrics`: service metrics.
 
-## Configuration
-Key variables (see `.env.example`):
-- `DATABASE_URL`
-- `REDIS_URL`
-- `MINIO_*`
-- `ALLOWED_ORIGINS`
-- `PUBLIC_BASE_URL`
-- `RATE_LIMIT_MAX`
-- `RATE_LIMIT_WRITE_MAX`
-- `RATE_LIMIT_WINDOW`
-- `RATE_LIMIT_WRITE_WINDOW`
-- `SSE_KEEPALIVE_MS`
-- `SSE_MAX_CLIENTS`
-- `BODY_LIMIT`
-- `AUTH_ENABLED`
-- `BETTER_AUTH_SECRET`
-- `API_KEY_ENABLED`
-- `API_KEY`
-- `PAYMENTS_ENABLED`
+## Repo layout
+- `src/`: Fastify app and routes.
+- `tests/`: API and integration tests.
+- `docker-compose.yml`: local infra stack.
+- `scripts/`: utilities and checks.
 
-## Migrations
-Migrations run on startup by default. You can also run them manually:
-```bash
-bun run migrate
-```
+## Notes
+- Keep outward messaging lab demo only.
+- No public pilots or deployments.
 
-## Prisma
-The Prisma schema lives in `prisma/schema.prisma` and maps to the existing SQL
-migrations (custom SQL). Prisma CLI configuration lives in `prisma.config.ts`.
-Generate the Prisma client after installing dependencies:
-```bash
-bun run prisma:generate
-```
+## Links
+- Protocol spec: https://github.com/local-loop-io/loop-protocol
+- Docs hub: https://local-loop-io.github.io
 
-## SQLite import
-```bash
-bun run import:sqlite
-```
-Use this once to migrate legacy SQLite data into Postgres.
-
-## Lab demo (one command)
-```bash
-bun run lab:demo
-```
-Runs migrations, seeds demo data, spins up a local server, and executes a two-city
-interop simulation. Output is a timeline log of the flow.
-
-## Lab federation demo (two nodes, shared lab database)
-```bash
-bun run lab:federation
-```
-Spins up two local node instances and relays events between them to demonstrate
-lab-only federation messaging. The nodes share a single lab database for
-convenience; no production claims are made.
-
-## Auth (Better Auth)
-Auth routes are mounted at `/api/auth/*` and are disabled by default. Set `AUTH_ENABLED=true`
-and configure `BETTER_AUTH_SECRET` before enabling.
-`GET /api/auth/status` reports whether auth is enabled and active.
-
-## API key protection (optional)
-Enable a shared API key for write endpoints (interest submissions, loop demo writes, payments,
-federation handshakes) by setting:
-- `API_KEY_ENABLED=true`
-- `API_KEY=your-secret`
-
-Supply the key via `x-api-key` or `Authorization: Bearer <key>`.
-
-## Deployment
-- Run behind a reverse proxy with TLS (Traefik or Nginx).
-- Keep `ALLOWED_ORIGINS` restricted to the public site.
-- Use `deploy/localloop-backend.service` for systemd (Bun runtime).
-
-## License
-MIT (c) 2025-2026 Alphin Tom.
-
-## How to Cite
-
-If you reference this repository, please cite:
-Alphin Tom. "LocalLoop Backend API." LocalLoop, GitHub repository, 2025-2026. https://github.com/local-loop-io/localloop-backend
-
-```bibtex
-@misc{localloop_backend_2025,
-  author = {Alphin Tom},
-  title = {LocalLoop Backend API},
-  year = {2025},
-  howpublished = {GitHub repository},
-  url = {https://github.com/local-loop-io/localloop-backend},
-  note = {Accessed 2025-12-19}
-}
-```
+## Contributing
+- See `../AGENTS.md` for org context and domain policy.

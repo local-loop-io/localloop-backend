@@ -6,11 +6,12 @@ services:
     env_file:
       - .env.docker
     depends_on:
-      - postgres
-      - redis
-      - minio
-    ports:
-      - "8088:8088"
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=proxy"
@@ -34,15 +35,27 @@ services:
     volumes:
       - ./data/postgres:/var/lib/postgresql
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-localloop} -d ${POSTGRES_DB:-localloop}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
-    image: redis:latest
+    image: redis@sha256:3aaec283e6e593bde528077d60280ac1589887067a39273348860837c9346d7e
     ports:
       - "127.0.0.1:6381:6379"
+    volumes:
+      - ./data/redis:/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   minio:
-    image: minio/minio:latest
+    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-localloop}
@@ -53,6 +66,11 @@ services:
     volumes:
       - ./data/minio:/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   proxy:

@@ -53,6 +53,20 @@ const transferPayload = {
   received_at: '2025-06-02T18:00:00Z',
 };
 
+const materialStatusPayload = {
+  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
+  '@type': 'MaterialStatusUpdate',
+  schema_version: '0.1.1',
+  id: '3c9a6a0b-8c1a-4d3f-9c2c-3c1c2f9d5c2a',
+  material_id: materialPayload.id,
+  status: 'reserved',
+  updated_at: '2025-06-03T09:15:00Z',
+  reason: 'Reserved by city exchange',
+  notes: 'Holding until pickup is confirmed',
+  source_node: 'lab-hub.loop',
+  metadata: { ticket: 'LAB-42' },
+};
+
 const buildApp = () => {
   const app = Fastify({ logger: false });
   registerLoopSchemas(app);
@@ -91,6 +105,29 @@ describe('loop routes', () => {
     expect(transferResponse.statusCode).toBe(201);
   });
 
+  it('records material status updates', async () => {
+    const { app, deps } = buildApp();
+    const calls: { event?: { event_type: string; entity_type: string; entity_id: string } } = {};
+    await registerLoopRoutes(app, {
+      ...deps,
+      insertLoopEvent: async (input) => {
+        calls.event = input;
+        return { id: 3, created_at: new Date().toISOString() };
+      },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/loop/material-status',
+      payload: materialStatusPayload,
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(calls.event?.event_type).toBe('material.status_updated');
+    expect(calls.event?.entity_type).toBe('material');
+    expect(calls.event?.entity_id).toBe(materialPayload.id);
+  });
+
   it('rejects offers for unknown materials', async () => {
     const { app, deps } = buildApp();
     await registerLoopRoutes(app, { ...deps, getLoopMaterial: async () => undefined });
@@ -107,6 +144,18 @@ describe('loop routes', () => {
       method: 'POST',
       url: '/api/loop/materials',
       payload: { id: 'DE-MUC-2025-PLASTIC-B847F3' },
+    });
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('rejects status updates for unknown materials', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, { ...deps, getLoopMaterial: async () => undefined });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/loop/material-status',
+      payload: materialStatusPayload,
     });
     expect(response.statusCode).toBe(400);
   });

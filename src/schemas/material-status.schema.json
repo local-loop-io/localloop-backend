@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://local-loop-io.github.io/projects/loop-protocol/schemas/v0.1.1/material-status.schema.json",
+  "title": "MaterialStatusUpdate",
+  "description": "Status update for a MaterialDNA record (LOOP Protocol v0.1.1 lab demo)",
+  "type": "object",
+  "required": [
+    "@context",
+    "@type",
+    "schema_version",
+    "id",
+    "material_id",
+    "status",
+    "updated_at"
+  ],
+  "properties": {
+    "@context": {
+      "description": "JSON-LD context",
+      "type": "string",
+      "const": "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld"
+    },
+    "@type": {
+      "description": "Object type identifier",
+      "type": "string",
+      "const": "MaterialStatusUpdate"
+    },
+    "schema_version": {
+      "description": "Schema version for the minimal interop flow",
+      "type": "string",
+      "const": "0.1.1"
+    },
+    "id": {
+      "description": "Status update identifier",
+      "type": "string",
+      "format": "uuid",
+      "examples": [
+        "3c9a6a0b-8c1a-4d3f-9c2c-3c1c2f9d5c2a"
+      ]
+    },
+    "material_id": {
+      "description": "MaterialDNA identifier",
+      "type": "string",
+      "pattern": "^[A-Z]{2}-[A-Z]{3}-\\d{4}-[A-Z]+-[A-Z0-9]{6,}$",
+      "examples": [
+        "DE-MUC-2025-PLASTIC-B847F3"
+      ]
+    },
+    "status": {
+      "description": "Material availability status",
+      "type": "string",
+      "enum": [
+        "available",
+        "reserved",
+        "withdrawn"
+      ]
+    },
+    "updated_at": {
+      "description": "Status update timestamp (ISO 8601)",
+      "type": "string",
+      "format": "date-time",
+      "examples": [
+        "2025-06-03T09:15:00Z"
+      ]
+    },
+    "reason": {
+      "description": "Optional reason for the status change",
+      "type": "string",
+      "maxLength": 120,
+      "examples": [
+        "Reserved by city exchange"
+      ]
+    },
+    "notes": {
+      "description": "Optional notes",
+      "type": "string",
+      "maxLength": 500,
+      "examples": [
+        "Holding until pickup is confirmed"
+      ]
+    },
+    "source_node": {
+      "description": "Node emitting the status update",
+      "type": "string",
+      "maxLength": 120,
+      "examples": [
+        "lab-hub.loop"
+      ]
+    },
+    "metadata": {
+      "description": "Additional metadata",
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}
