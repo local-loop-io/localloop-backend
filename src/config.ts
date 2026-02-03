@@ -5,9 +5,27 @@ const booleanFromEnv = (value: string | undefined, fallback: boolean) => {
   return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
 };
 
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Validate that required secrets are set in production
+const validateProductionSecrets = () => {
+  const requiredSecrets = ['DATABASE_URL', 'MINIO_SECRET_KEY'];
+  const missing = requiredSecrets.filter((key) => !process.env[key]);
+  if (isProduction && missing.length > 0) {
+    throw new Error(
+      `Missing required environment variables in production: ${missing.join(', ')}. ` +
+      'These must be explicitly set and cannot use defaults.'
+    );
+  }
+};
+
+validateProductionSecrets();
+
 const envSchema = z.object({
   PORT: z.coerce.number().default(8088),
-  DATABASE_URL: z.string().default('postgresql://localloop:change-me@localhost:55432/localloop'),
+  DATABASE_URL: isProduction
+    ? z.string().min(1, 'DATABASE_URL is required in production')
+    : z.string().default('postgresql://localloop:localloop_dev@localhost:55432/localloop'),
   DATABASE_SSL: z.string().optional(),
   DB_POOL_SIZE: z.coerce.number().default(10),
   PUBLIC_LIMIT: z.coerce.number().default(100),
@@ -25,7 +43,9 @@ const envSchema = z.object({
   MINIO_ENDPOINT: z.string().default('localhost'),
   MINIO_PORT: z.coerce.number().default(9200),
   MINIO_ACCESS_KEY: z.string().default('localloop'),
-  MINIO_SECRET_KEY: z.string().default('change-me'),
+  MINIO_SECRET_KEY: isProduction
+    ? z.string().min(1, 'MINIO_SECRET_KEY is required in production')
+    : z.string().default('localloop_dev_secret'),
   MINIO_BUCKET: z.string().default('localloop-assets'),
   MINIO_USE_SSL: z.string().optional(),
   PUBLIC_BASE_URL: z.string().default('https://loop-api.urbnia.com'),
