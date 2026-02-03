@@ -1,18 +1,29 @@
 [Unit]
 Description=LocalLoop Backend API
-After=network.target
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
 
 [Service]
 Type=simple
-WorkingDirectory=/root/code/local-loop-io/localloop-backend
-EnvironmentFile=/root/code/local-loop-io/localloop-backend/.env
-ExecStart=/root/.bun/bin/bun /root/code/local-loop-io/localloop-backend/src/index.ts
+# Paths should be customized to match your deployment.
+# Example: /opt/localloop-backend or /home/localloop/localloop-backend
+WorkingDirectory=/opt/localloop-backend
+EnvironmentFile=/opt/localloop-backend/.env
+ExecStart=/usr/local/bin/bun run /opt/localloop-backend/src/index.ts
 Restart=on-failure
 RestartSec=5
 
-# Use a non-root user that owns the repo and data directory.
+# Security: Run as dedicated non-root user
+# Create user with: sudo useradd -r -s /usr/sbin/nologin -d /opt/localloop-backend localloop
 User=localloop
 Group=localloop
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/opt/localloop-backend/data
 
 [Install]
 WantedBy=multi-user.target
