@@ -22,6 +22,7 @@ const validateProductionSecrets = () => {
 validateProductionSecrets();
 
 const envSchema = z.object({
+  NODE_ENV: z.string().default('development'),
   PORT: z.coerce.number().default(8088),
   DATABASE_URL: isProduction
     ? z.string().min(1, 'DATABASE_URL is required in production')
@@ -62,6 +63,46 @@ const envSchema = z.object({
 });
 
 const parsed = envSchema.parse(process.env);
+
+const weakSecrets = new Set([
+  'change-me',
+  'password',
+  'secret',
+  'default',
+]);
+
+const hasWeakDatabasePassword = (databaseUrl: string) => {
+  try {
+    const password = new URL(databaseUrl).password;
+    if (!password) return true;
+    return weakSecrets.has(password.toLowerCase());
+  } catch {
+    return true;
+  }
+};
+
+const ensureSecureProductionConfig = () => {
+  if (parsed.NODE_ENV.toLowerCase() !== 'production') return;
+
+  if (weakSecrets.has(parsed.MINIO_SECRET_KEY.toLowerCase())) {
+    throw new Error('Insecure MINIO_SECRET_KEY for production');
+  }
+  if (hasWeakDatabasePassword(parsed.DATABASE_URL)) {
+    throw new Error('Insecure database password in DATABASE_URL for production');
+  }
+  if (booleanFromEnv(parsed.AUTH_ENABLED, false)) {
+    if (!parsed.BETTER_AUTH_SECRET || weakSecrets.has(parsed.BETTER_AUTH_SECRET.toLowerCase())) {
+      throw new Error('Insecure BETTER_AUTH_SECRET for production when auth is enabled');
+    }
+  }
+  if (booleanFromEnv(parsed.API_KEY_ENABLED, false)) {
+    if (!parsed.API_KEY || weakSecrets.has(parsed.API_KEY.toLowerCase())) {
+      throw new Error('Insecure API_KEY for production when API key protection is enabled');
+    }
+  }
+};
+
+ensureSecureProductionConfig();
 
 export const config = {
   port: parsed.PORT,
