@@ -4,7 +4,7 @@ import { config } from '../config';
 export const pool = new Pool({
   connectionString: config.databaseUrl,
   max: config.dbPoolSize,
-  ssl: config.databaseSsl ? { rejectUnauthorized: false } : undefined,
+  ssl: config.databaseSsl ? { rejectUnauthorized: true } : undefined,
 });
 
 pool.on('error', (err: Error) => {

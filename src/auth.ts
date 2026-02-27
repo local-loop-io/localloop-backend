@@ -11,7 +11,7 @@ if (config.auth.enabled && !config.auth.secret) {
 const authPool = new Pool({
   connectionString: config.databaseUrl,
   max: 5,
-  ssl: config.databaseSsl ? { rejectUnauthorized: false } : undefined,
+  ssl: config.databaseSsl ? { rejectUnauthorized: true } : undefined,
 });
 
 export const auth = authEnabled
