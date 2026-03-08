@@ -28,7 +28,7 @@ Project maintainers may remove, edit, or reject contributions that violate this 
 
 ## Reporting
 
-Report violations to: alphinctom@gmail.com (GitHub: @alpha912)
+Report violations to: alphin@mycel-ai.de (GitHub: @alpha912)
 
 ## Attribution
 

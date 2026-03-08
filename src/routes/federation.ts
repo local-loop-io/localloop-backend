@@ -50,7 +50,7 @@ const defaultDeps: FederationDeps = {
 export async function registerFederationRoutes(app: FastifyInstance, deps: FederationDeps = defaultDeps) {
   registerFederationSchemas(app);
 
-  app.get('/api/federation/nodes', {
+  app.get('/api/v1/federation/nodes', {
     schema: {
       response: {
         200: listResponseSchema,
@@ -64,7 +64,7 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
     };
   });
 
-  app.post('/api/federation/handshake', {
+  app.post('/api/v1/federation/handshake', {
     config: { rateLimit: writeRateLimit },
     schema: {
       consumes: ['application/json', loopContentType],
@@ -97,7 +97,7 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
 
     const local = deps.getLocalNode();
     reply.code(202).send({
-      '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
+      '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
       '@type': 'NodeHandshakeResponse',
       schema_version: '0.1.1',
       status: 'accepted',

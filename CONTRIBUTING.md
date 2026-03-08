@@ -1,4 +1,4 @@
-# Contributing to LocalLoop Backend
+# Contributing to localLOOP Backend
 
 Thanks for your interest in contributing! This backend is intentionally small and focused.
 
@@ -20,4 +20,4 @@ bun run dev
 - [ ] No secrets committed
 
 ## Contact
-Questions? Email alphinctom@gmail.com or open a GitHub Discussion.
+Questions? Email alphin@mycel-ai.de or open a GitHub Discussion.

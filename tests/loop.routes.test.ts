@@ -94,16 +94,16 @@ describe('loop routes', () => {
     const { app, deps } = buildApp();
     await registerLoopRoutes(app, deps);
 
-    const materialResponse = await app.inject({ method: 'POST', url: '/api/loop/materials', payload: materialPayload });
+    const materialResponse = await app.inject({ method: 'POST', url: '/api/v1/material', payload: materialPayload });
     expect(materialResponse.statusCode).toBe(201);
 
-    const offerResponse = await app.inject({ method: 'POST', url: '/api/loop/offers', payload: offerPayload });
+    const offerResponse = await app.inject({ method: 'POST', url: '/api/v1/offer', payload: offerPayload });
     expect(offerResponse.statusCode).toBe(201);
 
-    const matchResponse = await app.inject({ method: 'POST', url: '/api/loop/matches', payload: matchPayload });
+    const matchResponse = await app.inject({ method: 'POST', url: '/api/v1/match', payload: matchPayload });
     expect(matchResponse.statusCode).toBe(201);
 
-    const transferResponse = await app.inject({ method: 'POST', url: '/api/loop/transfers', payload: transferPayload });
+    const transferResponse = await app.inject({ method: 'POST', url: '/api/v1/transfer', payload: transferPayload });
     expect(transferResponse.statusCode).toBe(201);
   });
 
@@ -120,7 +120,7 @@ describe('loop routes', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/loop/material-status',
+      url: '/api/v1/material-status',
       payload: materialStatusPayload,
     });
 
@@ -134,7 +134,7 @@ describe('loop routes', () => {
     const { app, deps } = buildApp();
     await registerLoopRoutes(app, { ...deps, getLoopMaterial: async () => undefined });
 
-    const response = await app.inject({ method: 'POST', url: '/api/loop/offers', payload: offerPayload });
+    const response = await app.inject({ method: 'POST', url: '/api/v1/offer', payload: offerPayload });
     expect(response.statusCode).toBe(400);
   });
 
@@ -144,7 +144,7 @@ describe('loop routes', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/loop/materials',
+      url: '/api/v1/material',
       payload: { id: 'DE-MUC-2025-PLASTIC-B847F3' },
     });
     expect(response.statusCode).toBe(400);
@@ -156,7 +156,7 @@ describe('loop routes', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/loop/material-status',
+      url: '/api/v1/material-status',
       payload: materialStatusPayload,
     });
     expect(response.statusCode).toBe(400);
@@ -166,7 +166,7 @@ describe('loop routes', () => {
     const { app, deps } = buildApp();
     await registerLoopRoutes(app, deps);
 
-    const response = await app.inject({ method: 'GET', url: '/api/loop/events' });
+    const response = await app.inject({ method: 'GET', url: '/api/v1/events' });
     expect(response.statusCode).toBe(200);
     const payload = response.json();
     expect(payload.results.length).toBeGreaterThan(0);
@@ -185,7 +185,7 @@ describe('loop routes', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/loop/relay',
+      url: '/api/v1/relay',
       payload: {
         event_type: 'material.created',
         entity_type: 'material',
@@ -205,7 +205,7 @@ describe('loop routes', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/loop/materials',
+      url: '/api/v1/material',
       headers: {
         'content-type': 'application/ld+json',
       },
@@ -221,7 +221,7 @@ describe('loop routes', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/loop/materials',
+      url: '/api/v1/material',
       payload: {
         ...materialPayload,
         contact: {
@@ -239,7 +239,7 @@ describe('loop routes', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/loop/materials',
+      url: '/api/v1/material',
       payload: {
         ...materialPayload,
         schema_version: '0.1.2',
@@ -262,7 +262,7 @@ describe('loop routes', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/loop/materials',
+      url: '/api/v1/material',
       payload: materialPayload,
     });
 

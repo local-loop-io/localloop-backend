@@ -1,6 +1,6 @@
-# LocalLoop Backend
+# localLOOP Backend
 
-Backend service for collecting and publishing Expressions of Interest for the LocalLoop protocol.
+Backend service for collecting and publishing Expressions of Interest for the localLOOP platform.
 
 > This project is an early, low-TRL concept. There are no public pilots or deployments. Lab demo only.
 
@@ -27,8 +27,8 @@ bun test
 - `POST /api/interest`: submit an Expression of Interest.
 - `GET /api/interest`: list Expressions of Interest.
 - `GET /api/interest/stream`: SSE stream for new interest.
-- `GET /api/loop/stream`: SSE stream for lab demo flow.
-- `POST /api/loop/material-status`: record a material status update (lab demo).
+- `GET /api/v1/stream`: SSE stream for lab demo flow.
+- `POST /api/v1/material-status`: record a material status update (lab demo).
 - `GET /api/metrics`: service metrics.
 
 LOOP interop write routes accept `application/ld+json` as the preferred content type.

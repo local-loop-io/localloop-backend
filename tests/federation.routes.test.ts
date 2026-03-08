@@ -24,7 +24,7 @@ describe('federation routes', () => {
       listNodes: () => ([
         {
           node_id: 'lab-hub.loop',
-          name: 'LocalLoop Lab Hub',
+          name: 'localLOOP Lab Hub',
           endpoint: 'https://loop-api.urbnia.com',
           capabilities: ['lab-relay'],
           last_seen: '2025-12-20T10:00:00Z',
@@ -38,7 +38,7 @@ describe('federation routes', () => {
       }),
       getLocalNode: () => ({
         node_id: 'lab-hub.loop',
-        name: 'LocalLoop Lab Hub',
+        name: 'localLOOP Lab Hub',
         endpoint: 'https://loop-api.urbnia.com',
         capabilities: ['lab-relay'],
         last_seen: '2025-12-20T10:00:00Z',
@@ -46,7 +46,7 @@ describe('federation routes', () => {
       }),
     });
 
-    const response = await app.inject({ method: 'GET', url: '/api/federation/nodes' });
+    const response = await app.inject({ method: 'GET', url: '/api/v1/federation/nodes' });
     expect(response.statusCode).toBe(200);
     const payload = response.json();
     expect(payload.lab_only).toBe(true);
@@ -70,7 +70,7 @@ describe('federation routes', () => {
       },
       getLocalNode: () => ({
         node_id: 'lab-hub.loop',
-        name: 'LocalLoop Lab Hub',
+        name: 'localLOOP Lab Hub',
         endpoint: 'https://loop-api.urbnia.com',
         capabilities: ['lab-relay'],
         last_seen: '2025-12-20T10:00:00Z',
@@ -80,7 +80,7 @@ describe('federation routes', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/federation/handshake',
+      url: '/api/v1/federation/handshake',
       payload: handshakePayload,
     });
 
@@ -104,7 +104,7 @@ describe('federation routes', () => {
       }),
       getLocalNode: () => ({
         node_id: 'lab-hub.loop',
-        name: 'LocalLoop Lab Hub',
+        name: 'localLOOP Lab Hub',
         endpoint: 'https://loop-api.urbnia.com',
         capabilities: ['lab-relay'],
         last_seen: '2025-12-20T10:00:00Z',
@@ -114,7 +114,7 @@ describe('federation routes', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/federation/handshake',
+      url: '/api/v1/federation/handshake',
       payload: {
         ...handshakePayload,
         endpoint: 'not-a-uri',

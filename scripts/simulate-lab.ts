@@ -31,7 +31,7 @@ export async function runLabSimulation(baseUrl = `http://localhost:${config.port
     available_from: now.toISOString(),
   };
 
-  const materialResponse = await fetch(`${baseUrl}/api/loop/materials`, {
+  const materialResponse = await fetch(`${baseUrl}/api/v1/material`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(material),
@@ -56,7 +56,7 @@ export async function runLabSimulation(baseUrl = `http://localhost:${config.port
     terms: 'Lab demo pickup',
   };
 
-  const offerResponse = await fetch(`${baseUrl}/api/loop/offers`, {
+  const offerResponse = await fetch(`${baseUrl}/api/v1/offer`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(offer),
@@ -80,7 +80,7 @@ export async function runLabSimulation(baseUrl = `http://localhost:${config.port
     matched_at: new Date(now.getTime() + 1000 * 60 * 60).toISOString(),
   };
 
-  const matchResponse = await fetch(`${baseUrl}/api/loop/matches`, {
+  const matchResponse = await fetch(`${baseUrl}/api/v1/match`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(match),
@@ -104,7 +104,7 @@ export async function runLabSimulation(baseUrl = `http://localhost:${config.port
     route: { from_city: 'DEMO Munich', to_city: 'DEMO Berlin', mode: 'road' },
   };
 
-  const transferResponse = await fetch(`${baseUrl}/api/loop/transfers`, {
+  const transferResponse = await fetch(`${baseUrl}/api/v1/transfer`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(transfer),

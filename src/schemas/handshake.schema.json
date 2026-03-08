@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://local-loop-io.github.io/projects/loop-protocol/schemas/v0.1.1/handshake.schema.json",
+  "$id": "https://local-loop-io.github.io/projects/loop-protocol/schemas/v0.2.0/handshake.schema.json",
   "title": "NodeHandshake",
-  "description": "Lab-only federation handshake payload for LOOP Protocol v0.1.1",
+  "description": "Federation handshake schema — LOOP v0.2.0",
   "oneOf": [
     {
       "$ref": "#/definitions/HandshakeRequest"
@@ -27,7 +27,10 @@
       "properties": {
         "@context": {
           "type": "string",
-          "const": "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld"
+          "enum": [
+            "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld",
+            "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld"
+          ]
         },
         "@type": {
           "type": "string",
@@ -35,7 +38,7 @@
         },
         "schema_version": {
           "type": "string",
-          "const": "0.1.1"
+          "pattern": "^0\\.[1-9]\\d*\\.\\d+$"
         },
         "node_id": {
           "type": "string",
@@ -106,7 +109,10 @@
       "properties": {
         "@context": {
           "type": "string",
-          "const": "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld"
+          "enum": [
+            "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld",
+            "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld"
+          ]
         },
         "@type": {
           "type": "string",
@@ -114,7 +120,7 @@
         },
         "schema_version": {
           "type": "string",
-          "const": "0.1.1"
+          "pattern": "^0\\.[1-9]\\d*\\.\\d+$"
         },
         "status": {
           "type": "string",
