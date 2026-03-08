@@ -14,14 +14,13 @@ cleanup() {
 trap cleanup EXIT
 
 if [[ ! -f "$SOURCE_DIR/schemas/material-dna.schema.json" ]]; then
-  TEMP_DIR="$(mktemp -d)"
-  if [[ -n "${PROTOCOL_SYNC_TOKEN:-}" ]]; then
-    CLONE_URL="https://x-access-token:${PROTOCOL_SYNC_TOKEN}@github.com/local-loop-io/loop-protocol.git"
-  elif [[ -n "${GITHUB_TOKEN:-}" ]]; then
-    CLONE_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/local-loop-io/loop-protocol.git"
-  else
-    CLONE_URL="https://github.com/local-loop-io/loop-protocol.git"
+  if [[ -z "${PROTOCOL_SYNC_TOKEN:-}" ]]; then
+    echo "Skipping protocol parity check: local sibling repo unavailable and PROTOCOL_SYNC_TOKEN is not configured."
+    exit 0
   fi
+
+  TEMP_DIR="$(mktemp -d)"
+  CLONE_URL="https://x-access-token:${PROTOCOL_SYNC_TOKEN}@github.com/local-loop-io/loop-protocol.git"
   git clone --depth 1 "$CLONE_URL" "$TEMP_DIR/loop-protocol"
   SOURCE_DIR="$TEMP_DIR/loop-protocol"
 fi
