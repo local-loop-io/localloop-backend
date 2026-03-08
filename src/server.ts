@@ -21,6 +21,8 @@ import { handleAuth } from './auth';
 import { startWorkers } from './queue';
 import { pool } from './db/pool';
 import { registerLoopSchemas } from './schemas/loopSchemas';
+import { registerFederationSchemas } from './schemas/federationSchemas';
+import { registerLoopProtocolParsers } from './protocol';
 
 type BuildOptions = {
   logger?: boolean;
@@ -32,6 +34,8 @@ export async function buildServer(options: BuildOptions = {}) {
     trustProxy: true,
     bodyLimit: config.bodyLimit,
   });
+
+  registerLoopProtocolParsers(app);
 
   await app.register(cors, {
     origin: config.allowedOrigins,
@@ -77,6 +81,7 @@ export async function buildServer(options: BuildOptions = {}) {
   });
 
   registerLoopSchemas(app);
+  registerFederationSchemas(app);
 
   await registerHealthRoutes(app);
   await registerInterestRoutes(app);

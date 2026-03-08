@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import Fastify from 'fastify';
+import { registerLoopProtocolParsers } from '../src/protocol';
 import { registerLoopRoutes } from '../src/routes/loop';
 import { registerLoopSchemas } from '../src/schemas/loopSchemas';
 
@@ -69,6 +70,7 @@ const materialStatusPayload = {
 
 const buildApp = () => {
   const app = Fastify({ logger: false });
+  registerLoopProtocolParsers(app);
   registerLoopSchemas(app);
 
   const deps = {
@@ -195,5 +197,75 @@ describe('loop routes', () => {
 
     expect(response.statusCode).toBe(202);
     expect(calls.event?.event_type).toBe('material.created');
+  });
+
+  it('accepts the canonical linked-data content type', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/loop/materials',
+      headers: {
+        'content-type': 'application/ld+json',
+      },
+      payload: JSON.stringify(materialPayload),
+    });
+
+    expect(response.statusCode).toBe(201);
+  });
+
+  it('rejects personal contact data in minimal interop payloads', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/loop/materials',
+      payload: {
+        ...materialPayload,
+        contact: {
+          email: 'pii@example.com',
+        },
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('accepts additive patch-line schema versions', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/loop/materials',
+      payload: {
+        ...materialPayload,
+        schema_version: '0.1.2',
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+  });
+
+  it('maps duplicate writes to conflicts', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, {
+      ...deps,
+      insertLoopMaterial: async () => {
+        const error = new Error('duplicate key value violates unique constraint');
+        (error as Error & { code?: string }).code = '23505';
+        throw error;
+      },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/loop/materials',
+      payload: materialPayload,
+    });
+
+    expect(response.statusCode).toBe(409);
   });
 });

@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://local-loop-io.github.io/projects/loop-protocol/schemas/v0.1.1/handshake.schema.json",
+  "title": "NodeHandshake",
+  "description": "Lab-only federation handshake payload for LOOP Protocol v0.1.1",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/HandshakeRequest"
+    },
+    {
+      "$ref": "#/definitions/HandshakeResponse"
+    }
+  ],
+  "definitions": {
+    "HandshakeRequest": {
+      "type": "object",
+      "required": [
+        "@context",
+        "@type",
+        "schema_version",
+        "node_id",
+        "name",
+        "endpoint",
+        "capabilities",
+        "timestamp"
+      ],
+      "properties": {
+        "@context": {
+          "type": "string",
+          "const": "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld"
+        },
+        "@type": {
+          "type": "string",
+          "const": "NodeHandshake"
+        },
+        "schema_version": {
+          "type": "string",
+          "const": "0.1.1"
+        },
+        "node_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9\\-]+\\.loop$",
+          "examples": [
+            "munich.loop"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120,
+          "examples": [
+            "DEMO Munich Node"
+          ]
+        },
+        "endpoint": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https?://",
+          "examples": [
+            "https://demo-munich.loop/api"
+          ]
+        },
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "examples": [
+            [
+              "material-registry",
+              "lab-relay"
+            ]
+          ]
+        },
+        "public_key": {
+          "type": "string",
+          "description": "Optional public key for lab validation",
+          "examples": [
+            "-----BEGIN PUBLIC KEY-----...-----END PUBLIC KEY-----"
+          ]
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "signature": {
+          "type": "string",
+          "description": "Optional lab-only signature placeholder"
+        }
+      },
+      "additionalProperties": false
+    },
+    "HandshakeResponse": {
+      "type": "object",
+      "required": [
+        "@context",
+        "@type",
+        "schema_version",
+        "status",
+        "peer_id",
+        "capabilities",
+        "received_at",
+        "lab_only"
+      ],
+      "properties": {
+        "@context": {
+          "type": "string",
+          "const": "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld"
+        },
+        "@type": {
+          "type": "string",
+          "const": "NodeHandshakeResponse"
+        },
+        "schema_version": {
+          "type": "string",
+          "const": "0.1.1"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "accepted",
+            "rejected"
+          ]
+        },
+        "peer_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9\\-]+\\.loop$",
+          "examples": [
+            "lab-hub.loop"
+          ]
+        },
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "received_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lab_only": {
+          "type": "boolean",
+          "const": true
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 280
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -3,38 +3,8 @@ import { config } from '../config';
 import { incrementMetric } from '../metrics';
 import { getLocalNode, listNodes, upsertNode, type NodeRecord } from '../federation/registry';
 import { requireApiKey } from '../security/apiKey';
-
-const handshakeBodySchema = {
-  type: 'object',
-  required: ['@context', '@type', 'schema_version', 'node_id', 'name', 'endpoint', 'capabilities', 'timestamp'],
-  properties: {
-    '@context': { type: 'string' },
-    '@type': { type: 'string' },
-    schema_version: { type: 'string' },
-    node_id: { type: 'string' },
-    name: { type: 'string' },
-    endpoint: { type: 'string' },
-    capabilities: { type: 'array', items: { type: 'string' } },
-    timestamp: { type: 'string' },
-    public_key: { type: 'string' },
-    signature: { type: 'string' },
-  },
-};
-
-const handshakeResponseSchema = {
-  type: 'object',
-  properties: {
-    '@context': { type: 'string' },
-    '@type': { type: 'string' },
-    schema_version: { type: 'string' },
-    status: { type: 'string' },
-    peer_id: { type: 'string' },
-    capabilities: { type: 'array', items: { type: 'string' } },
-    received_at: { type: 'string' },
-    lab_only: { type: 'boolean' },
-    message: { type: 'string' },
-  },
-};
+import { federationSchemaIds, registerFederationSchemas } from '../schemas/federationSchemas';
+import { loopContentType } from '../protocol';
 
 const listResponseSchema = {
   type: 'object',
@@ -78,6 +48,8 @@ const defaultDeps: FederationDeps = {
 };
 
 export async function registerFederationRoutes(app: FastifyInstance, deps: FederationDeps = defaultDeps) {
+  registerFederationSchemas(app);
+
   app.get('/api/federation/nodes', {
     schema: {
       response: {
@@ -95,10 +67,11 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
   app.post('/api/federation/handshake', {
     config: { rateLimit: writeRateLimit },
     schema: {
+      consumes: ['application/json', loopContentType],
       security: apiKeySecurity,
-      body: handshakeBodySchema,
+      body: { $ref: `${federationSchemaIds.handshake}#/definitions/HandshakeRequest` },
       response: {
-        202: handshakeResponseSchema,
+        202: { $ref: `${federationSchemaIds.handshake}#/definitions/HandshakeResponse` },
       },
     },
   }, async (request, reply) => {

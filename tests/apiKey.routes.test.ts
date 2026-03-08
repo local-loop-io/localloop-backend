@@ -37,7 +37,7 @@ const handshakePayload = {
   '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
   '@type': 'NodeHandshake',
   schema_version: '0.1.1',
-  node_id: 'node-a',
+  node_id: 'node-a.loop',
   name: 'Node A',
   endpoint: 'https://node-a.example.com',
   capabilities: ['material-registry'],

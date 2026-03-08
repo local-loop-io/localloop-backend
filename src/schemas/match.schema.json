@@ -28,9 +28,13 @@
       "const": "Match"
     },
     "schema_version": {
-      "description": "Schema version for the minimal interop flow",
+      "description": "Schema version for the minimal interop flow. Emitters SHOULD use 0.1.1; receivers SHOULD accept additive 0.1.x patch releases.",
       "type": "string",
-      "const": "0.1.1"
+      "pattern": "^0\\.1\\.[1-9]\\d*$",
+      "examples": [
+        "0.1.1",
+        "0.1.2"
+      ]
     },
     "id": {
       "description": "Match identifier",
