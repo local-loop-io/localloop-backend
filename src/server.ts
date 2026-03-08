@@ -59,9 +59,9 @@ export async function buildServer(options: BuildOptions = {}) {
   await app.register(swagger, {
     openapi: {
       info: {
-        title: 'localLOOP API',
-        description: 'Public API for localLOOP lab demo, interest capture, and city portal data.',
-        version: '0.1.1-demo',
+        title: 'localLOOP Lab API',
+        description: 'Live lab-only backend surface for interest capture, city data, and controlled interoperability demos. This artifact is not the normative LOOP protocol reference.',
+        version: '0.2.0-lab',
       },
       components: {
         securitySchemes: {

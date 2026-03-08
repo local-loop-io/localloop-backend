@@ -10,7 +10,7 @@ Backend service for collecting and publishing Expressions of Interest for the lo
 | Runtime | Bun + Fastify |
 | Data | PostgreSQL, Redis, MinIO |
 | API base | https://loop-api.urbnia.com |
-| Docs | Swagger at `/docs` |
+| Docs | Live lab OpenAPI at `/openapi.json`, Redoc at `/docs` |
 
 ## Quickstart (local)
 ```bash
@@ -32,6 +32,7 @@ bun test
 - `GET /api/metrics`: service metrics.
 
 LOOP interop write routes accept `application/ld+json` as the preferred content type.
+The live Swagger/Redoc surface describes this backend's lab-only routes. The normative protocol reference contract is `loop-protocol/openapi.json`, mirrored on the docs hub.
 
 ## Repo layout
 - `src/`: Fastify app and routes.
