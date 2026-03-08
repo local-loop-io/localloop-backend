@@ -11,4 +11,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Verify protocol schema parity
+        env:
+          PROTOCOL_SYNC_TOKEN: ${{ secrets.DOCS_SYNC_TOKEN }}
         run: bash scripts/check-protocol-parity.sh
