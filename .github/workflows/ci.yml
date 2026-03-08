@@ -18,8 +18,7 @@ jobs:
           bun-version: 'latest'
       - name: Install dependencies
         run: bun install
-      - name: Audit dependencies (informational)
-        continue-on-error: true
+      - name: Audit dependencies
         run: bun audit
       - name: Generate Prisma client
         run: bun run prisma:generate
