@@ -8,7 +8,7 @@ const privacyPayload = {
     'Interest submissions are optional and explicitly consent-based.',
   ],
   retention: 'Lab demo data is retained only for validation and removed on request.',
-  contact: 'alphinctom@gmail.com',
+  contact: 'alphin@mycel-ai.de',
 };
 
 export async function registerPrivacyRoutes(app: FastifyInstance) {

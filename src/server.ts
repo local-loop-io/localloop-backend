@@ -59,8 +59,8 @@ export async function buildServer(options: BuildOptions = {}) {
   await app.register(swagger, {
     openapi: {
       info: {
-        title: 'LocalLoop API',
-        description: 'Public API for LocalLoop lab demo, interest capture, and city portal data.',
+        title: 'localLOOP API',
+        description: 'Public API for localLOOP lab demo, interest capture, and city portal data.',
         version: '0.1.1-demo',
       },
       components: {

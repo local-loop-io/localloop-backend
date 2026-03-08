@@ -31,7 +31,7 @@ const relayEvent = async (
   baseUrl: string,
   event: { event_type: string; entity_type: string; entity_id: string; payload: Record<string, unknown> },
   sourceNode: string,
-) => postJson(`${baseUrl}/api/loop/relay`, { ...event, source_node: sourceNode });
+) => postJson(`${baseUrl}/api/v1/relay`, { ...event, source_node: sourceNode });
 
 export async function runFederationSimulation(
   nodeAUrl = process.env.LOOP_NODE_A_URL ?? `http://localhost:${config.port}`,
@@ -53,7 +53,7 @@ export async function runFederationSimulation(
     available_from: now.toISOString(),
   };
 
-  const materialCreated = await postJson(`${nodeAUrl}/api/loop/materials`, material);
+  const materialCreated = await postJson(`${nodeAUrl}/api/v1/material`, material);
   timeline.push({ label: 'MaterialDNA registered', node: 'Node A', id: materialCreated.id, createdAt: materialCreated.created_at });
   await relayEvent(nodeBUrl, {
     event_type: 'material.created',
@@ -77,7 +77,7 @@ export async function runFederationSimulation(
     terms: 'Lab federation demo pickup',
   };
 
-  const offerCreated = await postJson(`${nodeAUrl}/api/loop/offers`, offer);
+  const offerCreated = await postJson(`${nodeAUrl}/api/v1/offer`, offer);
   timeline.push({ label: 'Offer published', node: 'Node A', id: offerCreated.id, createdAt: offerCreated.created_at });
   await relayEvent(nodeBUrl, {
     event_type: 'offer.created',
@@ -100,7 +100,7 @@ export async function runFederationSimulation(
     matched_at: new Date(now.getTime() + 1000 * 60 * 60).toISOString(),
   };
 
-  const matchCreated = await postJson(`${nodeAUrl}/api/loop/matches`, match);
+  const matchCreated = await postJson(`${nodeAUrl}/api/v1/match`, match);
   timeline.push({ label: 'Match accepted', node: 'Node A', id: matchCreated.id, createdAt: matchCreated.created_at });
   await relayEvent(nodeBUrl, {
     event_type: 'match.created',
@@ -123,7 +123,7 @@ export async function runFederationSimulation(
     route: { from_city: 'DEMO Munich', to_city: 'DEMO Berlin', mode: 'road' },
   };
 
-  const transferCreated = await postJson(`${nodeAUrl}/api/loop/transfers`, transfer);
+  const transferCreated = await postJson(`${nodeAUrl}/api/v1/transfer`, transfer);
   timeline.push({ label: 'Transfer completed', node: 'Node A', id: transferCreated.id, createdAt: transferCreated.created_at });
   await relayEvent(nodeBUrl, {
     event_type: 'transfer.created',

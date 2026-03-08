@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://local-loop-io.github.io/projects/loop-protocol/schemas/v0.1.1/transfer.schema.json",
+  "$id": "https://local-loop-io.github.io/projects/loop-protocol/schemas/v0.2.0/transfer.schema.json",
   "title": "Transfer",
-  "description": "Minimal interop transfer for LOOP Protocol v0.1.1",
+  "description": "Transfer schema — LOOP v0.2.0",
   "type": "object",
   "required": [
     "@context",
@@ -18,7 +18,10 @@
     "@context": {
       "description": "JSON-LD context",
       "type": "string",
-      "const": "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld"
+      "enum": [
+        "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld",
+        "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld"
+      ]
     },
     "@type": {
       "description": "Object type identifier",
@@ -26,12 +29,12 @@
       "const": "Transfer"
     },
     "schema_version": {
-      "description": "Schema version for the minimal interop flow. Emitters SHOULD use 0.1.1; receivers SHOULD accept additive 0.1.x patch releases.",
+      "description": "Schema version for the interop flow. Emitters SHOULD use 0.2.0; receivers SHOULD accept additive minor/patch releases.",
       "type": "string",
-      "pattern": "^0\\.1\\.[1-9]\\d*$",
+      "pattern": "^0\\.[1-9]\\d*\\.\\d+$",
       "examples": [
         "0.1.1",
-        "0.1.2"
+        "0.2.0"
       ]
     },
     "id": {
@@ -112,6 +115,65 @@
       "description": "Additional metadata",
       "type": "object",
       "additionalProperties": true
+    },
+    "traceability": {
+      "description": "Optional chain-of-custody and evidence references for transfer events.",
+      "type": "object",
+      "properties": {
+        "batch_id": { "type": "string", "maxLength": 120 },
+        "serial_number": { "type": "string", "maxLength": 160 },
+        "lot_number": { "type": "string", "maxLength": 120 },
+        "source_operator_id": { "type": "string", "maxLength": 120 },
+        "facility_id": { "type": "string", "maxLength": 120 },
+        "retention_until": { "type": "string", "format": "date-time" },
+        "document_refs": {
+          "type": "array",
+          "items": { "type": "string", "format": "uri" },
+          "maxItems": 20
+        },
+        "due_diligence_ref": { "type": "string", "maxLength": 160 },
+        "epcis_event_refs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["event_type", "event_id"],
+            "properties": {
+              "event_type": { "type": "string", "enum": ["observation", "aggregation", "transaction", "transformation"] },
+              "event_id": { "type": "string" },
+              "event_url": { "type": "string", "format": "uri" },
+              "hash_digest": { "type": "string" },
+              "hash_method": { "type": "string", "enum": ["SHA-256", "SHA-384", "SHA-512"] }
+            }
+          }
+        },
+        "chain_of_custody_url": { "type": "string", "format": "uri" },
+        "w3c_vc_credential_id": { "type": "string", "format": "uri" },
+        "w3c_vc_issuer": { "type": "string", "format": "uri" }
+      },
+      "additionalProperties": true
+    },
+    "passport": {
+      "description": "Subset of passport fields relevant to transfer events.",
+      "type": "object",
+      "properties": {
+        "passport_id": { "type": "string", "maxLength": 160 },
+        "passport_url": { "type": "string", "format": "uri" },
+        "access_scope": { "type": "string", "enum": ["public", "role-based", "restricted"] }
+      },
+      "additionalProperties": true
+    },
+    "waste_shipment_doc_ref": {
+      "description": "Waste Shipment Regulation evidence URL",
+      "type": "string",
+      "format": "uri"
+    },
+    "environmental_conditions": {
+      "description": "Environmental conditions during transfer",
+      "type": "object",
+      "properties": {
+        "temperature_c": { "type": "number" },
+        "humidity_percent": { "type": "number" }
+      }
     }
   }
 }

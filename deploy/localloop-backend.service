@@ -1,5 +1,5 @@
 [Unit]
-Description=LocalLoop Backend API
+Description=localLOOP Backend API
 After=network.target postgresql.service redis.service
 Wants=postgresql.service redis.service
 

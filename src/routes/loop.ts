@@ -142,7 +142,7 @@ function sendWriteConflict(error: unknown, reply: FastifyReply) {
 }
 
 export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = defaultDeps) {
-  app.post('/api/loop/materials', {
+  app.post('/api/v1/material', {
     config: { rateLimit: writeRateLimit },
     schema: {
       consumes: ['application/json', loopContentType],
@@ -187,7 +187,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     reply.code(201).send(created);
   });
 
-  app.post('/api/loop/offers', {
+  app.post('/api/v1/offer', {
     config: { rateLimit: writeRateLimit },
     schema: {
       consumes: ['application/json', loopContentType],
@@ -237,7 +237,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     reply.code(201).send(created);
   });
 
-  app.post('/api/loop/matches', {
+  app.post('/api/v1/match', {
     config: { rateLimit: writeRateLimit },
     schema: {
       consumes: ['application/json', loopContentType],
@@ -296,7 +296,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     reply.code(201).send(created);
   });
 
-  app.post('/api/loop/transfers', {
+  app.post('/api/v1/transfer', {
     config: { rateLimit: writeRateLimit },
     schema: {
       consumes: ['application/json', loopContentType],
@@ -355,7 +355,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     reply.code(201).send(created);
   });
 
-  app.post('/api/loop/material-status', {
+  app.post('/api/v1/material-status', {
     config: { rateLimit: writeRateLimit },
     schema: {
       consumes: ['application/json', loopContentType],
@@ -400,7 +400,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     reply.code(201).send({ id: payload.id, created_at: created.created_at });
   });
 
-  app.get('/api/loop/events', {
+  app.get('/api/v1/events', {
     schema: {
       querystring: {
         type: 'object',
@@ -419,11 +419,11 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     return { results };
   });
 
-  app.get('/api/loop/stream', async (request, reply) => {
+  app.get('/api/v1/stream', async (request, reply) => {
     registerLoopStream(request, reply);
   });
 
-  app.post('/api/loop/relay', {
+  app.post('/api/v1/relay', {
     config: { rateLimit: writeRateLimit },
     schema: {
       consumes: ['application/json', loopContentType],

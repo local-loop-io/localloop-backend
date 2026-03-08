@@ -1,6 +1,6 @@
 # Domain Policy
 
-This backend serves the LocalLoop lab demo and public APIs.
+This backend serves the localLOOP lab demo and public APIs.
 
 ## Canonical domains
 

@@ -69,7 +69,7 @@ describe('api key guard on write routes', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/loop/materials',
+      url: '/api/v1/material',
       payload: materialPayload,
     });
 
@@ -99,7 +99,7 @@ describe('api key guard on write routes', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/federation/handshake',
+      url: '/api/v1/federation/handshake',
       payload: handshakePayload,
     });
 

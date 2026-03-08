@@ -1,5 +1,5 @@
 #!/bin/bash
-# LocalLoop Backend Deployment Setup Script
+# localLOOP Backend Deployment Setup Script
 # This script provisions the non-root user and sets up the deployment environment.
 # Run as root: sudo bash deploy/setup.sh
 
@@ -9,7 +9,7 @@ INSTALL_DIR="${INSTALL_DIR:-/opt/localloop-backend}"
 SERVICE_USER="${SERVICE_USER:-localloop}"
 SERVICE_GROUP="${SERVICE_GROUP:-localloop}"
 
-echo "=== LocalLoop Backend Deployment Setup ==="
+echo "=== localLOOP Backend Deployment Setup ==="
 echo "Install directory: $INSTALL_DIR"
 echo "Service user: $SERVICE_USER"
 echo ""

@@ -2,12 +2,12 @@
 
 ## Reporting a Vulnerability
 
-Please report security issues by emailing **alphinctom@gmail.com** (GitHub: @alpha912).
+Please report security issues by emailing **alphin@mycel-ai.de** (GitHub: @alpha912).
 Do not open public issues for security-sensitive reports.
 
 ## Scope
 
-This repository contains the LocalLoop backend API. All dependencies and server logic
+This repository contains the localLOOP backend API. All dependencies and server logic
 are in scope.
 
 ## Response Timeline
