@@ -36,9 +36,9 @@ const writeRateLimit = {
 };
 
 type FederationDeps = {
-  listNodes: typeof listNodes;
-  upsertNode: typeof upsertNode;
-  getLocalNode: typeof getLocalNode;
+  listNodes: () => Promise<NodeRecord[]>;
+  upsertNode: (input: Omit<NodeRecord, 'last_seen' | 'lab_only'>) => Promise<NodeRecord>;
+  getLocalNode: () => NodeRecord;
 };
 
 const defaultDeps: FederationDeps = {
@@ -60,7 +60,7 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
     return {
       lab_only: true,
       updated_at: new Date().toISOString(),
-      nodes: deps.listNodes(),
+      nodes: await deps.listNodes(),
     };
   });
 
@@ -86,7 +86,7 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
       capabilities: string[];
     };
 
-    const record = deps.upsertNode({
+    const record = await deps.upsertNode({
       node_id: payload.node_id,
       name: payload.name,
       endpoint: payload.endpoint,

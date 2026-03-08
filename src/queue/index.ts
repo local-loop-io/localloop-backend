@@ -18,7 +18,7 @@ const getConnection = () => {
 
 const getQueue = () => {
   if (!queue) {
-    queue = new Queue('interest', { connection: getConnection() });
+    queue = new Queue('interest', { connection: getConnection() as never });
   }
   return queue;
 };
@@ -79,7 +79,7 @@ export function startWorkers() {
   const worker = new Worker(
     'interest',
     createInterestJobHandler(),
-    { connection: getConnection() }
+    { connection: getConnection() as never }
   );
 
   worker.on('failed', (job, error) => {

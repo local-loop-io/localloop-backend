@@ -1,4 +1,5 @@
 import { config } from '../config';
+import { upsertFederationNode, listFederationNodes } from '../db/federationNodes';
 
 export type NodeRecord = {
   node_id: string;
@@ -8,8 +9,6 @@ export type NodeRecord = {
   last_seen: string;
   lab_only: true;
 };
-
-const nodes = new Map<string, NodeRecord>();
 
 export function getLocalNode(): NodeRecord {
   return {
@@ -22,22 +21,38 @@ export function getLocalNode(): NodeRecord {
   };
 }
 
-export function upsertNode(input: Omit<NodeRecord, 'last_seen' | 'lab_only'>): NodeRecord {
-  const record: NodeRecord = {
-    ...input,
-    last_seen: new Date().toISOString(),
+export async function upsertNode(input: Omit<NodeRecord, 'last_seen' | 'lab_only'>): Promise<NodeRecord> {
+  const row = await upsertFederationNode({
+    node_id: input.node_id,
+    name: input.name,
+    endpoint: input.endpoint,
+    capabilities: input.capabilities,
+  });
+  return {
+    node_id: row.node_id,
+    name: row.name,
+    endpoint: row.endpoint,
+    capabilities: row.capabilities,
+    last_seen: typeof row.last_seen === 'string' ? row.last_seen : new Date(row.last_seen).toISOString(),
     lab_only: true,
   };
-  nodes.set(input.node_id, record);
-  return record;
 }
 
-export function listNodes(): NodeRecord[] {
+export async function listNodes(): Promise<NodeRecord[]> {
   const local = getLocalNode();
-  const results = [local];
-  for (const node of nodes.values()) {
-    if (node.node_id !== local.node_id) {
-      results.push(node);
+  const dbNodes = await listFederationNodes();
+
+  const results: NodeRecord[] = [local];
+  for (const row of dbNodes) {
+    if (row.node_id !== local.node_id) {
+      results.push({
+        node_id: row.node_id,
+        name: row.name,
+        endpoint: row.endpoint,
+        capabilities: row.capabilities,
+        last_seen: typeof row.last_seen === 'string' ? row.last_seen : new Date(row.last_seen).toISOString(),
+        lab_only: true,
+      });
     }
   }
   return results;

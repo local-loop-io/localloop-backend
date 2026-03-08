@@ -15,35 +15,28 @@ const handshakePayload = {
   timestamp: '2025-12-20T10:00:00Z',
 };
 
+const localNode = {
+  node_id: 'lab-hub.loop',
+  name: 'localLOOP Lab Hub',
+  endpoint: 'https://loop-api.urbnia.com',
+  capabilities: ['lab-relay'],
+  last_seen: '2025-12-20T10:00:00Z',
+  lab_only: true as const,
+};
+
 describe('federation routes', () => {
   it('lists lab nodes', async () => {
     const app = Fastify({ logger: false });
     registerLoopProtocolParsers(app);
     registerFederationSchemas(app);
     await registerFederationRoutes(app, {
-      listNodes: () => ([
-        {
-          node_id: 'lab-hub.loop',
-          name: 'localLOOP Lab Hub',
-          endpoint: 'https://loop-api.urbnia.com',
-          capabilities: ['lab-relay'],
-          last_seen: '2025-12-20T10:00:00Z',
-          lab_only: true,
-        },
-      ]),
-      upsertNode: (node) => ({
+      listNodes: async () => [localNode],
+      upsertNode: async (node) => ({
         ...node,
         last_seen: '2025-12-20T10:00:00Z',
-        lab_only: true,
+        lab_only: true as const,
       }),
-      getLocalNode: () => ({
-        node_id: 'lab-hub.loop',
-        name: 'localLOOP Lab Hub',
-        endpoint: 'https://loop-api.urbnia.com',
-        capabilities: ['lab-relay'],
-        last_seen: '2025-12-20T10:00:00Z',
-        lab_only: true,
-      }),
+      getLocalNode: () => localNode,
     });
 
     const response = await app.inject({ method: 'GET', url: '/api/v1/federation/nodes' });
@@ -59,23 +52,16 @@ describe('federation routes', () => {
     registerFederationSchemas(app);
     const calls: { node?: string } = {};
     await registerFederationRoutes(app, {
-      listNodes: () => ([]),
-      upsertNode: (node) => {
+      listNodes: async () => [],
+      upsertNode: async (node) => {
         calls.node = node.node_id;
         return {
           ...node,
           last_seen: '2025-12-20T10:00:00Z',
-          lab_only: true,
+          lab_only: true as const,
         };
       },
-      getLocalNode: () => ({
-        node_id: 'lab-hub.loop',
-        name: 'localLOOP Lab Hub',
-        endpoint: 'https://loop-api.urbnia.com',
-        capabilities: ['lab-relay'],
-        last_seen: '2025-12-20T10:00:00Z',
-        lab_only: true,
-      }),
+      getLocalNode: () => localNode,
     });
 
     const response = await app.inject({
@@ -96,20 +82,13 @@ describe('federation routes', () => {
     registerLoopProtocolParsers(app);
     registerFederationSchemas(app);
     await registerFederationRoutes(app, {
-      listNodes: () => ([]),
-      upsertNode: (node) => ({
+      listNodes: async () => [],
+      upsertNode: async (node) => ({
         ...node,
         last_seen: '2025-12-20T10:00:00Z',
-        lab_only: true,
+        lab_only: true as const,
       }),
-      getLocalNode: () => ({
-        node_id: 'lab-hub.loop',
-        name: 'localLOOP Lab Hub',
-        endpoint: 'https://loop-api.urbnia.com',
-        capabilities: ['lab-relay'],
-        last_seen: '2025-12-20T10:00:00Z',
-        lab_only: true,
-      }),
+      getLocalNode: () => localNode,
     });
 
     const response = await app.inject({

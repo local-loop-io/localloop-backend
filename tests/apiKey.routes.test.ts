@@ -81,11 +81,11 @@ describe('api key guard on write routes', () => {
     const app = Fastify({ logger: false });
     const now = new Date().toISOString();
     await registerFederationRoutes(app, {
-      listNodes: () => ([]),
-      upsertNode: (input) => ({
+      listNodes: async () => ([]),
+      upsertNode: async (input) => ({
         ...input,
         last_seen: now,
-        lab_only: true,
+        lab_only: true as const,
       }),
       getLocalNode: () => ({
         node_id: 'local-node',
