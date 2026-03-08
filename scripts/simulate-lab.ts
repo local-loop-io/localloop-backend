@@ -14,6 +14,11 @@ const buildMaterialId = (year: number) => {
   return `DE-MUC-${year}-PLASTIC-${unique}`;
 };
 
+const buildProductId = (year: number) => {
+  const unique = crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
+  return `PRD-DE-MUC-${year}-FURNITURE-${unique}`;
+};
+
 export async function runLabSimulation(baseUrl = `http://localhost:${config.port}`) {
   const timeline: TimelineEvent[] = [];
   const now = new Date();
@@ -114,6 +119,105 @@ export async function runLabSimulation(baseUrl = `http://localhost:${config.port
   }
   const transferCreated = await transferResponse.json();
   timeline.push({ label: 'Transfer completed', id: transferCreated.id, createdAt: transferCreated.created_at });
+
+  // --- ProductDNA flow ---
+
+  const product = {
+    '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+    '@type': 'ProductDNA',
+    schema_version: '0.2.0',
+    id: buildProductId(now.getUTCFullYear()),
+    product_category: 'furniture-office',
+    name: 'Standing Desk — Ergotron WorkFit',
+    condition: 'good',
+    quantity: { value: 5, unit: 'piece' },
+    origin_city: 'DEMO Munich',
+    current_city: 'DEMO Munich',
+    available_from: now.toISOString(),
+  };
+
+  const productResponse = await fetch(`${baseUrl}/api/v1/product`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(product),
+  });
+  if (!productResponse.ok) {
+    throw new Error(`Product creation failed: ${await productResponse.text()}`);
+  }
+  const productCreated = await productResponse.json();
+  timeline.push({ label: 'ProductDNA registered', id: productCreated.id, createdAt: productCreated.created_at });
+
+  const productOffer = {
+    '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+    '@type': 'Offer',
+    schema_version: '0.2.0',
+    id: buildId('OFR-PRD'),
+    product_id: product.id,
+    from_city: 'DEMO Munich',
+    to_city: 'DEMO Berlin',
+    quantity: { value: 5, unit: 'piece' },
+    status: 'open',
+    available_until: new Date(now.getTime() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+    terms: 'Lab demo product pickup',
+  };
+
+  const productOfferResponse = await fetch(`${baseUrl}/api/v1/offer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(productOffer),
+  });
+  if (!productOfferResponse.ok) {
+    throw new Error(`Product offer creation failed: ${await productOfferResponse.text()}`);
+  }
+  const productOfferCreated = await productOfferResponse.json();
+  timeline.push({ label: 'Product offer published', id: productOfferCreated.id, createdAt: productOfferCreated.created_at });
+
+  const productMatch = {
+    '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+    '@type': 'Match',
+    schema_version: '0.2.0',
+    id: buildId('MCH-PRD'),
+    product_id: product.id,
+    offer_id: productOffer.id,
+    from_city: 'DEMO Munich',
+    to_city: 'DEMO Berlin',
+    status: 'accepted',
+    matched_at: new Date(now.getTime() + 1000 * 60 * 60 * 5).toISOString(),
+  };
+
+  const productMatchResponse = await fetch(`${baseUrl}/api/v1/match`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(productMatch),
+  });
+  if (!productMatchResponse.ok) {
+    throw new Error(`Product match creation failed: ${await productMatchResponse.text()}`);
+  }
+  const productMatchCreated = await productMatchResponse.json();
+  timeline.push({ label: 'Product match accepted', id: productMatchCreated.id, createdAt: productMatchCreated.created_at });
+
+  const productTransfer = {
+    '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+    '@type': 'Transfer',
+    schema_version: '0.2.0',
+    id: buildId('TRF-PRD'),
+    product_id: product.id,
+    match_id: productMatch.id,
+    status: 'completed',
+    handoff_at: new Date(now.getTime() + 1000 * 60 * 60 * 6).toISOString(),
+    received_at: new Date(now.getTime() + 1000 * 60 * 60 * 8).toISOString(),
+  };
+
+  const productTransferResponse = await fetch(`${baseUrl}/api/v1/transfer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(productTransfer),
+  });
+  if (!productTransferResponse.ok) {
+    throw new Error(`Product transfer creation failed: ${await productTransferResponse.text()}`);
+  }
+  const productTransferCreated = await productTransferResponse.json();
+  timeline.push({ label: 'Product transfer completed', id: productTransferCreated.id, createdAt: productTransferCreated.created_at });
 
   console.log('\nLab demo timeline');
   console.log('-----------------');

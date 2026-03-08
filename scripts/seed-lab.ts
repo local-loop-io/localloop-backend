@@ -1,7 +1,7 @@
 import { pool } from '../src/db/pool';
 import { waitForDatabase } from '../src/db/wait';
 import { runMigrations } from '../src/db/migrate';
-import { insertLoopMaterial, insertLoopOffer, insertLoopEvent } from '../src/db/loop';
+import { insertLoopMaterial, insertLoopProduct, insertLoopOffer, insertLoopEvent } from '../src/db/loop';
 
 const demoCities = [
   { slug: 'demo-munich', name: 'DEMO Munich', country: 'DE', code: 'MUC' },
@@ -15,6 +15,24 @@ const categories = [
   'organic-food',
   'glass-clear',
   'paper-clean',
+];
+
+const productCategories = [
+  'furniture-office',
+  'electronics-computing',
+  'building-fixture',
+  'textile-garment',
+  'equipment-industrial',
+];
+
+const productConditions = ['new', 'like-new', 'good', 'fair', 'poor'] as const;
+
+const productNames = [
+  'Standing Desk — Ergotron WorkFit',
+  'Monitor — Dell UltraSharp 27"',
+  'LED Panel — Philips CoreLine',
+  'Work Jacket — Engelbert Strauss',
+  'Conveyor Belt Motor — Siemens',
 ];
 
 const units = ['kg', 't', 'piece'];
@@ -33,7 +51,7 @@ export async function seedLab() {
   await waitForDatabase();
   await runMigrations();
 
-  await pool.query('TRUNCATE loop_transfers, loop_matches, loop_offers, loop_materials, loop_events RESTART IDENTITY');
+  await pool.query('TRUNCATE loop_transfers, loop_matches, loop_offers, loop_products, loop_materials, loop_events RESTART IDENTITY');
 
   await pool.query(`
     INSERT INTO cities (slug, name, country)
@@ -103,6 +121,64 @@ export async function seedLab() {
       entity_type: 'offer',
       entity_id: offerPayload.id,
       payload: offerPayload,
+    });
+  }
+
+  for (let index = 0; index < 50; index += 1) {
+    const city = demoCities[index % demoCities.length];
+    const productCategory = productCategories[index % productCategories.length];
+    const condition = productConditions[index % productConditions.length];
+    const name = productNames[index % productNames.length];
+    const quantityValue = Math.round(random() * 20 + 1);
+    const productId = `PRD-DE-${city.code}-2025-${productCategory.toUpperCase().split('-')[0]}-${randomHex(random, 6)}`;
+
+    const productPayload = {
+      '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+      '@type': 'ProductDNA',
+      schema_version: '0.2.0',
+      id: productId,
+      product_category: productCategory,
+      name,
+      condition,
+      quantity: { value: quantityValue, unit: 'piece' },
+      origin_city: city.name,
+      current_city: city.name,
+      available_from: new Date().toISOString(),
+      metadata: {
+        demo: true,
+        batch: `LAB-PRD-${index + 1}`,
+      },
+    };
+
+    await insertLoopProduct(productPayload);
+    await insertLoopEvent({
+      event_type: 'product.seeded',
+      entity_type: 'product',
+      entity_id: productId,
+      payload: productPayload,
+    });
+
+    const productOfferPayload = {
+      '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+      '@type': 'Offer',
+      schema_version: '0.2.0',
+      id: `OFR-PRD-${randomHex(random, 8)}`,
+      product_id: productId,
+      from_city: city.name,
+      to_city: demoCities[(index + 1) % demoCities.length].name,
+      quantity: { value: quantityValue, unit: 'piece' },
+      status: 'open',
+      available_until: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+      terms: 'Lab demo product offer',
+      metadata: { demo: true },
+    };
+
+    await insertLoopOffer(productOfferPayload);
+    await insertLoopEvent({
+      event_type: 'offer.seeded',
+      entity_type: 'offer',
+      entity_id: productOfferPayload.id,
+      payload: productOfferPayload,
     });
   }
 }

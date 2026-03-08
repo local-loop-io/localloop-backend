@@ -90,9 +90,31 @@ model LoopMaterial {
   @@map("loop_materials")
 }
 
+model LoopProduct {
+  id              String   @id @db.Text
+  productCategory String   @map("product_category") @db.Text
+  name            String   @db.Text
+  condition       String   @db.Text
+  quantityValue   Decimal  @map("quantity_value")
+  quantityUnit    String   @map("quantity_unit") @db.Text
+  originCity      String   @map("origin_city") @db.Text
+  currentCity     String   @map("current_city") @db.Text
+  availableFrom   DateTime @map("available_from")
+  expiresAt       DateTime? @map("expires_at")
+  payload         Json     @db.JsonB
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  offers    LoopOffer[]
+  matches   LoopMatch[]
+  transfers LoopTransfer[]
+
+  @@map("loop_products")
+}
+
 model LoopOffer {
   id             String   @id @db.Text
-  materialId     String   @map("material_id") @db.Text
+  materialId     String?  @map("material_id") @db.Text
+  productId      String?  @map("product_id") @db.Text
   fromCity       String   @map("from_city") @db.Text
   toCity         String   @map("to_city") @db.Text
   status         String   @db.Text
@@ -103,7 +125,8 @@ model LoopOffer {
   payload        Json     @db.JsonB
   createdAt      DateTime @default(now()) @map("created_at")
 
-  material LoopMaterial @relation(fields: [materialId], references: [id])
+  material LoopMaterial? @relation(fields: [materialId], references: [id])
+  product  LoopProduct?  @relation(fields: [productId], references: [id])
   matches  LoopMatch[]
 
   @@map("loop_offers")
@@ -111,7 +134,8 @@ model LoopOffer {
 
 model LoopMatch {
   id         String   @id @db.Text
-  materialId String   @map("material_id") @db.Text
+  materialId String?  @map("material_id") @db.Text
+  productId  String?  @map("product_id") @db.Text
   offerId    String   @map("offer_id") @db.Text
   fromCity   String   @map("from_city") @db.Text
   toCity     String   @map("to_city") @db.Text
@@ -120,8 +144,9 @@ model LoopMatch {
   payload    Json     @db.JsonB
   createdAt  DateTime @default(now()) @map("created_at")
 
-  material  LoopMaterial @relation(fields: [materialId], references: [id])
-  offer     LoopOffer    @relation(fields: [offerId], references: [id])
+  material  LoopMaterial? @relation(fields: [materialId], references: [id])
+  product   LoopProduct?  @relation(fields: [productId], references: [id])
+  offer     LoopOffer     @relation(fields: [offerId], references: [id])
   transfers LoopTransfer[]
 
   @@map("loop_matches")
@@ -129,7 +154,8 @@ model LoopMatch {
 
 model LoopTransfer {
   id         String   @id @db.Text
-  materialId String   @map("material_id") @db.Text
+  materialId String?  @map("material_id") @db.Text
+  productId  String?  @map("product_id") @db.Text
   matchId    String   @map("match_id") @db.Text
   status     String   @db.Text
   handoffAt  DateTime @map("handoff_at")
@@ -137,8 +163,9 @@ model LoopTransfer {
   payload    Json     @db.JsonB
   createdAt  DateTime @default(now()) @map("created_at")
 
-  material LoopMaterial @relation(fields: [materialId], references: [id])
-  match    LoopMatch    @relation(fields: [matchId], references: [id])
+  material LoopMaterial? @relation(fields: [materialId], references: [id])
+  product  LoopProduct?  @relation(fields: [productId], references: [id])
+  match    LoopMatch     @relation(fields: [matchId], references: [id])
 
   @@map("loop_transfers")
 }

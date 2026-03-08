@@ -2,15 +2,18 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { config } from '../config';
 import {
   insertLoopMaterial,
+  insertLoopProduct,
   insertLoopOffer,
   insertLoopMatch,
   insertLoopTransfer,
   insertLoopEvent,
   listLoopEvents,
   getLoopMaterial,
+  getLoopProduct,
   getLoopOffer,
   getLoopMatch,
   type LoopMaterialPayload,
+  type LoopProductPayload,
   type LoopOfferPayload,
   type LoopMatchPayload,
   type LoopTransferPayload,
@@ -104,12 +107,14 @@ type LoopMaterialStatusPayload = {
 
 type LoopDeps = {
   insertLoopMaterial: typeof insertLoopMaterial;
+  insertLoopProduct: typeof insertLoopProduct;
   insertLoopOffer: typeof insertLoopOffer;
   insertLoopMatch: typeof insertLoopMatch;
   insertLoopTransfer: typeof insertLoopTransfer;
   insertLoopEvent: typeof insertLoopEvent;
   listLoopEvents: typeof listLoopEvents;
   getLoopMaterial: typeof getLoopMaterial;
+  getLoopProduct: typeof getLoopProduct;
   getLoopOffer: typeof getLoopOffer;
   getLoopMatch: typeof getLoopMatch;
   broadcastLoopEvent: typeof broadcastLoopEvent;
@@ -117,12 +122,14 @@ type LoopDeps = {
 
 const defaultDeps: LoopDeps = {
   insertLoopMaterial,
+  insertLoopProduct,
   insertLoopOffer,
   insertLoopMatch,
   insertLoopTransfer,
   insertLoopEvent,
   listLoopEvents,
   getLoopMaterial,
+  getLoopProduct,
   getLoopOffer,
   getLoopMatch,
   broadcastLoopEvent,
@@ -187,6 +194,51 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     reply.code(201).send(created);
   });
 
+  app.post('/api/v1/product', {
+    config: { rateLimit: writeRateLimit },
+    schema: {
+      consumes: ['application/json', loopContentType],
+      security: apiKeySecurity,
+      body: { $ref: `${loopSchemaIds.product}#` },
+      response: { 201: createResponseSchema, 400: errorResponseSchema, 409: errorResponseSchema },
+    },
+  }, async (request, reply) => {
+    if (!requireApiKey(request, reply)) {
+      return;
+    }
+
+    const payload = request.body as LoopProductPayload;
+    let created;
+    try {
+      created = await deps.insertLoopProduct(payload);
+    } catch (error) {
+      if (sendWriteConflict(error, reply)) {
+        return;
+      }
+      throw error;
+    }
+
+    const eventPayload = {
+      type: 'product.created',
+      entity: 'product',
+      entity_id: created.id,
+      data: payload,
+      created_at: created.created_at,
+    };
+    await deps.insertLoopEvent({
+      event_type: eventPayload.type,
+      entity_type: eventPayload.entity,
+      entity_id: eventPayload.entity_id,
+      payload: eventPayload,
+    });
+    deps.broadcastLoopEvent(eventPayload);
+    incrementMetric('loop_product_created');
+    incrementMetric('loop_event_emitted');
+    request.log.info({ productId: created.id }, 'Loop product created');
+
+    reply.code(201).send(created);
+  });
+
   app.post('/api/v1/offer', {
     config: { rateLimit: writeRateLimit },
     schema: {
@@ -201,10 +253,19 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     }
 
     const payload = request.body as LoopOfferPayload;
-    const material = await deps.getLoopMaterial(payload.material_id);
-    if (!material) {
-      reply.code(400).send({ error: 'Unknown material_id' });
-      return;
+    if (payload.material_id) {
+      const material = await deps.getLoopMaterial(payload.material_id);
+      if (!material) {
+        reply.code(400).send({ error: 'Unknown material_id' });
+        return;
+      }
+    }
+    if (payload.product_id) {
+      const product = await deps.getLoopProduct(payload.product_id);
+      if (!product) {
+        reply.code(400).send({ error: 'Unknown product_id' });
+        return;
+      }
     }
 
     let created;
@@ -232,7 +293,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     deps.broadcastLoopEvent(eventPayload);
     incrementMetric('loop_offer_created');
     incrementMetric('loop_event_emitted');
-    request.log.info({ offerId: created.id, materialId: payload.material_id }, 'Loop offer created');
+    request.log.info({ offerId: created.id, materialId: payload.material_id, productId: payload.product_id }, 'Loop offer created');
 
     reply.code(201).send(created);
   });
@@ -251,18 +312,29 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     }
 
     const payload = request.body as LoopMatchPayload;
-    const material = await deps.getLoopMaterial(payload.material_id);
-    if (!material) {
-      reply.code(400).send({ error: 'Unknown material_id' });
-      return;
+    if (payload.material_id) {
+      const material = await deps.getLoopMaterial(payload.material_id);
+      if (!material) {
+        reply.code(400).send({ error: 'Unknown material_id' });
+        return;
+      }
+    }
+    if (payload.product_id) {
+      const product = await deps.getLoopProduct(payload.product_id);
+      if (!product) {
+        reply.code(400).send({ error: 'Unknown product_id' });
+        return;
+      }
     }
     const offer = await deps.getLoopOffer(payload.offer_id);
     if (!offer) {
       reply.code(400).send({ error: 'Unknown offer_id' });
       return;
     }
-    if (offer.material_id !== payload.material_id) {
-      reply.code(400).send({ error: 'Offer does not match material_id' });
+    const subjectId = payload.material_id || payload.product_id;
+    const offerSubjectId = offer.material_id || offer.product_id;
+    if (subjectId && offerSubjectId && offerSubjectId !== subjectId) {
+      reply.code(400).send({ error: 'Offer does not match subject' });
       return;
     }
 
@@ -310,18 +382,29 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     }
 
     const payload = request.body as LoopTransferPayload;
-    const material = await deps.getLoopMaterial(payload.material_id);
-    if (!material) {
-      reply.code(400).send({ error: 'Unknown material_id' });
-      return;
+    if (payload.material_id) {
+      const material = await deps.getLoopMaterial(payload.material_id);
+      if (!material) {
+        reply.code(400).send({ error: 'Unknown material_id' });
+        return;
+      }
+    }
+    if (payload.product_id) {
+      const product = await deps.getLoopProduct(payload.product_id);
+      if (!product) {
+        reply.code(400).send({ error: 'Unknown product_id' });
+        return;
+      }
     }
     const match = await deps.getLoopMatch(payload.match_id);
     if (!match) {
       reply.code(400).send({ error: 'Unknown match_id' });
       return;
     }
-    if (match.material_id !== payload.material_id) {
-      reply.code(400).send({ error: 'Match does not match material_id' });
+    const subjectId = payload.material_id || payload.product_id;
+    const matchSubjectId = match.material_id || match.product_id;
+    if (subjectId && matchSubjectId && matchSubjectId !== subjectId) {
+      reply.code(400).send({ error: 'Match does not match subject' });
       return;
     }
 

@@ -13,9 +13,24 @@ export type LoopMaterialPayload = {
   [key: string]: unknown;
 };
 
+export type LoopProductPayload = {
+  id: string;
+  product_category: string;
+  name: string;
+  condition: string;
+  quantity: { value: number; unit: string };
+  origin_city: string;
+  current_city: string;
+  available_from: string;
+  expires?: string;
+  schema_version: string;
+  [key: string]: unknown;
+};
+
 export type LoopOfferPayload = {
   id: string;
-  material_id: string;
+  material_id?: string;
+  product_id?: string;
   from_city: string;
   to_city: string;
   quantity: { value: number; unit: string };
@@ -28,7 +43,8 @@ export type LoopOfferPayload = {
 
 export type LoopMatchPayload = {
   id: string;
-  material_id: string;
+  material_id?: string;
+  product_id?: string;
   offer_id: string;
   from_city: string;
   to_city: string;
@@ -40,7 +56,8 @@ export type LoopMatchPayload = {
 
 export type LoopTransferPayload = {
   id: string;
-  material_id: string;
+  material_id?: string;
+  product_id?: string;
   match_id: string;
   status: string;
   handoff_at: string;
@@ -72,16 +89,41 @@ export async function insertLoopMaterial(payload: LoopMaterialPayload) {
   return rows[0] as { id: string; created_at: string };
 }
 
-export async function insertLoopOffer(payload: LoopOfferPayload) {
+export async function insertLoopProduct(payload: LoopProductPayload) {
   const { rows } = await pool.query(
-    `INSERT INTO loop_offers (
-      id, material_id, from_city, to_city, status, quantity_value, quantity_unit,
-      available_until, terms, payload
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    `INSERT INTO loop_products (
+      id, product_category, name, condition, quantity_value, quantity_unit,
+      origin_city, current_city, available_from, expires_at, payload
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
     RETURNING id, created_at`,
     [
       payload.id,
-      payload.material_id,
+      payload.product_category,
+      payload.name,
+      payload.condition,
+      payload.quantity.value,
+      payload.quantity.unit,
+      payload.origin_city,
+      payload.current_city,
+      payload.available_from,
+      payload.expires ?? null,
+      payload,
+    ],
+  );
+  return rows[0] as { id: string; created_at: string };
+}
+
+export async function insertLoopOffer(payload: LoopOfferPayload) {
+  const { rows } = await pool.query(
+    `INSERT INTO loop_offers (
+      id, material_id, product_id, from_city, to_city, status, quantity_value, quantity_unit,
+      available_until, terms, payload
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+    RETURNING id, created_at`,
+    [
+      payload.id,
+      payload.material_id ?? null,
+      payload.product_id ?? null,
       payload.from_city,
       payload.to_city,
       payload.status,
@@ -98,12 +140,13 @@ export async function insertLoopOffer(payload: LoopOfferPayload) {
 export async function insertLoopMatch(payload: LoopMatchPayload) {
   const { rows } = await pool.query(
     `INSERT INTO loop_matches (
-      id, material_id, offer_id, from_city, to_city, status, matched_at, payload
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      id, material_id, product_id, offer_id, from_city, to_city, status, matched_at, payload
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
     RETURNING id, created_at`,
     [
       payload.id,
-      payload.material_id,
+      payload.material_id ?? null,
+      payload.product_id ?? null,
       payload.offer_id,
       payload.from_city,
       payload.to_city,
@@ -118,12 +161,13 @@ export async function insertLoopMatch(payload: LoopMatchPayload) {
 export async function insertLoopTransfer(payload: LoopTransferPayload) {
   const { rows } = await pool.query(
     `INSERT INTO loop_transfers (
-      id, material_id, match_id, status, handoff_at, received_at, payload
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7)
+      id, material_id, product_id, match_id, status, handoff_at, received_at, payload
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
     RETURNING id, created_at`,
     [
       payload.id,
-      payload.material_id,
+      payload.material_id ?? null,
+      payload.product_id ?? null,
       payload.match_id,
       payload.status,
       payload.handoff_at,
@@ -168,18 +212,26 @@ export async function getLoopMaterial(id: string) {
   return rows[0] as { id: string } | undefined;
 }
 
-export async function getLoopOffer(id: string) {
+export async function getLoopProduct(id: string) {
   const { rows } = await pool.query(
-    'SELECT id, material_id FROM loop_offers WHERE id = $1',
+    'SELECT id FROM loop_products WHERE id = $1',
     [id],
   );
-  return rows[0] as { id: string; material_id: string } | undefined;
+  return rows[0] as { id: string } | undefined;
+}
+
+export async function getLoopOffer(id: string) {
+  const { rows } = await pool.query(
+    'SELECT id, material_id, product_id FROM loop_offers WHERE id = $1',
+    [id],
+  );
+  return rows[0] as { id: string; material_id: string | null; product_id: string | null } | undefined;
 }
 
 export async function getLoopMatch(id: string) {
   const { rows } = await pool.query(
-    'SELECT id, material_id, offer_id FROM loop_matches WHERE id = $1',
+    'SELECT id, material_id, product_id, offer_id FROM loop_matches WHERE id = $1',
     [id],
   );
-  return rows[0] as { id: string; material_id: string; offer_id: string } | undefined;
+  return rows[0] as { id: string; material_id: string | null; product_id: string | null; offer_id: string } | undefined;
 }

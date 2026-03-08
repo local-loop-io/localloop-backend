@@ -54,6 +54,58 @@ const transferPayload = {
   received_at: '2025-06-02T18:00:00Z',
 };
 
+const productPayload = {
+  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+  '@type': 'ProductDNA',
+  schema_version: '0.2.0',
+  id: 'PRD-DE-MUC-2025-DESK-F4A7B2',
+  product_category: 'furniture-office',
+  name: 'Standing Desk — Ergotron WorkFit',
+  condition: 'good',
+  quantity: { value: 12, unit: 'piece' },
+  origin_city: 'Munich',
+  current_city: 'Munich',
+  available_from: '2026-03-15T08:00:00Z',
+};
+
+const productOfferPayload = {
+  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+  '@type': 'Offer',
+  schema_version: '0.2.0',
+  id: 'OFR-PRD-8C4F2A1B',
+  product_id: productPayload.id,
+  from_city: 'Munich',
+  to_city: 'Berlin',
+  quantity: { value: 12, unit: 'piece' },
+  status: 'open',
+  available_until: '2026-03-20T18:00:00Z',
+};
+
+const productMatchPayload = {
+  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+  '@type': 'Match',
+  schema_version: '0.2.0',
+  id: 'MCH-PRD-3D7E9F45',
+  product_id: productPayload.id,
+  offer_id: productOfferPayload.id,
+  from_city: 'Munich',
+  to_city: 'Berlin',
+  status: 'accepted',
+  matched_at: '2026-03-16T14:30:00Z',
+};
+
+const productTransferPayload = {
+  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+  '@type': 'Transfer',
+  schema_version: '0.2.0',
+  id: 'TRF-PRD-1A5B8C2D',
+  product_id: productPayload.id,
+  match_id: productMatchPayload.id,
+  status: 'completed',
+  handoff_at: '2026-03-18T09:00:00Z',
+  received_at: '2026-03-18T17:30:00Z',
+};
+
 const materialStatusPayload = {
   '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
   '@type': 'MaterialStatusUpdate',
@@ -75,14 +127,24 @@ const buildApp = () => {
 
   const deps = {
     insertLoopMaterial: async () => ({ id: materialPayload.id, created_at: new Date().toISOString() }),
-    insertLoopOffer: async () => ({ id: offerPayload.id, created_at: new Date().toISOString() }),
-    insertLoopMatch: async () => ({ id: matchPayload.id, created_at: new Date().toISOString() }),
-    insertLoopTransfer: async () => ({ id: transferPayload.id, created_at: new Date().toISOString() }),
+    insertLoopProduct: async () => ({ id: productPayload.id, created_at: new Date().toISOString() }),
+    insertLoopOffer: async (_p: { id: string }) => ({ id: _p.id, created_at: new Date().toISOString() }),
+    insertLoopMatch: async (_p: { id: string }) => ({ id: _p.id, created_at: new Date().toISOString() }),
+    insertLoopTransfer: async (_p: { id: string }) => ({ id: _p.id, created_at: new Date().toISOString() }),
     insertLoopEvent: async () => ({ id: 1, created_at: new Date().toISOString() }),
     listLoopEvents: async () => ([{ id: 1, event_type: 'material.created', entity_type: 'material', entity_id: materialPayload.id, payload: {}, created_at: new Date().toISOString() }]),
     getLoopMaterial: async (id: string) => (id === materialPayload.id ? { id } : undefined),
-    getLoopOffer: async (id: string) => (id === offerPayload.id ? { id, material_id: materialPayload.id } : undefined),
-    getLoopMatch: async (id: string) => (id === matchPayload.id ? { id, material_id: materialPayload.id, offer_id: offerPayload.id } : undefined),
+    getLoopProduct: async (id: string) => (id === productPayload.id ? { id } : undefined),
+    getLoopOffer: async (id: string) => {
+      if (id === offerPayload.id) return { id, material_id: materialPayload.id, product_id: null };
+      if (id === productOfferPayload.id) return { id, material_id: null, product_id: productPayload.id };
+      return undefined;
+    },
+    getLoopMatch: async (id: string) => {
+      if (id === matchPayload.id) return { id, material_id: materialPayload.id, product_id: null, offer_id: offerPayload.id };
+      if (id === productMatchPayload.id) return { id, material_id: null, product_id: productPayload.id, offer_id: productOfferPayload.id };
+      return undefined;
+    },
     broadcastLoopEvent: () => undefined,
   };
 
@@ -264,6 +326,63 @@ describe('loop routes', () => {
       method: 'POST',
       url: '/api/v1/material',
       payload: materialPayload,
+    });
+
+    expect(response.statusCode).toBe(409);
+  });
+
+  it('creates product, offer, match, and transfer with product_id', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const prodResponse = await app.inject({ method: 'POST', url: '/api/v1/product', payload: productPayload });
+    expect(prodResponse.statusCode).toBe(201);
+
+    const offerResponse = await app.inject({ method: 'POST', url: '/api/v1/offer', payload: productOfferPayload });
+    expect(offerResponse.statusCode).toBe(201);
+
+    const matchResponse = await app.inject({ method: 'POST', url: '/api/v1/match', payload: productMatchPayload });
+    expect(matchResponse.statusCode).toBe(201);
+
+    const transferResponse = await app.inject({ method: 'POST', url: '/api/v1/transfer', payload: productTransferPayload });
+    expect(transferResponse.statusCode).toBe(201);
+  });
+
+  it('rejects offers for unknown products', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, { ...deps, getLoopProduct: async () => undefined });
+
+    const response = await app.inject({ method: 'POST', url: '/api/v1/offer', payload: productOfferPayload });
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('rejects product with invalid payload', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/product',
+      payload: { id: 'PRD-INVALID' },
+    });
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('maps duplicate product writes to conflicts', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, {
+      ...deps,
+      insertLoopProduct: async () => {
+        const error = new Error('duplicate key value violates unique constraint');
+        (error as Error & { code?: string }).code = '23505';
+        throw error;
+      },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/product',
+      payload: productPayload,
     });
 
     expect(response.statusCode).toBe(409);

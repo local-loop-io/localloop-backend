@@ -1,0 +1,579 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://local-loop-io.github.io/projects/loop-protocol/schemas/v0.2.0/product-dna.schema.json",
+  "title": "ProductDNA",
+  "description": "Product identity and metadata schema — LOOP v0.2.0 (DPP-aligned, ESPR Art. 9-10 compatible). Products reference constituent materials via material_ids.",
+  "type": "object",
+  "required": [
+    "@context",
+    "@type",
+    "schema_version",
+    "id",
+    "product_category",
+    "name",
+    "condition",
+    "quantity",
+    "origin_city",
+    "current_city",
+    "available_from"
+  ],
+  "properties": {
+    "@context": {
+      "description": "JSON-LD context",
+      "type": "string",
+      "enum": [
+        "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld",
+        "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld"
+      ]
+    },
+    "@type": {
+      "description": "Object type identifier",
+      "type": "string",
+      "const": "ProductDNA"
+    },
+    "schema_version": {
+      "description": "Schema version for the interop flow. Emitters SHOULD use 0.2.0; receivers SHOULD accept additive minor/patch releases.",
+      "type": "string",
+      "pattern": "^0\\.[1-9]\\d*\\.\\d+$",
+      "examples": [
+        "0.2.0"
+      ]
+    },
+    "id": {
+      "description": "Unique ProductDNA identifier",
+      "type": "string",
+      "pattern": "^PRD-[A-Z0-9-]{8,}$",
+      "examples": [
+        "PRD-DE-MUC-2025-LAPTOP-A1B2C3"
+      ]
+    },
+    "product_category": {
+      "description": "Standardized product category",
+      "type": "string",
+      "enum": [
+        "furniture-office",
+        "furniture-residential",
+        "furniture-industrial",
+        "building-structural",
+        "building-fixture",
+        "building-hvac",
+        "building-electrical",
+        "electronics-computing",
+        "electronics-mobile",
+        "electronics-appliance",
+        "electronics-components",
+        "textile-garment",
+        "textile-industrial",
+        "packaging-reusable",
+        "vehicle-parts",
+        "equipment-industrial",
+        "equipment-medical"
+      ]
+    },
+    "name": {
+      "description": "Product name or short description",
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 200,
+      "examples": [
+        "Standing Desk — Ergotron WorkFit"
+      ]
+    },
+    "condition": {
+      "description": "Physical condition of the product",
+      "type": "string",
+      "enum": [
+        "new",
+        "like-new",
+        "good",
+        "fair",
+        "poor",
+        "for-parts"
+      ]
+    },
+    "quantity": {
+      "description": "Amount of product units",
+      "type": "object",
+      "required": [
+        "value",
+        "unit"
+      ],
+      "properties": {
+        "value": {
+          "description": "Numeric quantity",
+          "type": "number",
+          "minimum": 0,
+          "examples": [
+            12,
+            1
+          ]
+        },
+        "unit": {
+          "description": "Unit of measurement",
+          "type": "string",
+          "enum": [
+            "kg",
+            "g",
+            "t",
+            "l",
+            "ml",
+            "m3",
+            "piece",
+            "bundle"
+          ],
+          "examples": [
+            "piece"
+          ]
+        }
+      }
+    },
+    "origin_city": {
+      "description": "City that registered the product",
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 80,
+      "examples": [
+        "Munich"
+      ]
+    },
+    "current_city": {
+      "description": "City currently holding custody of the product",
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 80,
+      "examples": [
+        "Munich"
+      ]
+    },
+    "available_from": {
+      "description": "When product becomes available (ISO 8601)",
+      "type": "string",
+      "format": "date-time",
+      "examples": [
+        "2026-03-15T08:00:00Z"
+      ]
+    },
+    "expires": {
+      "description": "When product listing expires (ISO 8601)",
+      "type": "string",
+      "format": "date-time"
+    },
+    "manufacturer": {
+      "description": "Product manufacturer name",
+      "type": "string",
+      "maxLength": 200,
+      "examples": [
+        "Ergotron"
+      ]
+    },
+    "model": {
+      "description": "Product model name or number",
+      "type": "string",
+      "maxLength": 200,
+      "examples": [
+        "WorkFit-S"
+      ]
+    },
+    "manufacture_year": {
+      "description": "Year of manufacture",
+      "type": "integer",
+      "minimum": 1900,
+      "examples": [
+        2021
+      ]
+    },
+    "serial_number": {
+      "description": "Product serial number",
+      "type": "string",
+      "maxLength": 120
+    },
+    "functional_status": {
+      "description": "Functional state of the product",
+      "type": "string",
+      "enum": [
+        "fully-functional",
+        "partially-functional",
+        "non-functional",
+        "untested"
+      ]
+    },
+    "lifecycle_stage": {
+      "description": "Current stage in product lifecycle (ESPR/UNTP aligned)",
+      "type": "string",
+      "enum": [
+        "production",
+        "in-use",
+        "end-of-first-use",
+        "refurbished",
+        "end-of-life"
+      ]
+    },
+    "material_ids": {
+      "description": "References to constituent MaterialDNA identifiers (composition link)",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z]{2}-[A-Z]{3}-\\d{4}-[A-Z]+-[A-Z0-9]{6,}$"
+      },
+      "examples": [
+        ["DE-MUC-2025-METAL-4EB84C", "DE-MUC-2025-PLASTIC-96FE78"]
+      ]
+    },
+    "dimensions": {
+      "description": "Physical dimensions of the product",
+      "type": "object",
+      "properties": {
+        "length_cm": {
+          "description": "Length in centimeters",
+          "type": "number",
+          "minimum": 0
+        },
+        "width_cm": {
+          "description": "Width in centimeters",
+          "type": "number",
+          "minimum": 0
+        },
+        "height_cm": {
+          "description": "Height in centimeters",
+          "type": "number",
+          "minimum": 0
+        },
+        "weight_kg": {
+          "description": "Weight in kilograms",
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "images": {
+      "description": "Photos of the product",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uri"
+      },
+      "maxItems": 10
+    },
+    "reuse_potential": {
+      "description": "Free-text notes on reuse potential and condition details",
+      "type": "string",
+      "maxLength": 500,
+      "examples": [
+        "Fully functional standing desks from office clearance. Minor cosmetic wear."
+      ]
+    },
+    "certifications": {
+      "description": "List of certifications",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "location": {
+      "description": "Geographic location of product",
+      "type": "object",
+      "required": [
+        "lat",
+        "lon"
+      ],
+      "properties": {
+        "lat": {
+          "description": "Latitude",
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "description": "Longitude",
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "address": {
+          "description": "Human-readable address",
+          "type": "string"
+        }
+      }
+    },
+    "contact": {
+      "description": "Reserved. Personal contact details are not permitted in minimal interop payloads.",
+      "not": {}
+    },
+    "passport": {
+      "description": "Optional regulatory interoperability metadata for DPP-style integrations (ESPR Art. 9-10, UNTP ProductPassport aligned).",
+      "type": "object",
+      "properties": {
+        "passport_id": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "passport_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "backup_copy_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "passport_status": {
+          "type": "string",
+          "enum": [
+            "not_applicable",
+            "optional",
+            "required",
+            "available",
+            "restricted"
+          ]
+        },
+        "data_carrier_id": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "issuer_node": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "access_scope": {
+          "type": "string",
+          "enum": [
+            "public",
+            "role-based",
+            "restricted"
+          ]
+        },
+        "supported_regimes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "espr-dpp",
+              "battery-passport",
+              "ppwr",
+              "waste-shipment",
+              "nkws"
+            ]
+          }
+        },
+        "gtin": {
+          "description": "GS1 Global Trade Item Number",
+          "type": "string",
+          "pattern": "^\\d{8,14}$"
+        },
+        "gs1_digital_link": {
+          "description": "GS1 Digital Link URL",
+          "type": "string",
+          "format": "uri"
+        },
+        "economic_operator_id": {
+          "description": "ESPR economic operator identifier",
+          "type": "string",
+          "maxLength": 120
+        },
+        "economic_operator_name": {
+          "description": "ESPR economic operator name",
+          "type": "string",
+          "maxLength": 200
+        },
+        "manufacturer_id": {
+          "description": "Manufacturer identifier",
+          "type": "string",
+          "maxLength": 120
+        },
+        "country_of_production": {
+          "description": "ISO 3166-1 alpha-2 country code of production",
+          "type": "string",
+          "pattern": "^[A-Z]{2}$"
+        },
+        "conformity_declaration_ref": {
+          "description": "EU Declaration of Conformity link",
+          "type": "string",
+          "format": "uri"
+        },
+        "carbon_footprint_kg_co2e": {
+          "description": "Carbon footprint per declared unit (kg CO2e)",
+          "type": "number",
+          "minimum": 0
+        },
+        "carbon_footprint_unit": {
+          "description": "Declared unit for carbon footprint",
+          "type": "string"
+        },
+        "recycled_content_percent": {
+          "description": "Percentage of recycled content (ESPR & PPWR)",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "recyclable_content_percent": {
+          "description": "Percentage of recyclable content (UNTP circularity)",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "repair_score": {
+          "description": "Repairability index 0-10 (ESPR)",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "durability_score": {
+          "description": "Durability rating 0-10",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "disassembly_instructions": {
+          "description": "Link to disassembly information",
+          "type": "string",
+          "format": "uri"
+        },
+        "substances_of_concern": {
+          "description": "Substances of Concern declarations (ESPR)",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" },
+              "cas_number": {
+                "type": "string",
+                "pattern": "^\\d{1,7}-\\d{2}-\\d$"
+              },
+              "concentration_ppm": { "type": "number" },
+              "location": { "type": "string" }
+            }
+          }
+        },
+        "hazardous": {
+          "description": "Hazardous product flag",
+          "type": "boolean"
+        },
+        "material_safety_info_url": {
+          "description": "Material safety data sheet URL",
+          "type": "string",
+          "format": "uri"
+        },
+        "verified_ratio": {
+          "description": "UNTP data verification coverage (0.0 to 1.0)",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "verification_evidence_url": {
+          "description": "Link to verification attestation",
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "additionalProperties": true
+    },
+    "traceability": {
+      "description": "Optional chain-of-custody, retention, and evidence references.",
+      "type": "object",
+      "properties": {
+        "batch_id": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "serial_number": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "lot_number": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "epcis_event_refs": {
+          "description": "ISO 19987 (EPCIS) event references for supply chain traceability",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["event_type", "event_id"],
+            "properties": {
+              "event_type": {
+                "type": "string",
+                "enum": ["observation", "aggregation", "transaction", "transformation"]
+              },
+              "event_id": { "type": "string" },
+              "event_url": { "type": "string", "format": "uri" },
+              "hash_digest": { "type": "string" },
+              "hash_method": {
+                "type": "string",
+                "enum": ["SHA-256", "SHA-384", "SHA-512"]
+              }
+            }
+          }
+        },
+        "chain_of_custody_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "w3c_vc_credential_id": {
+          "type": "string",
+          "format": "uri"
+        },
+        "w3c_vc_issuer": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "additionalProperties": true
+    },
+    "conformity_claims": {
+      "description": "UNTP-aligned conformity claims for regulatory and standards compliance.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["claim_id"],
+        "properties": {
+          "claim_id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "reference_standard": {
+            "type": "string"
+          },
+          "reference_regulation": {
+            "type": "string"
+          },
+          "conformity_topic": {
+            "type": "string",
+            "enum": ["environment", "social", "governance", "safety", "quality"]
+          },
+          "declared_value": {
+            "type": "object",
+            "properties": {
+              "metric": { "type": "string" },
+              "value": { "type": "number" },
+              "unit": { "type": "string" },
+              "accuracy": { "type": "number" }
+            }
+          },
+          "conformance": {
+            "type": "boolean"
+          },
+          "assessment_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "conformity_evidence_url": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "description": "Additional metadata",
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

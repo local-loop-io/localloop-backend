@@ -56,14 +56,16 @@ describe('api key guard on write routes', () => {
     registerLoopSchemas(app);
     await registerLoopRoutes(app, {
       insertLoopMaterial: async () => ({ id: materialPayload.id, created_at: new Date().toISOString() }),
+      insertLoopProduct: async () => ({ id: 'product', created_at: new Date().toISOString() }),
       insertLoopOffer: async () => ({ id: 'offer', created_at: new Date().toISOString() }),
       insertLoopMatch: async () => ({ id: 'match', created_at: new Date().toISOString() }),
       insertLoopTransfer: async () => ({ id: 'transfer', created_at: new Date().toISOString() }),
       insertLoopEvent: async () => ({ id: 1, created_at: new Date().toISOString() }),
       listLoopEvents: async () => ([]),
       getLoopMaterial: async () => ({ id: materialPayload.id }),
-      getLoopOffer: async () => ({ id: 'offer', material_id: materialPayload.id }),
-      getLoopMatch: async () => ({ id: 'match', material_id: materialPayload.id, offer_id: 'offer' }),
+      getLoopProduct: async () => ({ id: 'product' }),
+      getLoopOffer: async () => ({ id: 'offer', material_id: materialPayload.id, product_id: null }),
+      getLoopMatch: async () => ({ id: 'match', material_id: materialPayload.id, product_id: null, offer_id: 'offer' }),
       broadcastLoopEvent: () => undefined,
     });
 
