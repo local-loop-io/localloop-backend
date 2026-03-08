@@ -27,9 +27,13 @@
       "const": "MaterialDNA"
     },
     "schema_version": {
-      "description": "Schema version for the minimal interop flow",
+      "description": "Schema version for the minimal interop flow. Emitters SHOULD use 0.1.1; receivers SHOULD accept additive 0.1.x patch releases.",
       "type": "string",
-      "const": "0.1.1"
+      "pattern": "^0\\.1\\.[1-9]\\d*$",
+      "examples": [
+        "0.1.1",
+        "0.1.2"
+      ]
     },
     "id": {
       "description": "Unique MaterialDNA identifier",
@@ -214,30 +218,138 @@
       "maxItems": 10
     },
     "contact": {
-      "description": "Contact information",
+      "description": "Reserved. Personal contact details are not permitted in minimal interop payloads.",
+      "not": {}
+    },
+    "passport": {
+      "description": "Optional regulatory interoperability metadata for DPP-style integrations.",
       "type": "object",
       "properties": {
-        "name": {
+        "passport_id": {
           "type": "string",
-          "examples": [
-            "Munich Recycling Center"
+          "maxLength": 160
+        },
+        "passport_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "backup_copy_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "passport_status": {
+          "type": "string",
+          "enum": [
+            "not_applicable",
+            "optional",
+            "required",
+            "available",
+            "restricted"
           ]
         },
-        "email": {
+        "data_carrier_id": {
           "type": "string",
-          "format": "email",
-          "examples": [
-            "materials@munich.loop"
+          "maxLength": 160
+        },
+        "issuer": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "access_scope": {
+          "type": "string",
+          "enum": [
+            "public",
+            "role-based",
+            "restricted"
           ]
         },
-        "phone": {
+        "supported_regimes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "espr-dpp",
+              "battery-passport",
+              "ppwr",
+              "waste-shipment",
+              "nkws"
+            ]
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "classification": {
+      "description": "Optional classification hints for customs, waste, or product-specific rules.",
+      "type": "object",
+      "properties": {
+        "ewc_code": {
           "type": "string",
-          "pattern": "^\\+?[0-9\\s\\-\\(\\)]+$",
-          "examples": [
-            "+49-89-123456"
+          "pattern": "^\\d{2}(\\s\\d{2}){2}$"
+        },
+        "hs_code": {
+          "type": "string",
+          "pattern": "^\\d{6,10}$"
+        },
+        "cn_code": {
+          "type": "string",
+          "pattern": "^\\d{8}$"
+        },
+        "battery_category": {
+          "type": "string",
+          "enum": [
+            "portable",
+            "lmt",
+            "sli",
+            "industrial",
+            "ev"
           ]
         }
-      }
+      },
+      "additionalProperties": true
+    },
+    "traceability": {
+      "description": "Optional chain-of-custody, retention, and evidence references.",
+      "type": "object",
+      "properties": {
+        "batch_id": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "serial_number": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "lot_number": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "source_operator_id": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "facility_id": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "retention_until": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "document_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "maxItems": 20
+        },
+        "due_diligence_ref": {
+          "type": "string",
+          "maxLength": 160
+        }
+      },
+      "additionalProperties": true
     },
     "metadata": {
       "description": "Additional metadata",
@@ -264,7 +376,9 @@
             "Clean, sorted PET bottles"
           ]
         }
-      }
+      },
+      "additionalProperties": true
     }
-  }
+  },
+  "additionalProperties": true
 }

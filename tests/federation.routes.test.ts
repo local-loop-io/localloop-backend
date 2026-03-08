@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import Fastify from 'fastify';
+import { registerLoopProtocolParsers } from '../src/protocol';
+import { registerFederationSchemas } from '../src/schemas/federationSchemas';
 import { registerFederationRoutes } from '../src/routes/federation';
 
 const handshakePayload = {
@@ -16,6 +18,8 @@ const handshakePayload = {
 describe('federation routes', () => {
   it('lists lab nodes', async () => {
     const app = Fastify({ logger: false });
+    registerLoopProtocolParsers(app);
+    registerFederationSchemas(app);
     await registerFederationRoutes(app, {
       listNodes: () => ([
         {
@@ -51,6 +55,8 @@ describe('federation routes', () => {
 
   it('accepts handshake payloads', async () => {
     const app = Fastify({ logger: false });
+    registerLoopProtocolParsers(app);
+    registerFederationSchemas(app);
     const calls: { node?: string } = {};
     await registerFederationRoutes(app, {
       listNodes: () => ([]),
@@ -83,5 +89,38 @@ describe('federation routes', () => {
     expect(payload.status).toBe('accepted');
     expect(payload.peer_id).toBe('lab-hub.loop');
     expect(calls.node).toBe('munich.loop');
+  });
+
+  it('rejects malformed handshake payloads', async () => {
+    const app = Fastify({ logger: false });
+    registerLoopProtocolParsers(app);
+    registerFederationSchemas(app);
+    await registerFederationRoutes(app, {
+      listNodes: () => ([]),
+      upsertNode: (node) => ({
+        ...node,
+        last_seen: '2025-12-20T10:00:00Z',
+        lab_only: true,
+      }),
+      getLocalNode: () => ({
+        node_id: 'lab-hub.loop',
+        name: 'LocalLoop Lab Hub',
+        endpoint: 'https://loop-api.urbnia.com',
+        capabilities: ['lab-relay'],
+        last_seen: '2025-12-20T10:00:00Z',
+        lab_only: true,
+      }),
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/federation/handshake',
+      payload: {
+        ...handshakePayload,
+        endpoint: 'not-a-uri',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
   });
 });

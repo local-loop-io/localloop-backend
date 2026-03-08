@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 import { config } from '../config';
 import {
   insertLoopMaterial,
@@ -19,6 +19,7 @@ import { broadcastLoopEvent, registerLoopStream } from '../realtime/loopStream';
 import { incrementMetric } from '../metrics';
 import { loopSchemaIds } from '../schemas/loopSchemas';
 import { requireApiKey } from '../security/apiKey';
+import { loopContentType } from '../protocol';
 
 const createResponseSchema = {
   type: 'object',
@@ -82,6 +83,10 @@ const writeRateLimit = {
   timeWindow: config.rateLimitWriteWindow,
 };
 
+type DbLikeError = Error & {
+  code?: string;
+};
+
 type LoopMaterialStatusPayload = {
   '@context'?: string;
   '@type'?: string;
@@ -123,13 +128,27 @@ const defaultDeps: LoopDeps = {
   broadcastLoopEvent,
 };
 
+function sendWriteConflict(error: unknown, reply: FastifyReply) {
+  const pgError = error as DbLikeError;
+  if (pgError?.code === '23505') {
+    reply.code(409).send({ error: 'Resource already exists' });
+    return true;
+  }
+  if (pgError?.code === '23503') {
+    reply.code(409).send({ error: 'Related resource was not found' });
+    return true;
+  }
+  return false;
+}
+
 export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = defaultDeps) {
   app.post('/api/loop/materials', {
     config: { rateLimit: writeRateLimit },
     schema: {
+      consumes: ['application/json', loopContentType],
       security: apiKeySecurity,
       body: { $ref: `${loopSchemaIds.material}#` },
-      response: { 201: createResponseSchema, 400: errorResponseSchema },
+      response: { 201: createResponseSchema, 400: errorResponseSchema, 409: errorResponseSchema },
     },
   }, async (request, reply) => {
     if (!requireApiKey(request, reply)) {
@@ -137,7 +156,15 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     }
 
     const payload = request.body as LoopMaterialPayload;
-    const created = await deps.insertLoopMaterial(payload);
+    let created;
+    try {
+      created = await deps.insertLoopMaterial(payload);
+    } catch (error) {
+      if (sendWriteConflict(error, reply)) {
+        return;
+      }
+      throw error;
+    }
 
     const eventPayload = {
       type: 'material.created',
@@ -163,9 +190,10 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   app.post('/api/loop/offers', {
     config: { rateLimit: writeRateLimit },
     schema: {
+      consumes: ['application/json', loopContentType],
       security: apiKeySecurity,
       body: { $ref: `${loopSchemaIds.offer}#` },
-      response: { 201: createResponseSchema, 400: errorResponseSchema },
+      response: { 201: createResponseSchema, 400: errorResponseSchema, 409: errorResponseSchema },
     },
   }, async (request, reply) => {
     if (!requireApiKey(request, reply)) {
@@ -179,7 +207,15 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       return;
     }
 
-    const created = await deps.insertLoopOffer(payload);
+    let created;
+    try {
+      created = await deps.insertLoopOffer(payload);
+    } catch (error) {
+      if (sendWriteConflict(error, reply)) {
+        return;
+      }
+      throw error;
+    }
     const eventPayload = {
       type: 'offer.created',
       entity: 'offer',
@@ -204,9 +240,10 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   app.post('/api/loop/matches', {
     config: { rateLimit: writeRateLimit },
     schema: {
+      consumes: ['application/json', loopContentType],
       security: apiKeySecurity,
       body: { $ref: `${loopSchemaIds.match}#` },
-      response: { 201: createResponseSchema, 400: errorResponseSchema },
+      response: { 201: createResponseSchema, 400: errorResponseSchema, 409: errorResponseSchema },
     },
   }, async (request, reply) => {
     if (!requireApiKey(request, reply)) {
@@ -229,7 +266,15 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       return;
     }
 
-    const created = await deps.insertLoopMatch(payload);
+    let created;
+    try {
+      created = await deps.insertLoopMatch(payload);
+    } catch (error) {
+      if (sendWriteConflict(error, reply)) {
+        return;
+      }
+      throw error;
+    }
     const eventPayload = {
       type: 'match.created',
       entity: 'match',
@@ -254,9 +299,10 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   app.post('/api/loop/transfers', {
     config: { rateLimit: writeRateLimit },
     schema: {
+      consumes: ['application/json', loopContentType],
       security: apiKeySecurity,
       body: { $ref: `${loopSchemaIds.transfer}#` },
-      response: { 201: createResponseSchema, 400: errorResponseSchema },
+      response: { 201: createResponseSchema, 400: errorResponseSchema, 409: errorResponseSchema },
     },
   }, async (request, reply) => {
     if (!requireApiKey(request, reply)) {
@@ -279,7 +325,15 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       return;
     }
 
-    const created = await deps.insertLoopTransfer(payload);
+    let created;
+    try {
+      created = await deps.insertLoopTransfer(payload);
+    } catch (error) {
+      if (sendWriteConflict(error, reply)) {
+        return;
+      }
+      throw error;
+    }
     const eventPayload = {
       type: 'transfer.created',
       entity: 'transfer',
@@ -304,6 +358,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   app.post('/api/loop/material-status', {
     config: { rateLimit: writeRateLimit },
     schema: {
+      consumes: ['application/json', loopContentType],
       security: apiKeySecurity,
       body: { $ref: `${loopSchemaIds.materialStatus}#` },
       response: { 201: createResponseSchema, 400: errorResponseSchema },
@@ -371,6 +426,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   app.post('/api/loop/relay', {
     config: { rateLimit: writeRateLimit },
     schema: {
+      consumes: ['application/json', loopContentType],
       security: apiKeySecurity,
       body: relayBodySchema,
       response: {

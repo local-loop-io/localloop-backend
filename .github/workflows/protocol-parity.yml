@@ -1,0 +1,14 @@
+name: Protocol Schema Parity
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify protocol schema parity
+        run: bash scripts/check-protocol-parity.sh

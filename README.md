@@ -31,6 +31,8 @@ bun test
 - `POST /api/loop/material-status`: record a material status update (lab demo).
 - `GET /api/metrics`: service metrics.
 
+LOOP interop write routes accept `application/ld+json` as the preferred content type.
+
 ## Repo layout
 - `src/`: Fastify app and routes.
 - `tests/`: API and integration tests.
