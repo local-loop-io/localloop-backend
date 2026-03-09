@@ -120,6 +120,12 @@ const materialStatusPayload = {
   metadata: { ticket: 'LAB-42' },
 };
 
+const fakeMaterialRecord = { id: materialPayload.id, category: materialPayload.category, created_at: new Date().toISOString() };
+const fakeProductRecord = { id: productPayload.id, product_category: productPayload.product_category, created_at: new Date().toISOString() };
+const fakeOfferRecord = { id: offerPayload.id, material_id: materialPayload.id, product_id: null, status: 'open', created_at: new Date().toISOString() };
+const fakeMatchRecord = { id: matchPayload.id, material_id: materialPayload.id, product_id: null, offer_id: offerPayload.id, status: 'accepted', created_at: new Date().toISOString() };
+const fakeTransferRecord = { id: transferPayload.id, material_id: materialPayload.id, product_id: null, match_id: matchPayload.id, status: 'completed', created_at: new Date().toISOString() };
+
 const buildApp = () => {
   const app = Fastify({ logger: false });
   registerLoopProtocolParsers(app);
@@ -134,17 +140,27 @@ const buildApp = () => {
     insertLoopEvent: async () => ({ id: 1, created_at: new Date().toISOString() }),
     listLoopEvents: async () => ([{ id: 1, event_type: 'material.created', entity_type: 'material', entity_id: materialPayload.id, payload: {}, created_at: new Date().toISOString() }]),
     getLoopMaterial: async (id: string) => (id === materialPayload.id ? { id } : undefined),
+    getLoopMaterialById: async (id: string) => (id === materialPayload.id ? fakeMaterialRecord : undefined),
+    listLoopMaterials: async () => ([fakeMaterialRecord]),
     getLoopProduct: async (id: string) => (id === productPayload.id ? { id } : undefined),
+    getLoopProductById: async (id: string) => (id === productPayload.id ? fakeProductRecord : undefined),
+    listLoopProducts: async () => ([fakeProductRecord]),
     getLoopOffer: async (id: string) => {
       if (id === offerPayload.id) return { id, material_id: materialPayload.id, product_id: null };
       if (id === productOfferPayload.id) return { id, material_id: null, product_id: productPayload.id };
       return undefined;
     },
+    getLoopOfferById: async (id: string) => (id === offerPayload.id ? fakeOfferRecord : undefined),
+    listLoopOffers: async () => ([fakeOfferRecord]),
     getLoopMatch: async (id: string) => {
       if (id === matchPayload.id) return { id, material_id: materialPayload.id, product_id: null, offer_id: offerPayload.id };
       if (id === productMatchPayload.id) return { id, material_id: null, product_id: productPayload.id, offer_id: productOfferPayload.id };
       return undefined;
     },
+    getLoopMatchById: async (id: string) => (id === matchPayload.id ? fakeMatchRecord : undefined),
+    listLoopMatches: async () => ([fakeMatchRecord]),
+    getLoopTransferById: async (id: string) => (id === transferPayload.id ? fakeTransferRecord : undefined),
+    listLoopTransfers: async () => ([fakeTransferRecord]),
     broadcastLoopEvent: () => undefined,
   };
 
@@ -386,5 +402,146 @@ describe('loop routes', () => {
     });
 
     expect(response.statusCode).toBe(409);
+  });
+
+  it('retrieves a material by id', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({ method: 'GET', url: `/api/v1/material/${materialPayload.id}` });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.id).toBe(materialPayload.id);
+    expect(body.category).toBe(materialPayload.category);
+  });
+
+  it('returns 404 for unknown material id', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({ method: 'GET', url: '/api/v1/material/nonexistent-id' });
+    expect(response.statusCode).toBe(404);
+  });
+
+  it('lists materials', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({ method: 'GET', url: '/api/v1/material' });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(Array.isArray(body)).toBe(true);
+    expect(body.length).toBeGreaterThan(0);
+  });
+
+  it('retrieves a product by id', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({ method: 'GET', url: `/api/v1/product/${productPayload.id}` });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.id).toBe(productPayload.id);
+  });
+
+  it('returns 404 for unknown product id', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({ method: 'GET', url: '/api/v1/product/nonexistent-id' });
+    expect(response.statusCode).toBe(404);
+  });
+
+  it('lists products', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({ method: 'GET', url: '/api/v1/product' });
+    expect(response.statusCode).toBe(200);
+    expect(Array.isArray(response.json())).toBe(true);
+  });
+
+  it('retrieves an offer by id', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({ method: 'GET', url: `/api/v1/offer/${offerPayload.id}` });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.id).toBe(offerPayload.id);
+    expect(body.status).toBe('open');
+  });
+
+  it('returns 404 for unknown offer id', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({ method: 'GET', url: '/api/v1/offer/nonexistent-id' });
+    expect(response.statusCode).toBe(404);
+  });
+
+  it('lists offers', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({ method: 'GET', url: '/api/v1/offer' });
+    expect(response.statusCode).toBe(200);
+    expect(Array.isArray(response.json())).toBe(true);
+  });
+
+  it('retrieves a match by id', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({ method: 'GET', url: `/api/v1/match/${matchPayload.id}` });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.id).toBe(matchPayload.id);
+    expect(body.status).toBe('accepted');
+  });
+
+  it('returns 404 for unknown match id', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({ method: 'GET', url: '/api/v1/match/nonexistent-id' });
+    expect(response.statusCode).toBe(404);
+  });
+
+  it('lists matches', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({ method: 'GET', url: '/api/v1/match' });
+    expect(response.statusCode).toBe(200);
+    expect(Array.isArray(response.json())).toBe(true);
+  });
+
+  it('retrieves a transfer by id', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({ method: 'GET', url: `/api/v1/transfer/${transferPayload.id}` });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.id).toBe(transferPayload.id);
+    expect(body.status).toBe('completed');
+  });
+
+  it('returns 404 for unknown transfer id', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({ method: 'GET', url: '/api/v1/transfer/nonexistent-id' });
+    expect(response.statusCode).toBe(404);
+  });
+
+  it('lists transfers', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({ method: 'GET', url: '/api/v1/transfer' });
+    expect(response.statusCode).toBe(200);
+    expect(Array.isArray(response.json())).toBe(true);
   });
 });

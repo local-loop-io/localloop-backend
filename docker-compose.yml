@@ -5,6 +5,13 @@ services:
     build: .
     env_file:
       - .env.docker
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 128M
     depends_on:
       postgres:
         condition: service_healthy
@@ -12,6 +19,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+    ports:
+      - "127.0.0.1:8088:8088"
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=proxy"
@@ -26,6 +35,13 @@ services:
 
   postgres:
     image: postgis/postgis:18-3.6
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 256M
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-localloop}
       POSTGRES_USER: ${POSTGRES_USER:-localloop}
@@ -42,6 +58,13 @@ services:
       retries: 5
 
   redis:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          memory: 64M
     image: redis@sha256:3aaec283e6e593bde528077d60280ac1589887067a39273348860837c9346d7e
     ports:
       - "127.0.0.1:6381:6379"
@@ -55,6 +78,13 @@ services:
       retries: 5
 
   minio:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          memory: 64M
     image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     command: server /data --console-address ":9001"
     environment:

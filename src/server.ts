@@ -33,6 +33,7 @@ export async function buildServer(options: BuildOptions = {}) {
     logger: options.logger ?? true,
     trustProxy: true,
     bodyLimit: config.bodyLimit,
+    connectionTimeout: config.requestTimeoutMs,
   });
 
   registerLoopProtocolParsers(app);

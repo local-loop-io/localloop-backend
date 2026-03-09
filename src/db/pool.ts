@@ -4,6 +4,8 @@ import { config } from '../config';
 export const pool = new Pool({
   connectionString: config.databaseUrl,
   max: config.dbPoolSize,
+  idleTimeoutMillis: config.dbIdleTimeoutMs,
+  connectionTimeoutMillis: config.dbConnectionTimeoutMs,
   ssl: config.databaseSsl ? { rejectUnauthorized: true } : undefined,
 });
 

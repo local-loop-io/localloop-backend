@@ -9,9 +9,19 @@ import {
   insertLoopEvent,
   listLoopEvents,
   getLoopMaterial,
+  getLoopMaterialById,
+  listLoopMaterials,
   getLoopProduct,
+  getLoopProductById,
+  listLoopProducts,
   getLoopOffer,
+  getLoopOfferById,
+  listLoopOffers,
   getLoopMatch,
+  getLoopMatchById,
+  listLoopMatches,
+  getLoopTransferById,
+  listLoopTransfers,
   type LoopMaterialPayload,
   type LoopProductPayload,
   type LoopOfferPayload,
@@ -114,9 +124,19 @@ type LoopDeps = {
   insertLoopEvent: typeof insertLoopEvent;
   listLoopEvents: typeof listLoopEvents;
   getLoopMaterial: typeof getLoopMaterial;
+  getLoopMaterialById: typeof getLoopMaterialById;
+  listLoopMaterials: typeof listLoopMaterials;
   getLoopProduct: typeof getLoopProduct;
+  getLoopProductById: typeof getLoopProductById;
+  listLoopProducts: typeof listLoopProducts;
   getLoopOffer: typeof getLoopOffer;
+  getLoopOfferById: typeof getLoopOfferById;
+  listLoopOffers: typeof listLoopOffers;
   getLoopMatch: typeof getLoopMatch;
+  getLoopMatchById: typeof getLoopMatchById;
+  listLoopMatches: typeof listLoopMatches;
+  getLoopTransferById: typeof getLoopTransferById;
+  listLoopTransfers: typeof listLoopTransfers;
   broadcastLoopEvent: typeof broadcastLoopEvent;
 };
 
@@ -129,9 +149,19 @@ const defaultDeps: LoopDeps = {
   insertLoopEvent,
   listLoopEvents,
   getLoopMaterial,
+  getLoopMaterialById,
+  listLoopMaterials,
   getLoopProduct,
+  getLoopProductById,
+  listLoopProducts,
   getLoopOffer,
+  getLoopOfferById,
+  listLoopOffers,
   getLoopMatch,
+  getLoopMatchById,
+  listLoopMatches,
+  getLoopTransferById,
+  listLoopTransfers,
   broadcastLoopEvent,
 };
 
@@ -504,6 +534,98 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
 
   app.get('/api/v1/stream', async (request, reply) => {
     registerLoopStream(request, reply);
+  });
+
+  const listQuerySchema = {
+    type: 'object',
+    properties: {
+      limit: { type: 'number' },
+      category: { type: 'string' },
+      status: { type: 'string' },
+    },
+  };
+
+  const entityResponseSchema = { type: 'object', additionalProperties: true };
+  const entityListResponseSchema = { type: 'array', items: { type: 'object', additionalProperties: true } };
+
+  app.get('/api/v1/material/:id', {
+    schema: { response: { 200: entityResponseSchema, 404: errorResponseSchema } },
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const result = await deps.getLoopMaterialById(id);
+    if (!result) return reply.code(404).send({ error: 'Not found' });
+    return result;
+  });
+
+  app.get('/api/v1/material', {
+    schema: { querystring: listQuerySchema, response: { 200: entityListResponseSchema } },
+  }, async (request) => {
+    const q = request.query as { limit?: number; category?: string };
+    return deps.listLoopMaterials({ limit: q.limit, category: q.category });
+  });
+
+  app.get('/api/v1/product/:id', {
+    schema: { response: { 200: entityResponseSchema, 404: errorResponseSchema } },
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const result = await deps.getLoopProductById(id);
+    if (!result) return reply.code(404).send({ error: 'Not found' });
+    return result;
+  });
+
+  app.get('/api/v1/product', {
+    schema: { querystring: listQuerySchema, response: { 200: entityListResponseSchema } },
+  }, async (request) => {
+    const q = request.query as { limit?: number; category?: string };
+    return deps.listLoopProducts({ limit: q.limit, category: q.category });
+  });
+
+  app.get('/api/v1/offer/:id', {
+    schema: { response: { 200: entityResponseSchema, 404: errorResponseSchema } },
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const result = await deps.getLoopOfferById(id);
+    if (!result) return reply.code(404).send({ error: 'Not found' });
+    return result;
+  });
+
+  app.get('/api/v1/offer', {
+    schema: { querystring: listQuerySchema, response: { 200: entityListResponseSchema } },
+  }, async (request) => {
+    const q = request.query as { limit?: number; status?: string };
+    return deps.listLoopOffers({ limit: q.limit, status: q.status });
+  });
+
+  app.get('/api/v1/match/:id', {
+    schema: { response: { 200: entityResponseSchema, 404: errorResponseSchema } },
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const result = await deps.getLoopMatchById(id);
+    if (!result) return reply.code(404).send({ error: 'Not found' });
+    return result;
+  });
+
+  app.get('/api/v1/match', {
+    schema: { querystring: listQuerySchema, response: { 200: entityListResponseSchema } },
+  }, async (request) => {
+    const q = request.query as { limit?: number };
+    return deps.listLoopMatches({ limit: q.limit });
+  });
+
+  app.get('/api/v1/transfer/:id', {
+    schema: { response: { 200: entityResponseSchema, 404: errorResponseSchema } },
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const result = await deps.getLoopTransferById(id);
+    if (!result) return reply.code(404).send({ error: 'Not found' });
+    return result;
+  });
+
+  app.get('/api/v1/transfer', {
+    schema: { querystring: listQuerySchema, response: { 200: entityListResponseSchema } },
+  }, async (request) => {
+    const q = request.query as { limit?: number };
+    return deps.listLoopTransfers({ limit: q.limit });
   });
 
   app.post('/api/v1/relay', {

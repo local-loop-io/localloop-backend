@@ -212,12 +212,60 @@ export async function getLoopMaterial(id: string) {
   return rows[0] as { id: string } | undefined;
 }
 
+export async function getLoopMaterialById(id: string) {
+  const { rows } = await pool.query(
+    'SELECT id, category, quantity_value, quantity_unit, origin_city, current_city, available_from, expires_at, quality, payload, created_at FROM loop_materials WHERE id = $1',
+    [id],
+  );
+  return rows[0] as Record<string, unknown> | undefined;
+}
+
+export async function listLoopMaterials(opts: { limit?: number; category?: string } = {}) {
+  const limit = Math.min(opts.limit ?? 20, 100);
+  if (opts.category) {
+    const { rows } = await pool.query(
+      'SELECT id, category, quantity_value, quantity_unit, origin_city, current_city, available_from, expires_at, quality, payload, created_at FROM loop_materials WHERE category = $1 ORDER BY created_at DESC LIMIT $2',
+      [opts.category, limit],
+    );
+    return rows as Record<string, unknown>[];
+  }
+  const { rows } = await pool.query(
+    'SELECT id, category, quantity_value, quantity_unit, origin_city, current_city, available_from, expires_at, quality, payload, created_at FROM loop_materials ORDER BY created_at DESC LIMIT $1',
+    [limit],
+  );
+  return rows as Record<string, unknown>[];
+}
+
 export async function getLoopProduct(id: string) {
   const { rows } = await pool.query(
     'SELECT id FROM loop_products WHERE id = $1',
     [id],
   );
   return rows[0] as { id: string } | undefined;
+}
+
+export async function getLoopProductById(id: string) {
+  const { rows } = await pool.query(
+    'SELECT id, product_category, name, condition, quantity_value, quantity_unit, origin_city, current_city, available_from, expires_at, payload, created_at FROM loop_products WHERE id = $1',
+    [id],
+  );
+  return rows[0] as Record<string, unknown> | undefined;
+}
+
+export async function listLoopProducts(opts: { limit?: number; category?: string } = {}) {
+  const limit = Math.min(opts.limit ?? 20, 100);
+  if (opts.category) {
+    const { rows } = await pool.query(
+      'SELECT id, product_category, name, condition, quantity_value, quantity_unit, origin_city, current_city, available_from, expires_at, payload, created_at FROM loop_products WHERE product_category = $1 ORDER BY created_at DESC LIMIT $2',
+      [opts.category, limit],
+    );
+    return rows as Record<string, unknown>[];
+  }
+  const { rows } = await pool.query(
+    'SELECT id, product_category, name, condition, quantity_value, quantity_unit, origin_city, current_city, available_from, expires_at, payload, created_at FROM loop_products ORDER BY created_at DESC LIMIT $1',
+    [limit],
+  );
+  return rows as Record<string, unknown>[];
 }
 
 export async function getLoopOffer(id: string) {
@@ -228,10 +276,68 @@ export async function getLoopOffer(id: string) {
   return rows[0] as { id: string; material_id: string | null; product_id: string | null } | undefined;
 }
 
+export async function getLoopOfferById(id: string) {
+  const { rows } = await pool.query(
+    'SELECT id, material_id, product_id, from_city, to_city, status, quantity_value, quantity_unit, available_until, terms, payload, created_at FROM loop_offers WHERE id = $1',
+    [id],
+  );
+  return rows[0] as Record<string, unknown> | undefined;
+}
+
+export async function listLoopOffers(opts: { limit?: number; status?: string } = {}) {
+  const limit = Math.min(opts.limit ?? 20, 100);
+  if (opts.status) {
+    const { rows } = await pool.query(
+      'SELECT id, material_id, product_id, from_city, to_city, status, quantity_value, quantity_unit, available_until, terms, payload, created_at FROM loop_offers WHERE status = $1 ORDER BY created_at DESC LIMIT $2',
+      [opts.status, limit],
+    );
+    return rows as Record<string, unknown>[];
+  }
+  const { rows } = await pool.query(
+    'SELECT id, material_id, product_id, from_city, to_city, status, quantity_value, quantity_unit, available_until, terms, payload, created_at FROM loop_offers ORDER BY created_at DESC LIMIT $1',
+    [limit],
+  );
+  return rows as Record<string, unknown>[];
+}
+
 export async function getLoopMatch(id: string) {
   const { rows } = await pool.query(
     'SELECT id, material_id, product_id, offer_id FROM loop_matches WHERE id = $1',
     [id],
   );
   return rows[0] as { id: string; material_id: string | null; product_id: string | null; offer_id: string } | undefined;
+}
+
+export async function getLoopMatchById(id: string) {
+  const { rows } = await pool.query(
+    'SELECT id, material_id, product_id, offer_id, from_city, to_city, status, matched_at, payload, created_at FROM loop_matches WHERE id = $1',
+    [id],
+  );
+  return rows[0] as Record<string, unknown> | undefined;
+}
+
+export async function listLoopMatches(opts: { limit?: number } = {}) {
+  const limit = Math.min(opts.limit ?? 20, 100);
+  const { rows } = await pool.query(
+    'SELECT id, material_id, product_id, offer_id, from_city, to_city, status, matched_at, payload, created_at FROM loop_matches ORDER BY created_at DESC LIMIT $1',
+    [limit],
+  );
+  return rows as Record<string, unknown>[];
+}
+
+export async function getLoopTransferById(id: string) {
+  const { rows } = await pool.query(
+    'SELECT id, material_id, product_id, match_id, status, handoff_at, received_at, payload, created_at FROM loop_transfers WHERE id = $1',
+    [id],
+  );
+  return rows[0] as Record<string, unknown> | undefined;
+}
+
+export async function listLoopTransfers(opts: { limit?: number } = {}) {
+  const limit = Math.min(opts.limit ?? 20, 100);
+  const { rows } = await pool.query(
+    'SELECT id, material_id, product_id, match_id, status, handoff_at, received_at, payload, created_at FROM loop_transfers ORDER BY created_at DESC LIMIT $1',
+    [limit],
+  );
+  return rows as Record<string, unknown>[];
 }
