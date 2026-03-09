@@ -2,9 +2,26 @@
 
 ## Unreleased
 ### Added
-- Lab federation relay endpoint and two-node demo scripts.
-- API body size limit configuration (`BODY_LIMIT`).
-- Typecheck step in CI plus SSE stream test coverage.
+- GET endpoints for all five Loop entity types: `GET /api/v1/material/:id`,
+  `/material`, `/product/:id`, `/product`, `/offer/:id`, `/offer`,
+  `/match/:id`, `/match`, `/transfer/:id`, `/transfer`.
+- `category` and `status` query filters on list endpoints.
+- Migration `010_loop_indexes.sql`: performance indexes on all loop_* tables
+  (category, status, city columns, FK columns, created_at DESC).
+- Health endpoint now probes the database pool and returns `db: "ok"/"error"`;
+  responds `503` if the DB is unreachable.
+- Pool configuration: `DB_IDLE_TIMEOUT_MS`, `DB_CONNECTION_TIMEOUT_MS`,
+  `REQUEST_TIMEOUT_MS` wired through config into Fastify and pg Pool.
+- Docker Compose resource limits (CPU + memory) on all four services.
+- Port `127.0.0.1:8088:8088` exposed in Docker Compose for local dev.
+
+### Changed
+- `DB_POOL_SIZE` default raised from 10 to 20.
+- `.env.docker.example` documents new pool/timeout vars.
+
+### Security
+- Rotated all `.env.docker` secrets (postgres, minio, better-auth).
+
 
 ## 0.2.2 - 2025-12-19
 ### Added
