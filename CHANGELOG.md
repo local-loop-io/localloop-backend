@@ -5,6 +5,8 @@
 - GET endpoints for all five Loop entity types: `GET /api/v1/material/:id`,
   `/material`, `/product/:id`, `/product`, `/offer/:id`, `/offer`,
   `/match/:id`, `/match`, `/transfer/:id`, `/transfer`.
+- Minimal lab `GET /api/v1/node/info` endpoint for local node metadata.
+- Backup automation artifacts: `deploy/backup.sh`, systemd backup service, and timer.
 - `category` and `status` query filters on list endpoints.
 - Migration `010_loop_indexes.sql`: performance indexes on all loop_* tables
   (category, status, city columns, FK columns, created_at DESC).
@@ -18,6 +20,9 @@
 ### Changed
 - `DB_POOL_SIZE` default raised from 10 to 20.
 - `.env.docker.example` documents new pool/timeout vars.
+- Federation handshake responses now default to the preferred v0.2.0 context/version.
+- Relay validation now restricts relayed event/entity combinations to supported lab event families.
+- `deploy/setup.sh` now provisions `.env.docker` for Docker-based operations.
 
 ### Security
 - Rotated all `.env.docker` secrets (postgres, minio, better-auth).

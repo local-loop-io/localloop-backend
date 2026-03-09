@@ -54,18 +54,29 @@ describe('api key guard on write routes', () => {
   it('blocks loop writes without api key', async () => {
     const app = Fastify({ logger: false });
     registerLoopSchemas(app);
+    const now = new Date().toISOString();
     await registerLoopRoutes(app, {
-      insertLoopMaterial: async () => ({ id: materialPayload.id, created_at: new Date().toISOString() }),
-      insertLoopProduct: async () => ({ id: 'product', created_at: new Date().toISOString() }),
-      insertLoopOffer: async () => ({ id: 'offer', created_at: new Date().toISOString() }),
-      insertLoopMatch: async () => ({ id: 'match', created_at: new Date().toISOString() }),
-      insertLoopTransfer: async () => ({ id: 'transfer', created_at: new Date().toISOString() }),
-      insertLoopEvent: async () => ({ id: 1, created_at: new Date().toISOString() }),
+      insertLoopMaterial: async () => ({ id: materialPayload.id, created_at: now }),
+      insertLoopProduct: async () => ({ id: 'product', created_at: now }),
+      insertLoopOffer: async () => ({ id: 'offer', created_at: now }),
+      insertLoopMatch: async () => ({ id: 'match', created_at: now }),
+      insertLoopTransfer: async () => ({ id: 'transfer', created_at: now }),
+      insertLoopEvent: async () => ({ id: 1, created_at: now }),
       listLoopEvents: async () => ([]),
       getLoopMaterial: async () => ({ id: materialPayload.id }),
+      getLoopMaterialById: async () => undefined,
+      listLoopMaterials: async () => ([]),
       getLoopProduct: async () => ({ id: 'product' }),
+      getLoopProductById: async () => undefined,
+      listLoopProducts: async () => ([]),
       getLoopOffer: async () => ({ id: 'offer', material_id: materialPayload.id, product_id: null }),
+      getLoopOfferById: async () => undefined,
+      listLoopOffers: async () => ([]),
       getLoopMatch: async () => ({ id: 'match', material_id: materialPayload.id, product_id: null, offer_id: 'offer' }),
+      getLoopMatchById: async () => undefined,
+      listLoopMatches: async () => ([]),
+      getLoopTransferById: async () => undefined,
+      listLoopTransfers: async () => ([]),
       broadcastLoopEvent: () => undefined,
     });
 

@@ -41,6 +41,7 @@ bun test                      # run all tests
 | `POST` | `/api/v1/material` | Register a MaterialDNA record |
 | `GET` | `/api/v1/material/:id` | Retrieve a material by ID |
 | `GET` | `/api/v1/material` | List materials (`limit`, `category`) |
+| `GET` | `/api/v1/node/info` | Return local node metadata for the lab backend |
 | `POST` | `/api/v1/product` | Register a ProductDNA record |
 | `GET` | `/api/v1/product/:id` | Retrieve a product by ID |
 | `GET` | `/api/v1/product` | List products (`limit`, `category`) |
@@ -56,13 +57,13 @@ bun test                      # run all tests
 | `POST` | `/api/v1/material-status` | Record a material status update |
 | `GET` | `/api/v1/events` | List loop events (`limit`) |
 | `GET` | `/api/v1/stream` | SSE stream for loop events |
-| `POST` | `/api/v1/relay` | Relay a loop event from another node |
+| `POST` | `/api/v1/relay` | Relay a supported lab loop event from another node |
 
 ### Federation
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/api/v1/federation/nodes` | List known federation nodes |
-| `POST` | `/api/v1/federation/handshake` | Register a federation node |
+| `POST` | `/api/v1/federation/handshake` | Register a federation node (lab-only handshake) |
 
 ### Cities
 | Method | Path | Description |
@@ -80,6 +81,8 @@ bun test                      # run all tests
 | `GET` | `/docs` | Redoc UI |
 
 LOOP write routes accept both `application/json` and `application/ld+json`.
+The backend also serves `GET /api/v1/node/info` as a minimal lab-only node metadata endpoint.
+Spec endpoints that remain unimplemented in this repo are `/api/v1/material/search`, `/api/v1/signals`, `/api/v1/transaction`, `/api/v1/federate/announce`, and `/api/v1/federate/offer`.
 
 ## Environment variables
 

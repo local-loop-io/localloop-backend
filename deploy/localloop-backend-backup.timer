@@ -1,0 +1,10 @@
+[Unit]
+Description=Nightly localLOOP backend backup
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+Persistent=true
+Unit=localloop-backend-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -96,6 +96,14 @@ const writeRateLimit = {
   timeWindow: config.rateLimitWriteWindow,
 };
 
+const allowedRelayEvents: Record<string, readonly string[]> = {
+  material: ['material.created', 'material.status_updated'],
+  product: ['product.created'],
+  offer: ['offer.created'],
+  match: ['match.created'],
+  transfer: ['transfer.created'],
+};
+
 type DbLikeError = Error & {
   code?: string;
 };
@@ -176,6 +184,14 @@ function sendWriteConflict(error: unknown, reply: FastifyReply) {
     return true;
   }
   return false;
+}
+
+function isAllowedRelayEvent(entityType: string, eventType: string) {
+  if (!Object.hasOwn(allowedRelayEvents, entityType)) {
+    return false;
+  }
+
+  return allowedRelayEvents[entityType]?.includes(eventType) ?? false;
 }
 
 export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = defaultDeps) {
@@ -651,6 +667,11 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       payload: Record<string, unknown>;
       source_node?: string;
     };
+
+    if (!isAllowedRelayEvent(payload.entity_type, payload.event_type)) {
+      reply.code(400).send({ error: 'Unsupported relay event_type for entity_type' });
+      return;
+    }
 
     const eventPayload = {
       ...payload.payload,

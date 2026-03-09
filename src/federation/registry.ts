@@ -10,11 +10,16 @@ export type NodeRecord = {
   lab_only: true;
 };
 
+export function resolveNodeApiEndpoint(publicBaseUrl: string) {
+  const trimmed = publicBaseUrl.replace(/\/+$/, '');
+  return trimmed.endsWith('/api/v1') ? trimmed : `${trimmed}/api/v1`;
+}
+
 export function getLocalNode(): NodeRecord {
   return {
     node_id: config.node.id,
     name: config.node.name,
-    endpoint: config.publicBaseUrl,
+    endpoint: resolveNodeApiEndpoint(config.publicBaseUrl),
     capabilities: config.node.capabilities,
     last_seen: new Date().toISOString(),
     lab_only: true,

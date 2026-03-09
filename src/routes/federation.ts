@@ -1,10 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 import { config } from '../config';
 import { incrementMetric } from '../metrics';
-import { getLocalNode, listNodes, upsertNode, type NodeRecord } from '../federation/registry';
+import { getLocalNode, listNodes, resolveNodeApiEndpoint, upsertNode, type NodeRecord } from '../federation/registry';
 import { requireApiKey } from '../security/apiKey';
 import { federationSchemaIds, registerFederationSchemas } from '../schemas/federationSchemas';
 import { loopContentType } from '../protocol';
+import packageInfo from '../../package.json';
 
 const listResponseSchema = {
   type: 'object',
@@ -25,6 +26,21 @@ const listResponseSchema = {
         },
       },
     },
+  },
+};
+
+const nodeInfoResponseSchema = {
+  type: 'object',
+  required: ['@context', '@type', 'id', 'name', 'version', 'endpoint', 'capabilities', 'lab_only'],
+  properties: {
+    '@context': { type: 'string' },
+    '@type': { type: 'string', const: 'NodeInfo' },
+    id: { type: 'string' },
+    name: { type: 'string' },
+    version: { type: 'string' },
+    endpoint: { type: 'string' },
+    capabilities: { type: 'array', items: { type: 'string' } },
+    lab_only: { type: 'boolean', const: true },
   },
 };
 
@@ -49,6 +65,26 @@ const defaultDeps: FederationDeps = {
 
 export async function registerFederationRoutes(app: FastifyInstance, deps: FederationDeps = defaultDeps) {
   registerFederationSchemas(app);
+
+  app.get('/api/v1/node/info', {
+    schema: {
+      response: {
+        200: nodeInfoResponseSchema,
+      },
+    },
+  }, async () => {
+    const local = deps.getLocalNode();
+    return {
+      '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+      '@type': 'NodeInfo',
+      id: local.node_id,
+      name: local.name,
+      version: packageInfo.version,
+      endpoint: resolveNodeApiEndpoint(config.publicBaseUrl),
+      capabilities: local.capabilities,
+      lab_only: true,
+    };
+  });
 
   app.get('/api/v1/federation/nodes', {
     schema: {
@@ -99,7 +135,7 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
     reply.code(202).send({
       '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
       '@type': 'NodeHandshakeResponse',
-      schema_version: '0.1.1',
+      schema_version: '0.2.0',
       status: 'accepted',
       peer_id: local.node_id,
       capabilities: local.capabilities,

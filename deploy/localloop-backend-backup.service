@@ -1,0 +1,17 @@
+[Unit]
+Description=localLOOP Backend Backup
+After=docker.service network.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/localloop-backend
+EnvironmentFile=-/opt/localloop-backend/.env
+ExecStart=/opt/localloop-backend/deploy/backup.sh
+User=root
+Group=root
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/opt/localloop-backend/backups /opt/localloop-backend/data

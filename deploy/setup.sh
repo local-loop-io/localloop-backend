@@ -32,11 +32,12 @@ fi
 echo "Setting up installation directory..."
 mkdir -p "$INSTALL_DIR"
 mkdir -p "$INSTALL_DIR/data"
+mkdir -p "$INSTALL_DIR/backups"
 
 # Copy application files (if running from source directory)
 if [[ -f "src/index.ts" ]]; then
     echo "Copying application files..."
-    cp -r src package.json bun.lock prisma prisma.config.ts "$INSTALL_DIR/"
+    cp -r src deploy package.json bun.lock prisma prisma.config.ts docker-compose.yml .env.example .env.docker.example "$INSTALL_DIR/"
 
     # Copy .env.example if .env doesn't exist
     if [[ ! -f "$INSTALL_DIR/.env" ]]; then
@@ -44,6 +45,13 @@ if [[ -f "src/index.ts" ]]; then
         echo ""
         echo "IMPORTANT: Edit $INSTALL_DIR/.env with your production configuration!"
         echo "Required: DATABASE_URL, MINIO_SECRET_KEY, BETTER_AUTH_SECRET (if auth enabled)"
+    fi
+
+    if [[ ! -f "$INSTALL_DIR/.env.docker" ]]; then
+        cp .env.docker.example "$INSTALL_DIR/.env.docker"
+        echo ""
+        echo "IMPORTANT: Edit $INSTALL_DIR/.env.docker before enabling Docker-based operations!"
+        echo "Required: POSTGRES_PASSWORD, MINIO_ROOT_PASSWORD, MINIO_SECRET_KEY, DATABASE_URL"
     fi
 fi
 
@@ -55,9 +63,12 @@ chown -R "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR"
 if [[ -f "deploy/localloop-backend.service" ]]; then
     echo "Installing systemd service..."
     cp deploy/localloop-backend.service /etc/systemd/system/localloop-backend.service
+    cp deploy/localloop-backend-backup.service /etc/systemd/system/localloop-backend-backup.service
+    cp deploy/localloop-backend-backup.timer /etc/systemd/system/localloop-backend-backup.timer
     systemctl daemon-reload
     echo "Service installed. Enable with: systemctl enable localloop-backend"
     echo "Start with: systemctl start localloop-backend"
+    echo "Enable backups with: systemctl enable --now localloop-backend-backup.timer"
 fi
 
 # Verify bun is installed
@@ -75,3 +86,4 @@ echo "1. Edit $INSTALL_DIR/.env with production credentials"
 echo "2. Run 'cd $INSTALL_DIR && bun install' as $SERVICE_USER"
 echo "3. Run 'systemctl enable --now localloop-backend'"
 echo "4. Check status with 'systemctl status localloop-backend'"
+echo "5. Enable nightly backups with 'systemctl enable --now localloop-backend-backup.timer'"

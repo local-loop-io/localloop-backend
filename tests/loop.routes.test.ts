@@ -277,6 +277,63 @@ describe('loop routes', () => {
     expect(calls.event?.event_type).toBe('material.created');
   });
 
+  it('rejects unsupported relay event types', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/relay',
+      payload: {
+        event_type: 'material.deleted',
+        entity_type: 'material',
+        entity_id: materialPayload.id,
+        payload: { hello: 'world' },
+        source_node: 'node-a',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('rejects unsupported relay entity types', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/relay',
+      payload: {
+        event_type: 'material.created',
+        entity_type: 'transaction',
+        entity_id: materialPayload.id,
+        payload: { hello: 'world' },
+        source_node: 'node-a',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('rejects prototype-pollution style relay entity names', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/relay',
+      payload: {
+        event_type: 'material.created',
+        entity_type: '__proto__',
+        entity_id: materialPayload.id,
+        payload: { hello: 'world' },
+        source_node: 'node-a',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
   it('accepts the canonical linked-data content type', async () => {
     const { app, deps } = buildApp();
     await registerLoopRoutes(app, deps);
