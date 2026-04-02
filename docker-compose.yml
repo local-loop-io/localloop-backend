@@ -17,7 +17,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
+      minio-proxy:
         condition: service_healthy
     ports:
       - "127.0.0.1:8088:8088"
@@ -91,13 +91,35 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-localloop}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
     ports:
-      - "127.0.0.1:9200:9000"
       - "127.0.0.1:9201:9001"
     volumes:
       - ./data/minio:/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio-proxy:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          memory: 64M
+    image: nginx:1.27-alpine
+    depends_on:
+      minio:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:9200:9000"
+    volumes:
+      - ./minio-proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9000/minio/health/ready >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
