@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-05-26
+
 ### Added
 - GET endpoints for all five Loop entity types: `GET /api/v1/material/:id`,
   `/material`, `/product/:id`, `/product`, `/offer/:id`, `/offer`,
@@ -32,6 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 - Rotated all `.env.docker` secrets (postgres, minio, better-auth).
+
+### Maintenance
+- Upgraded all dependencies: TypeScript 6.0.3, Prisma 7.8.0, zod 4.4.3, better-auth 1.6.11, @aws-sdk/client-s3 latest, bullmq 5.77.3, fastify 5.8.5
+- Upgraded Contributor Covenant to v3.0
+- Replaced personal contact with org identity (dev@mycel-ai.de)
 
 
 ## [0.2.2] - 2025-12-19
