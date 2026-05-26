@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "description": "Backend API for localLOOP expression-of-interest submissions",
-  "author": "Alphin Tom / Mycel UG (haftungsbeschränkt) <alphin@mycel-ai.de>",
+  "author": "Mycel UG (haftungsbeschränkt) <dev@mycel-ai.de>",
   "license": "MIT",
   "type": "module",
   "engines": {

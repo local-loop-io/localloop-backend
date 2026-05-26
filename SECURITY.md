@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-Please report security issues by emailing **alphin@mycel-ai.de** (GitHub: @alpha912).
+Please report security issues by emailing **dev@mycel-ai.de** (GitHub: @alpha912).
 Do not open public issues for security-sensitive reports.
 
 ## Scope

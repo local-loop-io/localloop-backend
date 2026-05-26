@@ -20,4 +20,4 @@ bun run dev
 - [ ] No secrets committed
 
 ## Contact
-Questions? Email alphin@mycel-ai.de or open a GitHub Discussion.
+Questions? Email dev@mycel-ai.de or open a GitHub Discussion.
