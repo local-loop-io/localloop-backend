@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-05-27
+
+### Fixed
+- Federation handshake OpenAPI body/response schemas now register as standalone
+  `$ref` targets instead of unresolved `#/definitions/` pointers.
+- Offer, match, transfer, and material-status schemas now require the `MAT-`
+  MaterialDNA id prefix, matching the protocol spec and material-dna schema.
+- Test fixtures updated to canonical `localloop.urbnia.com` JSON-LD contexts and
+  `MAT-` material ids; SSE CORS tests mutate `config.allowedOrigins` directly.
+
 ## [0.2.3] - 2026-05-26
 
 ### Added

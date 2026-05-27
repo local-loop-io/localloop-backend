@@ -5,7 +5,7 @@ import { registerFederationSchemas } from '../src/schemas/federationSchemas';
 import { registerFederationRoutes } from '../src/routes/federation';
 
 const handshakePayload = {
-  '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
+  '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
   '@type': 'NodeHandshake',
   schema_version: '0.1.1',
   node_id: 'munich.loop',
@@ -95,7 +95,7 @@ describe('federation routes', () => {
 
     expect(response.statusCode).toBe(202);
     const payload = response.json();
-    expect(payload['@context']).toBe('https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld');
+    expect(payload['@context']).toBe('https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld');
     expect(payload.schema_version).toBe('0.2.0');
     expect(payload.status).toBe('accepted');
     expect(payload.peer_id).toBe('lab-hub.loop');

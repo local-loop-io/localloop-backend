@@ -105,9 +105,9 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
     schema: {
       consumes: ['application/json', loopContentType],
       security: apiKeySecurity,
-      body: { $ref: `${federationSchemaIds.handshake}#/definitions/HandshakeRequest` },
+      body: { $ref: federationSchemaIds.handshakeRequest },
       response: {
-        202: { $ref: `${federationSchemaIds.handshake}#/definitions/HandshakeResponse` },
+        202: { $ref: federationSchemaIds.handshakeResponse },
       },
     },
   }, async (request, reply) => {

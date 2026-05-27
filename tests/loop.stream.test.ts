@@ -24,25 +24,27 @@ const makeReply = () => {
 
 describe('loop stream', () => {
   it('adds CORS headers for allowed origins', async () => {
-    process.env.ALLOWED_ORIGINS = 'https://local-loop-io.github.io';
     const { config } = await import('../src/config');
     const { registerLoopStream } = await import('../src/realtime/loopStream');
     const previousKeepAlive = config.sseKeepAliveMs;
+    const previousOrigins = config.allowedOrigins;
     config.sseKeepAliveMs = 0;
+    config.allowedOrigins = ['https://localloop.urbnia.com'];
 
     const reply = makeReply();
     const request = {
-      headers: { origin: 'https://local-loop-io.github.io' },
+      headers: { origin: 'https://localloop.urbnia.com' },
       raw: { on: () => undefined },
     } as any;
 
     registerLoopStream(request, reply as any);
 
     const headers = reply.getHeaders();
-    expect(headers['Access-Control-Allow-Origin']).toBe('https://local-loop-io.github.io');
+    expect(headers['Access-Control-Allow-Origin']).toBe('https://localloop.urbnia.com');
     expect(headers['Access-Control-Allow-Credentials']).toBe('true');
     expect(headers.Vary).toBe('Origin');
     config.sseKeepAliveMs = previousKeepAlive;
+    config.allowedOrigins = previousOrigins;
   });
 
   it('rejects new connections when max clients reached', async () => {

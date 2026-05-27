@@ -53,9 +53,9 @@
     "material_id": {
       "description": "MaterialDNA identifier (required if no product_id)",
       "type": "string",
-      "pattern": "^[A-Z]{2}-[A-Z]{3}-\\d{4}-[A-Z]+-[A-Z0-9]{6,}$",
+      "pattern": "^MAT-[A-Z]{2}-[A-Z]{3}-\\d{4}-[A-Z]+-[A-Z0-9]{6,}$",
       "examples": [
-        "DE-MUC-2025-PLASTIC-B847F3"
+        "MAT-DE-MUC-2025-PLASTIC-B847F3"
       ]
     },
     "product_id": {
