@@ -75,7 +75,7 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
   }, async () => {
     const local = deps.getLocalNode();
     return {
-      '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+      '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
       '@type': 'NodeInfo',
       id: local.node_id,
       name: local.name,
@@ -133,7 +133,7 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
 
     const local = deps.getLocalNode();
     reply.code(202).send({
-      '@context': 'https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+      '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
       '@type': 'NodeHandshakeResponse',
       schema_version: '0.2.0',
       status: 'accepted',

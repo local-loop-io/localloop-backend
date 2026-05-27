@@ -33,7 +33,7 @@ const envSchema = z.object({
   DB_CONNECTION_TIMEOUT_MS: z.coerce.number().default(5000),
   REQUEST_TIMEOUT_MS: z.coerce.number().default(30000),
   PUBLIC_LIMIT: z.coerce.number().default(100),
-  ALLOWED_ORIGINS: z.string().default('https://local-loop-io.github.io'),
+  ALLOWED_ORIGINS: z.string().default('https://localloop.urbnia.com'),
   RATE_LIMIT_MAX: z.coerce.number().default(60),
   RATE_LIMIT_WRITE_MAX: z.coerce.number().default(20),
   RATE_LIMIT_WINDOW: z.string().default('15 minutes'),

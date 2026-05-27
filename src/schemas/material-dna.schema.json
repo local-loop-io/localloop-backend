@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://local-loop-io.github.io/projects/loop-protocol/schemas/v0.2.0/material-dna.schema.json",
+  "$id": "https://localloop.urbnia.com/projects/loop-protocol/schemas/v0.2.0/material-dna.schema.json",
   "title": "MaterialDNA",
   "description": "Material identity and metadata schema — LOOP v0.2.0 (DPP-compatible baseline)",
   "type": "object",
@@ -20,8 +20,8 @@
       "description": "JSON-LD context",
       "type": "string",
       "enum": [
-        "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.1.1.jsonld",
-        "https://local-loop-io.github.io/projects/loop-protocol/contexts/loop-v0.2.0.jsonld"
+        "https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld",
+        "https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld"
       ]
     },
     "@type": {
