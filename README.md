@@ -97,7 +97,7 @@ See `.env.example` for the full list with descriptions. Key variables:
 | `DB_CONNECTION_TIMEOUT_MS` | `5000` | Fail if no pool slot in ms |
 | `REDIS_URL` | — | Redis connection string |
 | `MINIO_SECRET_KEY` | — | MinIO secret (required) |
-| `ALLOWED_ORIGINS` | `https://local-loop-io.github.io` | CORS allowlist (comma-separated) |
+| `ALLOWED_ORIGINS` | `https://localloop.urbnia.com` | CORS allowlist (comma-separated) |
 | `RATE_LIMIT_MAX` | `60` | Global rate limit per window |
 | `RATE_LIMIT_WRITE_MAX` | `20` | Write route rate limit per window |
 | `REQUEST_TIMEOUT_MS` | `30000` | Server connection timeout |
@@ -130,4 +130,4 @@ tests/             Bun test suite
 
 ## Links
 - Protocol spec: https://github.com/local-loop-io/loop-protocol
-- Docs hub: https://local-loop-io.github.io
+- Docs hub: https://localloop.urbnia.com

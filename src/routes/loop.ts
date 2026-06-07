@@ -1,11 +1,11 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { config } from '../config';
 import {
-  insertLoopMaterial,
-  insertLoopProduct,
-  insertLoopOffer,
-  insertLoopMatch,
-  insertLoopTransfer,
+  createLoopMaterial,
+  createLoopProduct,
+  createLoopOffer,
+  createLoopMatch,
+  createLoopTransfer,
   insertLoopEvent,
   listLoopEvents,
   getLoopMaterial,
@@ -22,6 +22,7 @@ import {
   listLoopMatches,
   getLoopTransferById,
   listLoopTransfers,
+  LoopStateError,
   type LoopMaterialPayload,
   type LoopProductPayload,
   type LoopOfferPayload,
@@ -124,11 +125,11 @@ type LoopMaterialStatusPayload = {
 };
 
 type LoopDeps = {
-  insertLoopMaterial: typeof insertLoopMaterial;
-  insertLoopProduct: typeof insertLoopProduct;
-  insertLoopOffer: typeof insertLoopOffer;
-  insertLoopMatch: typeof insertLoopMatch;
-  insertLoopTransfer: typeof insertLoopTransfer;
+  createLoopMaterial: typeof createLoopMaterial;
+  createLoopProduct: typeof createLoopProduct;
+  createLoopOffer: typeof createLoopOffer;
+  createLoopMatch: typeof createLoopMatch;
+  createLoopTransfer: typeof createLoopTransfer;
   insertLoopEvent: typeof insertLoopEvent;
   listLoopEvents: typeof listLoopEvents;
   getLoopMaterial: typeof getLoopMaterial;
@@ -149,11 +150,11 @@ type LoopDeps = {
 };
 
 const defaultDeps: LoopDeps = {
-  insertLoopMaterial,
-  insertLoopProduct,
-  insertLoopOffer,
-  insertLoopMatch,
-  insertLoopTransfer,
+  createLoopMaterial,
+  createLoopProduct,
+  createLoopOffer,
+  createLoopMatch,
+  createLoopTransfer,
   insertLoopEvent,
   listLoopEvents,
   getLoopMaterial,
@@ -186,6 +187,14 @@ function sendWriteConflict(error: unknown, reply: FastifyReply) {
   return false;
 }
 
+function sendStateError(error: unknown, reply: FastifyReply) {
+  if (error instanceof LoopStateError) {
+    reply.code(error.kind === 'not_found' ? 404 : 400).send({ error: error.message });
+    return true;
+  }
+  return false;
+}
+
 function isAllowedRelayEvent(entityType: string, eventType: string) {
   if (!Object.hasOwn(allowedRelayEvents, entityType)) {
     return false;
@@ -211,33 +220,23 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     const payload = request.body as LoopMaterialPayload;
     let created;
     try {
-      created = await deps.insertLoopMaterial(payload);
+      created = await deps.createLoopMaterial(payload);
     } catch (error) {
       if (sendWriteConflict(error, reply)) {
+        return;
+      }
+      if (sendStateError(error, reply)) {
         return;
       }
       throw error;
     }
 
-    const eventPayload = {
-      type: 'material.created',
-      entity: 'material',
-      entity_id: created.id,
-      data: payload,
-      created_at: created.created_at,
-    };
-    await deps.insertLoopEvent({
-      event_type: eventPayload.type,
-      entity_type: eventPayload.entity,
-      entity_id: eventPayload.entity_id,
-      payload: eventPayload,
-    });
-    deps.broadcastLoopEvent(eventPayload);
+    deps.broadcastLoopEvent(created.event);
     incrementMetric('loop_material_created');
     incrementMetric('loop_event_emitted');
     request.log.info({ materialId: created.id }, 'Loop material created');
 
-    reply.code(201).send(created);
+    reply.code(201).send({ id: created.id, created_at: created.created_at });
   });
 
   app.post('/api/v1/product', {
@@ -256,33 +255,23 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     const payload = request.body as LoopProductPayload;
     let created;
     try {
-      created = await deps.insertLoopProduct(payload);
+      created = await deps.createLoopProduct(payload);
     } catch (error) {
       if (sendWriteConflict(error, reply)) {
+        return;
+      }
+      if (sendStateError(error, reply)) {
         return;
       }
       throw error;
     }
 
-    const eventPayload = {
-      type: 'product.created',
-      entity: 'product',
-      entity_id: created.id,
-      data: payload,
-      created_at: created.created_at,
-    };
-    await deps.insertLoopEvent({
-      event_type: eventPayload.type,
-      entity_type: eventPayload.entity,
-      entity_id: eventPayload.entity_id,
-      payload: eventPayload,
-    });
-    deps.broadcastLoopEvent(eventPayload);
+    deps.broadcastLoopEvent(created.event);
     incrementMetric('loop_product_created');
     incrementMetric('loop_event_emitted');
     request.log.info({ productId: created.id }, 'Loop product created');
 
-    reply.code(201).send(created);
+    reply.code(201).send({ id: created.id, created_at: created.created_at });
   });
 
   app.post('/api/v1/offer', {
@@ -316,32 +305,22 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
 
     let created;
     try {
-      created = await deps.insertLoopOffer(payload);
+      created = await deps.createLoopOffer(payload);
     } catch (error) {
       if (sendWriteConflict(error, reply)) {
         return;
       }
+      if (sendStateError(error, reply)) {
+        return;
+      }
       throw error;
     }
-    const eventPayload = {
-      type: 'offer.created',
-      entity: 'offer',
-      entity_id: created.id,
-      data: payload,
-      created_at: created.created_at,
-    };
-    await deps.insertLoopEvent({
-      event_type: eventPayload.type,
-      entity_type: eventPayload.entity,
-      entity_id: eventPayload.entity_id,
-      payload: eventPayload,
-    });
-    deps.broadcastLoopEvent(eventPayload);
+    deps.broadcastLoopEvent(created.event);
     incrementMetric('loop_offer_created');
     incrementMetric('loop_event_emitted');
     request.log.info({ offerId: created.id, materialId: payload.material_id, productId: payload.product_id }, 'Loop offer created');
 
-    reply.code(201).send(created);
+    reply.code(201).send({ id: created.id, created_at: created.created_at });
   });
 
   app.post('/api/v1/match', {
@@ -386,32 +365,22 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
 
     let created;
     try {
-      created = await deps.insertLoopMatch(payload);
+      created = await deps.createLoopMatch(payload);
     } catch (error) {
       if (sendWriteConflict(error, reply)) {
         return;
       }
+      if (sendStateError(error, reply)) {
+        return;
+      }
       throw error;
     }
-    const eventPayload = {
-      type: 'match.created',
-      entity: 'match',
-      entity_id: created.id,
-      data: payload,
-      created_at: created.created_at,
-    };
-    await deps.insertLoopEvent({
-      event_type: eventPayload.type,
-      entity_type: eventPayload.entity,
-      entity_id: eventPayload.entity_id,
-      payload: eventPayload,
-    });
-    deps.broadcastLoopEvent(eventPayload);
+    deps.broadcastLoopEvent(created.event);
     incrementMetric('loop_match_created');
     incrementMetric('loop_event_emitted');
     request.log.info({ matchId: created.id, offerId: payload.offer_id }, 'Loop match created');
 
-    reply.code(201).send(created);
+    reply.code(201).send({ id: created.id, created_at: created.created_at });
   });
 
   app.post('/api/v1/transfer', {
@@ -456,32 +425,22 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
 
     let created;
     try {
-      created = await deps.insertLoopTransfer(payload);
+      created = await deps.createLoopTransfer(payload);
     } catch (error) {
       if (sendWriteConflict(error, reply)) {
         return;
       }
+      if (sendStateError(error, reply)) {
+        return;
+      }
       throw error;
     }
-    const eventPayload = {
-      type: 'transfer.created',
-      entity: 'transfer',
-      entity_id: created.id,
-      data: payload,
-      created_at: created.created_at,
-    };
-    await deps.insertLoopEvent({
-      event_type: eventPayload.type,
-      entity_type: eventPayload.entity,
-      entity_id: eventPayload.entity_id,
-      payload: eventPayload,
-    });
-    deps.broadcastLoopEvent(eventPayload);
+    deps.broadcastLoopEvent(created.event);
     incrementMetric('loop_transfer_created');
     incrementMetric('loop_event_emitted');
     request.log.info({ transferId: created.id, matchId: payload.match_id }, 'Loop transfer created');
 
-    reply.code(201).send(created);
+    reply.code(201).send({ id: created.id, created_at: created.created_at });
   });
 
   app.post('/api/v1/material-status', {

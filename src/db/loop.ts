@@ -1,4 +1,27 @@
-import { pool } from './pool';
+import { pool, withTransaction, type Queryable } from './pool';
+
+/**
+ * Thrown by the transactional create* operations when a state-machine rule is
+ * violated. Routes map `not_found` -> 404 and `invalid_state` -> 400.
+ */
+export class LoopStateError extends Error {
+  readonly kind: 'not_found' | 'invalid_state';
+  constructor(kind: 'not_found' | 'invalid_state', message: string) {
+    super(message);
+    this.name = 'LoopStateError';
+    this.kind = kind;
+  }
+}
+
+/** Offer/match statuses that count as "live" for single-allocation invariants. */
+const MATCH_ACTIVE_STATUSES = ['proposed', 'accepted'];
+
+/** Result of a transactional create: the new row plus the event to broadcast after commit. */
+export type LoopCreateResult = {
+  id: string;
+  created_at: string;
+  event: Record<string, unknown>;
+};
 
 export type LoopMaterialPayload = {
   id: string;
@@ -66,8 +89,8 @@ export type LoopTransferPayload = {
   [key: string]: unknown;
 };
 
-export async function insertLoopMaterial(payload: LoopMaterialPayload) {
-  const { rows } = await pool.query(
+export async function insertLoopMaterial(payload: LoopMaterialPayload, db: Queryable = pool) {
+  const { rows } = await db.query(
     `INSERT INTO loop_materials (
       id, category, quantity_value, quantity_unit, origin_city, current_city,
       available_from, expires_at, quality, payload
@@ -89,8 +112,8 @@ export async function insertLoopMaterial(payload: LoopMaterialPayload) {
   return rows[0] as { id: string; created_at: string };
 }
 
-export async function insertLoopProduct(payload: LoopProductPayload) {
-  const { rows } = await pool.query(
+export async function insertLoopProduct(payload: LoopProductPayload, db: Queryable = pool) {
+  const { rows } = await db.query(
     `INSERT INTO loop_products (
       id, product_category, name, condition, quantity_value, quantity_unit,
       origin_city, current_city, available_from, expires_at, payload
@@ -113,8 +136,8 @@ export async function insertLoopProduct(payload: LoopProductPayload) {
   return rows[0] as { id: string; created_at: string };
 }
 
-export async function insertLoopOffer(payload: LoopOfferPayload) {
-  const { rows } = await pool.query(
+export async function insertLoopOffer(payload: LoopOfferPayload, db: Queryable = pool) {
+  const { rows } = await db.query(
     `INSERT INTO loop_offers (
       id, material_id, product_id, from_city, to_city, status, quantity_value, quantity_unit,
       available_until, terms, payload
@@ -137,8 +160,8 @@ export async function insertLoopOffer(payload: LoopOfferPayload) {
   return rows[0] as { id: string; created_at: string };
 }
 
-export async function insertLoopMatch(payload: LoopMatchPayload) {
-  const { rows } = await pool.query(
+export async function insertLoopMatch(payload: LoopMatchPayload, db: Queryable = pool) {
+  const { rows } = await db.query(
     `INSERT INTO loop_matches (
       id, material_id, product_id, offer_id, from_city, to_city, status, matched_at, payload
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
@@ -158,8 +181,8 @@ export async function insertLoopMatch(payload: LoopMatchPayload) {
   return rows[0] as { id: string; created_at: string };
 }
 
-export async function insertLoopTransfer(payload: LoopTransferPayload) {
-  const { rows } = await pool.query(
+export async function insertLoopTransfer(payload: LoopTransferPayload, db: Queryable = pool) {
+  const { rows } = await db.query(
     `INSERT INTO loop_transfers (
       id, material_id, product_id, match_id, status, handoff_at, received_at, payload
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
@@ -183,14 +206,140 @@ export async function insertLoopEvent(event: {
   entity_type: string;
   entity_id: string;
   payload: unknown;
-}) {
-  const { rows } = await pool.query(
+}, db: Queryable = pool) {
+  const { rows } = await db.query(
     `INSERT INTO loop_events (event_type, entity_type, entity_id, payload)
      VALUES ($1,$2,$3,$4)
      RETURNING id, created_at`,
     [event.event_type, event.entity_type, event.entity_id, event.payload],
   );
   return rows[0] as { id: number; created_at: string };
+}
+
+/**
+ * Build the canonical event payload that is both persisted to loop_events and
+ * broadcast over SSE. Keeps the two in lock-step (they were identical objects
+ * in the route handlers previously).
+ */
+function buildLoopEvent(
+  type: string,
+  entity: string,
+  entity_id: string,
+  data: unknown,
+  created_at: string,
+): Record<string, unknown> {
+  return { type, entity, entity_id, data, created_at };
+}
+
+// --- Transactional create operations -----------------------------------------
+// Each wraps the entity insert, the loop_events insert, and any status
+// transition in a single transaction. The returned `event` must be broadcast by
+// the caller AFTER the promise resolves (i.e. after COMMIT), never before.
+
+export async function createLoopMaterial(payload: LoopMaterialPayload): Promise<LoopCreateResult> {
+  return withTransaction(async (client) => {
+    const created = await insertLoopMaterial(payload, client);
+    const event = buildLoopEvent('material.created', 'material', created.id, payload, created.created_at);
+    await insertLoopEvent(
+      { event_type: 'material.created', entity_type: 'material', entity_id: created.id, payload: event },
+      client,
+    );
+    return { id: created.id, created_at: created.created_at, event };
+  });
+}
+
+export async function createLoopProduct(payload: LoopProductPayload): Promise<LoopCreateResult> {
+  return withTransaction(async (client) => {
+    const created = await insertLoopProduct(payload, client);
+    const event = buildLoopEvent('product.created', 'product', created.id, payload, created.created_at);
+    await insertLoopEvent(
+      { event_type: 'product.created', entity_type: 'product', entity_id: created.id, payload: event },
+      client,
+    );
+    return { id: created.id, created_at: created.created_at, event };
+  });
+}
+
+export async function createLoopOffer(payload: LoopOfferPayload): Promise<LoopCreateResult> {
+  return withTransaction(async (client) => {
+    // Mass-balance sanity: an offer cannot promise more than its source material holds.
+    if (payload.material_id) {
+      const { rows } = await client.query(
+        'SELECT quantity_value FROM loop_materials WHERE id = $1',
+        [payload.material_id],
+      );
+      const material = rows[0] as { quantity_value: string | number } | undefined;
+      if (material && Number(payload.quantity.value) > Number(material.quantity_value)) {
+        throw new LoopStateError(
+          'invalid_state',
+          'Offer quantity exceeds available material quantity',
+        );
+      }
+    }
+    const created = await insertLoopOffer(payload, client);
+    const event = buildLoopEvent('offer.created', 'offer', created.id, payload, created.created_at);
+    await insertLoopEvent(
+      { event_type: 'offer.created', entity_type: 'offer', entity_id: created.id, payload: event },
+      client,
+    );
+    return { id: created.id, created_at: created.created_at, event };
+  });
+}
+
+export async function createLoopMatch(payload: LoopMatchPayload): Promise<LoopCreateResult> {
+  return withTransaction(async (client) => {
+    // Lock the offer row so concurrent matches serialize; re-read the committed status.
+    const { rows } = await client.query(
+      'SELECT status FROM loop_offers WHERE id = $1 FOR UPDATE',
+      [payload.offer_id],
+    );
+    const offer = rows[0] as { status: string } | undefined;
+    if (!offer) {
+      throw new LoopStateError('not_found', 'Unknown offer_id');
+    }
+    if (offer.status !== 'open') {
+      throw new LoopStateError('invalid_state', `Offer is not open (status=${offer.status})`);
+    }
+
+    const created = await insertLoopMatch(payload, client);
+
+    // Reserving the offer prevents further matches; the partial unique index on
+    // (offer_id WHERE status IN active) is the backstop for any concurrent path.
+    if (MATCH_ACTIVE_STATUSES.includes(payload.status)) {
+      await client.query('UPDATE loop_offers SET status = $1 WHERE id = $2', ['reserved', payload.offer_id]);
+    }
+
+    const event = buildLoopEvent('match.created', 'match', created.id, payload, created.created_at);
+    await insertLoopEvent(
+      { event_type: 'match.created', entity_type: 'match', entity_id: created.id, payload: event },
+      client,
+    );
+    return { id: created.id, created_at: created.created_at, event };
+  });
+}
+
+export async function createLoopTransfer(payload: LoopTransferPayload): Promise<LoopCreateResult> {
+  return withTransaction(async (client) => {
+    const { rows } = await client.query(
+      'SELECT status FROM loop_matches WHERE id = $1 FOR UPDATE',
+      [payload.match_id],
+    );
+    const match = rows[0] as { status: string } | undefined;
+    if (!match) {
+      throw new LoopStateError('not_found', 'Unknown match_id');
+    }
+    if (match.status !== 'accepted') {
+      throw new LoopStateError('invalid_state', `Match is not accepted (status=${match.status})`);
+    }
+
+    const created = await insertLoopTransfer(payload, client);
+    const event = buildLoopEvent('transfer.created', 'transfer', created.id, payload, created.created_at);
+    await insertLoopEvent(
+      { event_type: 'transfer.created', entity_type: 'transfer', entity_id: created.id, payload: event },
+      client,
+    );
+    return { id: created.id, created_at: created.created_at, event };
+  });
 }
 
 export async function listLoopEvents(limit = 50) {
@@ -270,10 +419,10 @@ export async function listLoopProducts(opts: { limit?: number; category?: string
 
 export async function getLoopOffer(id: string) {
   const { rows } = await pool.query(
-    'SELECT id, material_id, product_id FROM loop_offers WHERE id = $1',
+    'SELECT id, material_id, product_id, status FROM loop_offers WHERE id = $1',
     [id],
   );
-  return rows[0] as { id: string; material_id: string | null; product_id: string | null } | undefined;
+  return rows[0] as { id: string; material_id: string | null; product_id: string | null; status: string } | undefined;
 }
 
 export async function getLoopOfferById(id: string) {
@@ -302,10 +451,10 @@ export async function listLoopOffers(opts: { limit?: number; status?: string } =
 
 export async function getLoopMatch(id: string) {
   const { rows } = await pool.query(
-    'SELECT id, material_id, product_id, offer_id FROM loop_matches WHERE id = $1',
+    'SELECT id, material_id, product_id, offer_id, status FROM loop_matches WHERE id = $1',
     [id],
   );
-  return rows[0] as { id: string; material_id: string | null; product_id: string | null; offer_id: string } | undefined;
+  return rows[0] as { id: string; material_id: string | null; product_id: string | null; offer_id: string; status: string } | undefined;
 }
 
 export async function getLoopMatchById(id: string) {

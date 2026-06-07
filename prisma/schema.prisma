@@ -129,6 +129,8 @@ model LoopOffer {
   product  LoopProduct?  @relation(fields: [productId], references: [id])
   matches  LoopMatch[]
 
+  // Migration 011 adds a CHECK constraint: status IN ('open','reserved','withdrawn').
+  // Offers transition open -> reserved when an active match is created.
   @@map("loop_offers")
 }
 
@@ -149,6 +151,10 @@ model LoopMatch {
   offer     LoopOffer     @relation(fields: [offerId], references: [id])
   transfers LoopTransfer[]
 
+  // Enforced in SQL by migration 011: a partial UNIQUE index on (offer_id)
+  // WHERE status IN ('proposed','accepted') guarantees one active match per offer,
+  // plus a CHECK that status is one of proposed/accepted/rejected/expired.
+  // Prisma cannot express partial unique indexes, so this is documented, not modeled.
   @@map("loop_matches")
 }
 
@@ -167,6 +173,10 @@ model LoopTransfer {
   product  LoopProduct?  @relation(fields: [productId], references: [id])
   match    LoopMatch     @relation(fields: [matchId], references: [id])
 
+  // Enforced in SQL by migration 011: a partial UNIQUE index on (match_id)
+  // WHERE status <> 'cancelled' guarantees one live transfer per match, plus a
+  // CHECK that status is one of scheduled/in_transit/completed/cancelled.
+  // Prisma cannot express partial unique indexes, so this is documented, not modeled.
   @@map("loop_transfers")
 }
 

@@ -3,6 +3,13 @@ import Fastify from 'fastify';
 import { registerLoopProtocolParsers } from '../src/protocol';
 import { registerLoopRoutes } from '../src/routes/loop';
 import { registerLoopSchemas } from '../src/schemas/loopSchemas';
+import { LoopStateError } from '../src/db/loop';
+
+const conflictError = () => {
+  const error = new Error('duplicate key value violates unique constraint');
+  (error as Error & { code?: string }).code = '23505';
+  return error;
+};
 
 const materialPayload = {
   '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
@@ -131,12 +138,20 @@ const buildApp = () => {
   registerLoopProtocolParsers(app);
   registerLoopSchemas(app);
 
+  const eventFor = (type: string, entity: string, entity_id: string, data: unknown) => ({
+    type,
+    entity,
+    entity_id,
+    data,
+    created_at: new Date().toISOString(),
+  });
+
   const deps = {
-    insertLoopMaterial: async () => ({ id: materialPayload.id, created_at: new Date().toISOString() }),
-    insertLoopProduct: async () => ({ id: productPayload.id, created_at: new Date().toISOString() }),
-    insertLoopOffer: async (_p: { id: string }) => ({ id: _p.id, created_at: new Date().toISOString() }),
-    insertLoopMatch: async (_p: { id: string }) => ({ id: _p.id, created_at: new Date().toISOString() }),
-    insertLoopTransfer: async (_p: { id: string }) => ({ id: _p.id, created_at: new Date().toISOString() }),
+    createLoopMaterial: async (_p: { id: string }) => ({ id: materialPayload.id, created_at: new Date().toISOString(), event: eventFor('material.created', 'material', materialPayload.id, _p) }),
+    createLoopProduct: async (_p: { id: string }) => ({ id: productPayload.id, created_at: new Date().toISOString(), event: eventFor('product.created', 'product', productPayload.id, _p) }),
+    createLoopOffer: async (_p: { id: string }) => ({ id: _p.id, created_at: new Date().toISOString(), event: eventFor('offer.created', 'offer', _p.id, _p) }),
+    createLoopMatch: async (_p: { id: string }) => ({ id: _p.id, created_at: new Date().toISOString(), event: eventFor('match.created', 'match', _p.id, _p) }),
+    createLoopTransfer: async (_p: { id: string }) => ({ id: _p.id, created_at: new Date().toISOString(), event: eventFor('transfer.created', 'transfer', _p.id, _p) }),
     insertLoopEvent: async () => ({ id: 1, created_at: new Date().toISOString() }),
     listLoopEvents: async () => ([{ id: 1, event_type: 'material.created', entity_type: 'material', entity_id: materialPayload.id, payload: {}, created_at: new Date().toISOString() }]),
     getLoopMaterial: async (id: string) => (id === materialPayload.id ? { id } : undefined),
@@ -146,15 +161,15 @@ const buildApp = () => {
     getLoopProductById: async (id: string) => (id === productPayload.id ? fakeProductRecord : undefined),
     listLoopProducts: async () => ([fakeProductRecord]),
     getLoopOffer: async (id: string) => {
-      if (id === offerPayload.id) return { id, material_id: materialPayload.id, product_id: null };
-      if (id === productOfferPayload.id) return { id, material_id: null, product_id: productPayload.id };
+      if (id === offerPayload.id) return { id, material_id: materialPayload.id, product_id: null, status: 'open' };
+      if (id === productOfferPayload.id) return { id, material_id: null, product_id: productPayload.id, status: 'open' };
       return undefined;
     },
     getLoopOfferById: async (id: string) => (id === offerPayload.id ? fakeOfferRecord : undefined),
     listLoopOffers: async () => ([fakeOfferRecord]),
     getLoopMatch: async (id: string) => {
-      if (id === matchPayload.id) return { id, material_id: materialPayload.id, product_id: null, offer_id: offerPayload.id };
-      if (id === productMatchPayload.id) return { id, material_id: null, product_id: productPayload.id, offer_id: productOfferPayload.id };
+      if (id === matchPayload.id) return { id, material_id: materialPayload.id, product_id: null, offer_id: offerPayload.id, status: 'accepted' };
+      if (id === productMatchPayload.id) return { id, material_id: null, product_id: productPayload.id, offer_id: productOfferPayload.id, status: 'accepted' };
       return undefined;
     },
     getLoopMatchById: async (id: string) => (id === matchPayload.id ? fakeMatchRecord : undefined),
@@ -388,7 +403,7 @@ describe('loop routes', () => {
     const { app, deps } = buildApp();
     await registerLoopRoutes(app, {
       ...deps,
-      insertLoopMaterial: async () => {
+      createLoopMaterial: async () => {
         const error = new Error('duplicate key value violates unique constraint');
         (error as Error & { code?: string }).code = '23505';
         throw error;
@@ -445,7 +460,7 @@ describe('loop routes', () => {
     const { app, deps } = buildApp();
     await registerLoopRoutes(app, {
       ...deps,
-      insertLoopProduct: async () => {
+      createLoopProduct: async () => {
         const error = new Error('duplicate key value violates unique constraint');
         (error as Error & { code?: string }).code = '23505';
         throw error;
@@ -459,6 +474,61 @@ describe('loop routes', () => {
     });
 
     expect(response.statusCode).toBe(409);
+  });
+
+  it('maps an invalid-state match to 400', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, {
+      ...deps,
+      createLoopMatch: async () => {
+        throw new LoopStateError('invalid_state', 'Offer is not open (status=withdrawn)');
+      },
+    });
+
+    const response = await app.inject({ method: 'POST', url: '/api/v1/match', payload: matchPayload });
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('maps a duplicate active match to 409', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, { ...deps, createLoopMatch: async () => { throw conflictError(); } });
+
+    const response = await app.inject({ method: 'POST', url: '/api/v1/match', payload: matchPayload });
+    expect(response.statusCode).toBe(409);
+  });
+
+  it('maps a duplicate transfer to 409', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, { ...deps, createLoopTransfer: async () => { throw conflictError(); } });
+
+    const response = await app.inject({ method: 'POST', url: '/api/v1/transfer', payload: transferPayload });
+    expect(response.statusCode).toBe(409);
+  });
+
+  it('maps an over-quantity offer to 400', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, {
+      ...deps,
+      createLoopOffer: async () => {
+        throw new LoopStateError('invalid_state', 'Offer quantity exceeds available material quantity');
+      },
+    });
+
+    const response = await app.inject({ method: 'POST', url: '/api/v1/offer', payload: offerPayload });
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('maps a not-found state error to 404', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, {
+      ...deps,
+      createLoopTransfer: async () => {
+        throw new LoopStateError('not_found', 'Unknown match_id');
+      },
+    });
+
+    const response = await app.inject({ method: 'POST', url: '/api/v1/transfer', payload: transferPayload });
+    expect(response.statusCode).toBe(404);
   });
 
   it('retrieves a material by id', async () => {

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 banned=(
+  "local-loop-io.github.io"
   "loop-protocol.org"
   "localloop.org"
   "local-loop.io"

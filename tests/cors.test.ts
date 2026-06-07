@@ -16,7 +16,7 @@ describe('cors headers', () => {
   });
 
   it('includes x-api-key in allowed headers for preflight', async () => {
-    process.env.ALLOWED_ORIGINS = 'https://local-loop-io.github.io';
+    process.env.ALLOWED_ORIGINS = 'https://localloop.urbnia.com';
     const { buildServer } = await import('../src/server');
     const app = await buildServer({ logger: false });
 
@@ -25,7 +25,7 @@ describe('cors headers', () => {
         method: 'OPTIONS',
         url: '/api/interest',
         headers: {
-          origin: 'https://local-loop-io.github.io',
+          origin: 'https://localloop.urbnia.com',
           'access-control-request-method': 'POST',
           'access-control-request-headers': 'x-api-key,content-type',
         },
