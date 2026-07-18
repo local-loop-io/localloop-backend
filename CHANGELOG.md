@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-07-18
+
+### Added
+- `Idempotency-Key` cache rows now expire after 24 hours; a request bearing an
+  expired key runs fresh instead of replaying stale data or permanently
+  conflicting. Bounds how long a key can be held, since this profile's
+  single-shared-API-key auth model has no caller identity to scope keys to.
+- `bun run cleanup:idempotency-keys` to purge idempotency cache rows past the
+  retention window.
+
 ## [0.3.0] - 2026-07-18
 
 ### Added

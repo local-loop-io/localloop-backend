@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { pool } from '../src/db/pool';
 import { runMigrations } from '../src/db/migrate';
-import { withIdempotency } from '../src/idempotency';
+import { withIdempotency, IDEMPOTENCY_RETENTION_MS } from '../src/idempotency';
 import { CoreDpError } from '../src/errors';
 
 let dbReady = false;
@@ -64,6 +64,35 @@ describe('REST idempotency (Idempotency-Key)', () => {
     }
     expect(error).toBeInstanceOf(CoreDpError);
     expect((error as CoreDpError).code).toBe('conflict');
+  });
+
+  it('treats a cache row past the retention window as expired, not a conflict', async () => {
+    if (!dbReady) return;
+    const key = `idem-expired-${suffix()}`;
+    createdKeys.push(key);
+
+    // Seed a stale cache row directly (bypassing withIdempotency's own INSERT
+    // so we can control created_at), as if it were written before the
+    // retention window.
+    const staleCreatedAt = new Date(Date.now() - IDEMPOTENCY_RETENTION_MS - 60_000);
+    await pool.query(
+      `INSERT INTO loop_idempotency_keys (key, route, request_hash_sha256, response_status, response_body, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [key, 'test.route', 'stale-hash-does-not-matter', 201, JSON.stringify({ id: 'stale' }), staleCreatedAt],
+    );
+
+    let calls = 0;
+    const handler = async () => {
+      calls += 1;
+      return { status: 201 as const, body: { id: 'fresh' } };
+    };
+
+    // A different body than the "cached" one would normally conflict — but
+    // the cached row is expired, so this should run handler fresh instead.
+    const result = await withIdempotency('test.route', key, { a: 'a fresh, different body' }, handler);
+
+    expect(calls).toBe(1);
+    expect(result.body).toEqual({ id: 'fresh' });
   });
 
   it('passes through directly (runs every time) when no key is supplied', async () => {

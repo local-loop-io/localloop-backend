@@ -5,9 +5,22 @@ import { CoreDpError } from './errors';
 type CachedResponse = { status: number; body: unknown };
 
 /**
+ * How long a cached Idempotency-Key response is honored. Past this, the key is
+ * treated as if it were never used: a request bearing an expired key runs
+ * `handler` fresh and overwrites the old cache row (rather than replaying stale
+ * data or permanently conflicting). This bounds how long a key can be
+ * "squatted" — this profile's single-shared-API-key auth model has no caller
+ * identity to scope keys to, so an expiry window is the lightweight mitigation
+ * available without inventing new auth infrastructure. It also keeps the
+ * table from growing unboundedly; see scripts/cleanup-idempotency-keys.ts for
+ * purging rows past this window entirely.
+ */
+export const IDEMPOTENCY_RETENTION_MS = 1000 * 60 * 60 * 24; // 24 hours
+
+/**
  * REST-level idempotency keyed on the client-supplied `Idempotency-Key` header.
- * Same key + same body replays the cached response; same key + a different body
- * is a conflict.
+ * Same key + same body within the retention window replays the cached
+ * response; same key + a different body within the window is a conflict.
  *
  * Concurrent first-time requests for the same new key are serialized with a
  * Postgres advisory lock scoped to the key: only the first racer runs `handler`
@@ -29,14 +42,15 @@ export async function withIdempotency(
   }
 
   const requestHash = canonicalHash(requestBody);
+  const cutoff = new Date(Date.now() - IDEMPOTENCY_RETENTION_MS);
 
   const lockClient = await pool.connect();
   try {
     await lockClient.query('SELECT pg_advisory_lock(hashtext($1))', [key]);
     try {
       const { rows } = await lockClient.query(
-        'SELECT request_hash_sha256, response_status, response_body FROM loop_idempotency_keys WHERE key = $1 AND route = $2',
-        [key, route],
+        'SELECT request_hash_sha256, response_status, response_body FROM loop_idempotency_keys WHERE key = $1 AND route = $2 AND created_at >= $3',
+        [key, route, cutoff],
       );
       const existing = rows[0] as
         | { request_hash_sha256: string; response_status: number; response_body: unknown }
@@ -54,9 +68,14 @@ export async function withIdempotency(
       const result = await handler();
 
       await lockClient.query(
-        `INSERT INTO loop_idempotency_keys (key, route, request_hash_sha256, response_status, response_body)
-         VALUES ($1,$2,$3,$4,$5)
-         ON CONFLICT (key) DO NOTHING`,
+        `INSERT INTO loop_idempotency_keys (key, route, request_hash_sha256, response_status, response_body, created_at)
+         VALUES ($1,$2,$3,$4,$5,NOW())
+         ON CONFLICT (key) DO UPDATE SET
+           route = EXCLUDED.route,
+           request_hash_sha256 = EXCLUDED.request_hash_sha256,
+           response_status = EXCLUDED.response_status,
+           response_body = EXCLUDED.response_body,
+           created_at = EXCLUDED.created_at`,
         [key, route, requestHash, result.status, result.body],
       );
 
