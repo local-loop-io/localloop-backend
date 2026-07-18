@@ -1,6 +1,6 @@
 {
   "name": "@local-loop/localloop-backend",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Backend API for localLOOP expression-of-interest submissions",
   "author": "Mycel UG (haftungsbeschränkt) <dev@mycel-ai.de>",
@@ -20,6 +20,7 @@
     "typecheck": "tsc --noEmit",
     "import:sqlite": "bun run scripts/import-sqlite.ts",
     "seed:lab": "bun run scripts/seed-lab.ts",
+    "cleanup:idempotency-keys": "bun run scripts/cleanup-idempotency-keys.ts",
     "simulate:lab": "bun run scripts/simulate-lab.ts",
     "lab:demo": "bun run scripts/lab-demo.ts",
     "simulate:federation": "bun run scripts/simulate-federation.ts",
