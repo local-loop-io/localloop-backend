@@ -1,4 +1,9 @@
 import { pool, withTransaction, type Queryable } from './pool';
+import { config } from '../config';
+import { canonicalHash } from '../crypto/canonical';
+import { encodeCursor, decodeCursor, escapeLikePrefix } from '../pagination';
+import { CoreDpError } from '../errors';
+import { insertLoopEvidence, type EvidenceEventType } from './evidence';
 
 /**
  * Thrown by the transactional create* operations when a state-machine rule is
@@ -244,6 +249,10 @@ export async function createLoopMaterial(payload: LoopMaterialPayload): Promise<
       { event_type: 'material.created', entity_type: 'material', entity_id: created.id, payload: event },
       client,
     );
+    await insertLoopEvidence(
+      { subject: { type: 'material', id: created.id }, eventType: 'registered', data: payload },
+      client,
+    );
     return { id: created.id, created_at: created.created_at, event };
   });
 }
@@ -254,6 +263,10 @@ export async function createLoopProduct(payload: LoopProductPayload): Promise<Lo
     const event = buildLoopEvent('product.created', 'product', created.id, payload, created.created_at);
     await insertLoopEvent(
       { event_type: 'product.created', entity_type: 'product', entity_id: created.id, payload: event },
+      client,
+    );
+    await insertLoopEvidence(
+      { subject: { type: 'product', id: created.id }, eventType: 'registered', data: payload },
       client,
     );
     return { id: created.id, created_at: created.created_at, event };
@@ -280,6 +293,10 @@ export async function createLoopOffer(payload: LoopOfferPayload): Promise<LoopCr
     const event = buildLoopEvent('offer.created', 'offer', created.id, payload, created.created_at);
     await insertLoopEvent(
       { event_type: 'offer.created', entity_type: 'offer', entity_id: created.id, payload: event },
+      client,
+    );
+    await insertLoopEvidence(
+      { subject: { type: 'offer', id: created.id }, eventType: 'offer-published', data: payload },
       client,
     );
     return { id: created.id, created_at: created.created_at, event };
@@ -314,8 +331,39 @@ export async function createLoopMatch(payload: LoopMatchPayload): Promise<LoopCr
       { event_type: 'match.created', entity_type: 'match', entity_id: created.id, payload: event },
       client,
     );
+    await insertLoopEvidence(
+      { subject: { type: 'match', id: created.id }, eventType: matchEvidenceEventType(payload.status), data: payload },
+      client,
+    );
     return { id: created.id, created_at: created.created_at, event };
   });
+}
+
+/**
+ * Maps a loop_matches.status value to the closest evidence-entry event_type.
+ * `expired` has no dedicated evidence event in this lab profile, so it is
+ * recorded as a rejection (the closest terminal-negative outcome).
+ */
+function matchEvidenceEventType(status: string): EvidenceEventType {
+  if (status === 'accepted') return 'match-accepted';
+  if (status === 'rejected' || status === 'expired') return 'match-rejected';
+  return 'match-proposed';
+}
+
+/**
+ * Maps a loop_transfers.status value to the closest evidence-entry event_type.
+ * This profile's transfer creation is single-shot (no separate dispatch/receive/ack
+ * calls yet), so `scheduled`/`in_transit` record as `dispatched` and a terminal
+ * `completed` status records as `received`. `cancelled` must NOT record as
+ * `dispatched` — since loop_evidence is append-only, that would permanently
+ * misrepresent a transfer that never happened as one that did. There is no
+ * dedicated "cancelled" event_type in this profile's evidence-entry schema, so
+ * `error-recorded` (the generic non-success outcome) is the closest honest fit.
+ */
+function transferEvidenceEventType(status: string): EvidenceEventType {
+  if (status === 'completed') return 'transfer-received';
+  if (status === 'cancelled') return 'error-recorded';
+  return 'transfer-dispatched';
 }
 
 export async function createLoopTransfer(payload: LoopTransferPayload): Promise<LoopCreateResult> {
@@ -336,6 +384,10 @@ export async function createLoopTransfer(payload: LoopTransferPayload): Promise<
     const event = buildLoopEvent('transfer.created', 'transfer', created.id, payload, created.created_at);
     await insertLoopEvent(
       { event_type: 'transfer.created', entity_type: 'transfer', entity_id: created.id, payload: event },
+      client,
+    );
+    await insertLoopEvidence(
+      { subject: { type: 'transfer', id: created.id }, eventType: transferEvidenceEventType(payload.status), data: payload },
       client,
     );
     return { id: created.id, created_at: created.created_at, event };
@@ -489,4 +541,163 @@ export async function listLoopTransfers(opts: { limit?: number } = {}) {
     [limit],
   );
   return rows as Record<string, unknown>[];
+}
+
+// --- Core-DP local search (MaterialDNA / ProductDNA) --------------------------
+// Implements profiles/core-dp/schemas/search-contract.schema.json's local-scope
+// contract: exact filters, deterministic updated_at_asc/id_asc ordering, opaque
+// cursor pagination, and a per-result record_hash_sha256/source_node/updated_at.
+// Cross-node search (scope: "cross-node") requires the signed envelope + peer
+// federation machinery and is out of scope for this lab preview; callers get an
+// `invalid_request` CoreDpError if they ask for it.
+
+export type LoopSearchFilters = {
+  category_prefix?: string;
+  id_prefix?: string;
+  origin_city?: string;
+  current_city?: string;
+  available_from_gte?: string;
+  available_from_lt?: string;
+  quantity_min?: number;
+  condition?: string;
+  updated_since?: string;
+};
+
+export type LoopSearchOptions = {
+  filters: LoopSearchFilters;
+  limit: number;
+  cursor?: string;
+  strictFiltering?: boolean;
+};
+
+export type LoopSearchResultRow = Record<string, unknown> & {
+  id: string;
+  source_node: string;
+  record_hash_sha256: string;
+  updated_at: string;
+};
+
+export type LoopSearchResult = {
+  results: LoopSearchResultRow[];
+  next_cursor?: string;
+};
+
+type EntitySearchConfig = {
+  table: 'loop_materials' | 'loop_products';
+  categoryColumn: 'category' | 'product_category';
+  supportsCondition: boolean;
+  selectColumns: string[];
+};
+
+const MATERIAL_SEARCH_CONFIG: EntitySearchConfig = {
+  table: 'loop_materials',
+  categoryColumn: 'category',
+  supportsCondition: false,
+  selectColumns: [
+    'id', 'category', 'quantity_value', 'quantity_unit', 'origin_city', 'current_city',
+    'available_from', 'expires_at', 'quality', 'payload', 'created_at', 'updated_at',
+  ],
+};
+
+const PRODUCT_SEARCH_CONFIG: EntitySearchConfig = {
+  table: 'loop_products',
+  categoryColumn: 'product_category',
+  supportsCondition: true,
+  selectColumns: [
+    'id', 'product_category', 'name', 'condition', 'quantity_value', 'quantity_unit',
+    'origin_city', 'current_city', 'available_from', 'expires_at', 'payload', 'created_at', 'updated_at',
+  ],
+};
+
+async function runEntitySearch(entityConfig: EntitySearchConfig, opts: LoopSearchOptions): Promise<LoopSearchResult> {
+  const { filters, limit, cursor, strictFiltering } = opts;
+
+  if (strictFiltering && filters.condition !== undefined && !entityConfig.supportsCondition) {
+    throw new CoreDpError('invalid_request', `'condition' filter does not apply to ${entityConfig.table}`);
+  }
+
+  const conditions: string[] = [];
+  const values: unknown[] = [];
+
+  function push(sql: string, value: unknown) {
+    values.push(value);
+    conditions.push(sql.replace('?', `$${values.length}`));
+  }
+
+  if (filters.category_prefix) {
+    push(`${entityConfig.categoryColumn} LIKE ? ESCAPE '\\'`, `${escapeLikePrefix(filters.category_prefix)}%`);
+  }
+  if (filters.id_prefix) {
+    push(`id LIKE ? ESCAPE '\\'`, `${escapeLikePrefix(filters.id_prefix)}%`);
+  }
+  if (filters.origin_city) {
+    push('origin_city = ?', filters.origin_city);
+  }
+  if (filters.current_city) {
+    push('current_city = ?', filters.current_city);
+  }
+  if (filters.available_from_gte) {
+    push('available_from >= ?', filters.available_from_gte);
+  }
+  if (filters.available_from_lt) {
+    push('available_from < ?', filters.available_from_lt);
+  }
+  if (filters.quantity_min !== undefined) {
+    push('quantity_value >= ?', filters.quantity_min);
+  }
+  if (filters.condition !== undefined && entityConfig.supportsCondition) {
+    push('condition = ?', filters.condition);
+  }
+  if (filters.updated_since) {
+    push('updated_at >= ?', filters.updated_since);
+  }
+  // Cursor continuation uses EXTRACT(EPOCH ...) rather than a JS Date/ISO-string
+  // round trip: `timestamptz` has microsecond precision but JS Date only keeps
+  // milliseconds, so two rows within the same millisecond (easily hit when
+  // several rows are inserted back-to-back in a test or a burst of writes)
+  // would collapse to an equal, truncated cursor value and re-match on the
+  // next page. A double-precision epoch-seconds value round-trips exactly.
+  if (cursor) {
+    const decoded = decodeCursor<{ u: number; i: string }>(cursor);
+    values.push(decoded.u, decoded.i);
+    conditions.push(`(EXTRACT(EPOCH FROM updated_at), id) > ($${values.length - 1}::double precision, $${values.length})`);
+  }
+
+  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  values.push(limit + 1);
+
+  const { rows } = await pool.query(
+    `SELECT ${entityConfig.selectColumns.join(', ')}, EXTRACT(EPOCH FROM updated_at) AS updated_at_epoch
+     FROM ${entityConfig.table} ${whereClause}
+     ORDER BY updated_at ASC, id ASC LIMIT $${values.length}`,
+    values,
+  );
+
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+
+  const results: LoopSearchResultRow[] = page.map((row: Record<string, unknown>) => ({
+    ...(row.payload as Record<string, unknown>),
+    id: row.id as string,
+    source_node: config.node.id,
+    record_hash_sha256: canonicalHash(row.payload),
+    updated_at: new Date(row.updated_at as string).toISOString(),
+  }));
+
+  const next_cursor = hasMore
+    ? encodeCursor({
+        u: Number((page[page.length - 1] as Record<string, unknown>).updated_at_epoch),
+        i: (page[page.length - 1] as Record<string, unknown>).id as string,
+      })
+    : undefined;
+
+  return { results, next_cursor };
+}
+
+export async function searchLoopMaterials(opts: LoopSearchOptions): Promise<LoopSearchResult> {
+  return runEntitySearch(MATERIAL_SEARCH_CONFIG, opts);
+}
+
+export async function searchLoopProducts(opts: LoopSearchOptions): Promise<LoopSearchResult> {
+  return runEntitySearch(PRODUCT_SEARCH_CONFIG, opts);
 }

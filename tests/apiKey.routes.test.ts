@@ -77,6 +77,8 @@ describe('api key guard on write routes', () => {
       listLoopMatches: async () => ([]),
       getLoopTransferById: async () => undefined,
       listLoopTransfers: async () => ([]),
+      searchLoopMaterials: async () => ({ results: [] }),
+      searchLoopProducts: async () => ({ results: [] }),
       broadcastLoopEvent: () => undefined,
     });
 

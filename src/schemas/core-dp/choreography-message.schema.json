@@ -1,0 +1,395 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/choreography-message.schema.json",
+  "title": "Core-DP Choreography Message",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "conversation_id",
+    "message_type",
+    "origin_node",
+    "counterparty_node",
+    "authoritative_role",
+    "subject",
+    "state",
+    "terminal",
+    "attempt",
+    "timeout_at"
+  ],
+  "properties": {
+    "conversation_id": {
+      "type": "string",
+      "pattern": "^conv_[A-Za-z0-9_-]{16,80}$"
+    },
+    "message_type": {
+      "type": "string",
+      "enum": [
+        "capabilities.announce",
+        "capabilities.response",
+        "offer.publish",
+        "offer.ack",
+        "offer.reject",
+        "match.propose",
+        "match.accept",
+        "match.reject",
+        "transfer.dispatch",
+        "transfer.receive",
+        "transfer.ack"
+      ]
+    },
+    "origin_node": { "type": "string", "minLength": 3 },
+    "counterparty_node": { "type": "string", "minLength": 3 },
+    "authoritative_role": {
+      "type": "string",
+      "enum": ["origin", "counterparty"]
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["capabilities", "material", "product", "offer", "match", "transfer"]
+        },
+        "id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "previous_state": { "type": "string", "minLength": 1 },
+    "state": {
+      "type": "string",
+      "enum": [
+        "announced",
+        "capabilities-confirmed",
+        "offer-published",
+        "offer-acked",
+        "offer-rejected",
+        "match-proposed",
+        "match-accepted",
+        "match-rejected",
+        "transfer-dispatched",
+        "transfer-received",
+        "transfer-acked",
+        "timed-out",
+        "partitioned"
+      ]
+    },
+    "terminal": { "type": "boolean" },
+    "attempt": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "idempotency_key": {
+      "type": "string",
+      "pattern": "^idem_[A-Za-z0-9_-]{16,120}$"
+    },
+    "duplicate_of": { "type": "string", "pattern": "^msg_[A-Za-z0-9_-]{16,80}$" },
+    "duplicate_behavior": {
+      "type": "string",
+      "enum": ["stored_result", "conflict"]
+    },
+    "original_fingerprint_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "idempotency_fingerprint_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "local_state": { "type": "string", "minLength": 1 },
+    "timeout_at": { "type": "string", "format": "date-time" },
+    "reason": { "type": "string", "maxLength": 500 },
+    "accepted_profile_version": { "type": "string", "pattern": "^0\\.\\d+\\.\\d+(-lab)?$" },
+    "last_accepted_message_id": {
+      "type": "string",
+      "pattern": "^msg_[A-Za-z0-9_-]{16,80}$"
+    },
+    "local_evidence_hash_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "peer_evidence_hash_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "convergence_hash_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "acknowledges_message_id": {
+      "type": "string",
+      "pattern": "^msg_[A-Za-z0-9_-]{16,80}$"
+    },
+    "final_ack_role": {
+      "type": "string",
+      "enum": ["origin-confirms-receiver-receipt"]
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "state": { "enum": ["announced", "offer-published", "match-proposed", "transfer-dispatched", "transfer-received"] } }, "required": ["state"] },
+      "then": { "properties": { "terminal": { "const": false } }, "required": ["terminal"] }
+    },
+    {
+      "if": { "properties": { "state": { "enum": ["capabilities-confirmed", "offer-acked", "offer-rejected", "match-accepted", "match-rejected", "transfer-acked", "timed-out", "partitioned"] } }, "required": ["state"] },
+      "then": { "properties": { "terminal": { "const": true } }, "required": ["terminal"] }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "capabilities.announce" } }, "required": ["message_type"] },
+      "then": {
+        "properties": {
+          "subject": { "properties": { "type": { "const": "capabilities" } }, "required": ["type"] },
+          "state": { "const": "announced" },
+          "terminal": { "const": false },
+          "authoritative_role": { "const": "origin" }
+        },
+        "not": { "required": ["previous_state"] }
+      }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "capabilities.response" } }, "required": ["message_type"] },
+      "then": {
+        "required": ["previous_state", "accepted_profile_version"],
+        "properties": {
+          "subject": { "properties": { "type": { "const": "capabilities" } }, "required": ["type"] },
+          "previous_state": { "const": "announced" },
+          "state": { "const": "capabilities-confirmed" },
+          "terminal": { "const": true },
+          "authoritative_role": { "const": "counterparty" },
+          "accepted_profile_version": { "const": "0.1.0-lab" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "offer.publish" } }, "required": ["message_type"] },
+      "then": {
+        "properties": {
+          "subject": { "properties": { "type": { "const": "offer" } }, "required": ["type"] },
+          "previous_state": { "const": "offer-published" },
+          "state": { "enum": ["offer-published", "timed-out", "partitioned"] },
+          "terminal": { "enum": [false, true] },
+          "authoritative_role": { "const": "origin" }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "state": { "const": "offer-published" } }, "required": ["state"] },
+            "then": {
+              "properties": { "terminal": { "const": false } },
+              "not": { "required": ["previous_state"] }
+            }
+          },
+          { "$ref": "#/$defs/recoveryOverlay" }
+        ]
+      }
+    },
+    {
+      "if": { "properties": { "message_type": { "enum": ["offer.ack", "offer.reject"] } }, "required": ["message_type"] },
+      "then": {
+        "required": ["previous_state"],
+        "properties": {
+          "subject": { "properties": { "type": { "const": "offer" } }, "required": ["type"] },
+          "previous_state": { "enum": ["offer-published", "offer-acked", "offer-rejected"] },
+          "terminal": { "const": true },
+          "authoritative_role": { "const": "counterparty" }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "message_type": { "const": "offer.ack" }, "state": { "enum": ["offer-acked", "timed-out", "partitioned"] } }, "required": ["message_type", "state"] },
+            "then": { "properties": { "state": { "enum": ["offer-acked", "timed-out", "partitioned"] } } }
+          },
+          {
+            "if": { "properties": { "message_type": { "const": "offer.ack" }, "state": { "const": "offer-acked" } }, "required": ["message_type", "state"] },
+            "then": { "properties": { "previous_state": { "const": "offer-published" } } }
+          },
+          {
+            "if": { "properties": { "message_type": { "const": "offer.ack" }, "state": { "enum": ["timed-out", "partitioned"] } }, "required": ["message_type", "state"] },
+            "then": { "properties": { "previous_state": { "const": "offer-acked" } } }
+          },
+          {
+            "if": { "properties": { "message_type": { "const": "offer.reject" }, "state": { "enum": ["offer-rejected", "timed-out", "partitioned"] } }, "required": ["message_type", "state"] },
+            "then": { "properties": { "state": { "enum": ["offer-rejected", "timed-out", "partitioned"] } } }
+          },
+          {
+            "if": { "properties": { "message_type": { "const": "offer.reject" }, "state": { "const": "offer-rejected" } }, "required": ["message_type", "state"] },
+            "then": { "properties": { "previous_state": { "const": "offer-published" } } }
+          },
+          {
+            "if": { "properties": { "message_type": { "const": "offer.reject" }, "state": { "enum": ["timed-out", "partitioned"] } }, "required": ["message_type", "state"] },
+            "then": { "properties": { "previous_state": { "const": "offer-rejected" } } }
+          },
+          { "$ref": "#/$defs/recoveryOverlay" }
+        ]
+      }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "match.propose" } }, "required": ["message_type"] },
+      "then": {
+        "properties": {
+          "subject": { "properties": { "type": { "const": "match" } }, "required": ["type"] },
+          "previous_state": { "const": "match-proposed" },
+          "state": { "enum": ["match-proposed", "timed-out", "partitioned"] },
+          "terminal": { "enum": [false, true] },
+          "authoritative_role": { "const": "origin" }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "state": { "const": "match-proposed" } }, "required": ["state"] },
+            "then": {
+              "properties": { "terminal": { "const": false } },
+              "not": { "required": ["previous_state"] }
+            }
+          },
+          { "$ref": "#/$defs/recoveryOverlay" }
+        ]
+      }
+    },
+    {
+      "if": { "properties": { "message_type": { "enum": ["match.accept", "match.reject"] } }, "required": ["message_type"] },
+      "then": {
+        "required": ["previous_state"],
+        "properties": {
+          "subject": { "properties": { "type": { "const": "match" } }, "required": ["type"] },
+          "previous_state": { "enum": ["match-proposed", "match-accepted", "match-rejected"] },
+          "terminal": { "const": true },
+          "authoritative_role": { "const": "counterparty" }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "message_type": { "const": "match.accept" }, "state": { "enum": ["match-accepted", "timed-out", "partitioned"] } }, "required": ["message_type", "state"] },
+            "then": { "properties": { "state": { "enum": ["match-accepted", "timed-out", "partitioned"] } } }
+          },
+          {
+            "if": { "properties": { "message_type": { "const": "match.accept" }, "state": { "const": "match-accepted" } }, "required": ["message_type", "state"] },
+            "then": { "properties": { "previous_state": { "const": "match-proposed" } } }
+          },
+          {
+            "if": { "properties": { "message_type": { "const": "match.accept" }, "state": { "enum": ["timed-out", "partitioned"] } }, "required": ["message_type", "state"] },
+            "then": { "properties": { "previous_state": { "const": "match-accepted" } } }
+          },
+          {
+            "if": { "properties": { "message_type": { "const": "match.reject" }, "state": { "enum": ["match-rejected", "timed-out", "partitioned"] } }, "required": ["message_type", "state"] },
+            "then": { "properties": { "state": { "enum": ["match-rejected", "timed-out", "partitioned"] } } }
+          },
+          {
+            "if": { "properties": { "message_type": { "const": "match.reject" }, "state": { "const": "match-rejected" } }, "required": ["message_type", "state"] },
+            "then": { "properties": { "previous_state": { "const": "match-proposed" } } }
+          },
+          {
+            "if": { "properties": { "message_type": { "const": "match.reject" }, "state": { "enum": ["timed-out", "partitioned"] } }, "required": ["message_type", "state"] },
+            "then": { "properties": { "previous_state": { "const": "match-rejected" } } }
+          },
+          { "$ref": "#/$defs/recoveryOverlay" }
+        ]
+      }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "transfer.dispatch" } }, "required": ["message_type"] },
+      "then": {
+        "properties": {
+          "subject": { "properties": { "type": { "const": "transfer" } }, "required": ["type"] },
+          "previous_state": { "const": "transfer-dispatched" },
+          "state": { "enum": ["transfer-dispatched", "timed-out", "partitioned"] },
+          "terminal": { "enum": [false, true] },
+          "authoritative_role": { "const": "origin" }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "state": { "const": "transfer-dispatched" } }, "required": ["state"] },
+            "then": {
+              "properties": { "terminal": { "const": false } },
+              "not": { "required": ["previous_state"] }
+            }
+          },
+          { "$ref": "#/$defs/recoveryOverlay" }
+        ]
+      }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "transfer.receive" } }, "required": ["message_type"] },
+      "then": {
+        "required": ["previous_state"],
+        "properties": {
+          "subject": { "properties": { "type": { "const": "transfer" } }, "required": ["type"] },
+          "previous_state": { "enum": ["transfer-dispatched", "transfer-received"] },
+          "state": { "enum": ["transfer-received", "timed-out", "partitioned"] },
+          "authoritative_role": { "const": "counterparty" }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "state": { "const": "transfer-received" } }, "required": ["state"] },
+            "then": {
+              "properties": {
+                "previous_state": { "const": "transfer-dispatched" },
+                "terminal": { "const": false }
+              }
+            }
+          },
+          {
+            "if": { "properties": { "state": { "enum": ["timed-out", "partitioned"] } }, "required": ["state"] },
+            "then": { "properties": { "previous_state": { "const": "transfer-received" } } }
+          },
+          { "$ref": "#/$defs/recoveryOverlay" }
+        ]
+      }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "transfer.ack" } }, "required": ["message_type"] },
+      "then": {
+        "required": ["previous_state", "acknowledges_message_id", "final_ack_role"],
+        "properties": {
+          "subject": { "properties": { "type": { "const": "transfer" } }, "required": ["type"] },
+          "previous_state": { "const": "transfer-received" },
+          "state": { "const": "transfer-acked" },
+          "terminal": { "const": true },
+          "authoritative_role": { "const": "origin" },
+          "final_ack_role": { "const": "origin-confirms-receiver-receipt" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "offer.ack" } }, "required": ["message_type"] },
+      "then": { "properties": { "state": { "enum": ["offer-acked", "timed-out", "partitioned"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "offer.reject" } }, "required": ["message_type"] },
+      "then": { "properties": { "state": { "enum": ["offer-rejected", "timed-out", "partitioned"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "match.accept" } }, "required": ["message_type"] },
+      "then": { "properties": { "state": { "enum": ["match-accepted", "timed-out", "partitioned"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "match.reject" } }, "required": ["message_type"] },
+      "then": { "properties": { "state": { "enum": ["match-rejected", "timed-out", "partitioned"] } } }
+    },
+    {
+      "if": { "properties": { "state": { "enum": ["timed-out", "partitioned"] } }, "required": ["state"] },
+      "then": {
+        "required": ["previous_state", "last_accepted_message_id"],
+        "properties": { "terminal": { "const": true } },
+        "not": {
+          "anyOf": [
+            { "required": ["duplicate_of"] },
+            { "required": ["duplicate_behavior"] },
+            { "required": ["original_fingerprint_sha256"] },
+            { "required": ["idempotency_fingerprint_sha256"] }
+          ]
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "recoveryOverlay": {
+      "if": { "properties": { "state": { "enum": ["timed-out", "partitioned"] } }, "required": ["state"] },
+      "then": {
+        "required": ["previous_state", "last_accepted_message_id"],
+        "properties": { "terminal": { "const": true } },
+        "not": {
+          "anyOf": [
+            { "required": ["duplicate_of"] },
+            { "required": ["duplicate_behavior"] },
+            { "required": ["original_fingerprint_sha256"] },
+            { "required": ["idempotency_fingerprint_sha256"] }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/dna-operation.schema.json",
+  "title": "Core-DP DNA Register/Read Operation",
+  "description": "Minimal Core-DP MaterialDNA/ProductDNA register/read request and result contract. Register records compose the pinned LOOP v0.2.0 DNA schemas; DPP/VC/DID legal profile validation remains outside this profile.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["message_type", "operation", "entity_type", "request_id"],
+  "properties": {
+    "message_type": {
+      "type": "string",
+      "enum": ["material.register", "material.read", "product.register", "product.read"]
+    },
+    "operation": {
+      "type": "string",
+      "enum": ["register_request", "register_result", "read_request", "read_result"]
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": ["material", "product"]
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^req_[A-Za-z0-9_-]{16,80}$"
+    },
+    "record_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "record": {
+      "type": "object"
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "provenance"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["registered", "found", "not_found", "invalid", "conflict", "error"]
+        },
+        "provenance": { "$ref": "#/$defs/resultProvenance" },
+        "errors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/error.schema.json"
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "message_type": { "const": "material.register" } }, "required": ["message_type"] },
+      "then": {
+        "properties": {
+          "operation": { "enum": ["register_request", "register_result"] },
+          "entity_type": { "const": "material" },
+          "record_id": { "$ref": "#/$defs/materialId" },
+          "record": {
+            "$ref": "https://localloop.urbnia.com/projects/loop-protocol/schemas/v0.2.0/material-dna.schema.json"
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "material.read" } }, "required": ["message_type"] },
+      "then": {
+        "properties": {
+          "operation": { "enum": ["read_request", "read_result"] },
+          "entity_type": { "const": "material" },
+          "record_id": { "$ref": "#/$defs/materialId" },
+          "record": {
+            "$ref": "https://localloop.urbnia.com/projects/loop-protocol/schemas/v0.2.0/material-dna.schema.json"
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "product.register" } }, "required": ["message_type"] },
+      "then": {
+        "properties": {
+          "operation": { "enum": ["register_request", "register_result"] },
+          "entity_type": { "const": "product" },
+          "record_id": { "$ref": "#/$defs/productId" },
+          "record": {
+            "$ref": "https://localloop.urbnia.com/projects/loop-protocol/schemas/v0.2.0/product-dna.schema.json"
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "product.read" } }, "required": ["message_type"] },
+      "then": {
+        "properties": {
+          "operation": { "enum": ["read_request", "read_result"] },
+          "entity_type": { "const": "product" },
+          "record_id": { "$ref": "#/$defs/productId" },
+          "record": {
+            "$ref": "https://localloop.urbnia.com/projects/loop-protocol/schemas/v0.2.0/product-dna.schema.json"
+          }
+        }
+      }
+    }
+  ],
+  "oneOf": [
+    { "$ref": "#/$defs/materialRegisterRequest" },
+    { "$ref": "#/$defs/productRegisterRequest" },
+    { "$ref": "#/$defs/readRequest" },
+    { "$ref": "#/$defs/registerResult" },
+    { "$ref": "#/$defs/readResult" }
+  ],
+  "$defs": {
+    "materialId": {
+      "type": "string",
+      "pattern": "^MAT-[A-Z]{2}-[A-Z]{3}-\\d{4}-[A-Z]+-[A-Z0-9]{6,}$"
+    },
+    "productId": {
+      "type": "string",
+      "pattern": "^PRD-[A-Z0-9-]{8,}$"
+    },
+    "resultProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_node", "record_hash_sha256", "recorded_at"],
+      "properties": {
+        "source_node": {
+          "type": "string",
+          "minLength": 3
+        },
+        "record_hash_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "evidence_event_id": {
+          "type": "string",
+          "pattern": "^evt_[A-Za-z0-9_-]{16,80}$"
+        },
+        "envelope_message_id": {
+          "type": "string",
+          "pattern": "^msg_[A-Za-z0-9_-]{16,80}$"
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "materialRegisterRequest": {
+      "type": "object",
+      "required": ["message_type", "operation", "entity_type", "request_id", "record"],
+      "properties": {
+        "message_type": { "const": "material.register" },
+        "operation": { "const": "register_request" },
+        "entity_type": { "const": "material" },
+        "record": {
+          "$ref": "https://localloop.urbnia.com/projects/loop-protocol/schemas/v0.2.0/material-dna.schema.json"
+        }
+      }
+    },
+    "productRegisterRequest": {
+      "type": "object",
+      "required": ["message_type", "operation", "entity_type", "request_id", "record"],
+      "properties": {
+        "message_type": { "const": "product.register" },
+        "operation": { "const": "register_request" },
+        "entity_type": { "const": "product" },
+        "record": {
+          "$ref": "https://localloop.urbnia.com/projects/loop-protocol/schemas/v0.2.0/product-dna.schema.json"
+        }
+      }
+    },
+    "readRequest": {
+      "type": "object",
+      "required": ["message_type", "operation", "entity_type", "request_id", "record_id"],
+      "properties": {
+        "operation": { "const": "read_request" },
+        "record_id": {
+          "type": "string",
+          "pattern": "^(MAT-[A-Z]{2}-[A-Z]{3}-\\d{4}-[A-Z]+-[A-Z0-9]{6,}|PRD-[A-Z0-9-]{8,})$"
+        }
+      },
+      "not": { "required": ["record"] }
+    },
+    "registerResult": {
+      "type": "object",
+      "required": ["message_type", "operation", "entity_type", "request_id", "record_id", "result"],
+      "properties": {
+        "operation": { "const": "register_result" },
+        "result": {
+          "properties": {
+            "status": {
+              "enum": ["registered", "invalid", "conflict", "error"]
+            }
+          }
+        }
+      }
+    },
+    "readResult": {
+      "type": "object",
+      "required": ["message_type", "operation", "entity_type", "request_id", "record_id", "result"],
+      "properties": {
+        "operation": { "const": "read_result" },
+        "result": {
+          "properties": {
+            "status": {
+              "enum": ["found", "not_found", "error"]
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "result": {
+                "properties": { "status": { "const": "found" } },
+                "required": ["status"]
+              }
+            },
+            "required": ["result"]
+          },
+          "then": { "required": ["record"] }
+        },
+        {
+          "if": {
+            "properties": {
+              "result": {
+                "properties": { "status": { "enum": ["not_found", "error"] } },
+                "required": ["status"]
+              }
+            },
+            "required": ["result"]
+          },
+          "then": { "not": { "required": ["record"] } }
+        }
+      ]
+    }
+  }
+}

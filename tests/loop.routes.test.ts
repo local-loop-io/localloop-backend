@@ -176,6 +176,8 @@ const buildApp = () => {
     listLoopMatches: async () => ([fakeMatchRecord]),
     getLoopTransferById: async (id: string) => (id === transferPayload.id ? fakeTransferRecord : undefined),
     listLoopTransfers: async () => ([fakeTransferRecord]),
+    searchLoopMaterials: async () => ({ results: [] }),
+    searchLoopProducts: async () => ({ results: [] }),
     broadcastLoopEvent: () => undefined,
   };
 

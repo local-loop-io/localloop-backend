@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/search-contract.schema.json",
+  "title": "Core-DP Local and Cross-Node Search Contract",
+  "oneOf": [
+    { "$ref": "#/$defs/searchRequest" },
+    { "$ref": "#/$defs/searchResponse" }
+  ],
+  "$defs": {
+    "searchRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entity_type", "filters", "limit"],
+      "properties": {
+        "entity_type": { "type": "string", "enum": ["material", "product"] },
+        "scope": { "type": "string", "enum": ["local", "cross-node"], "default": "local" },
+        "filters": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "category_prefix": { "type": "string", "minLength": 1 },
+            "id_prefix": { "type": "string", "minLength": 3 },
+            "origin_city": { "type": "string", "minLength": 1 },
+            "current_city": { "type": "string", "minLength": 1 },
+            "available_from_gte": { "type": "string", "format": "date-time" },
+            "available_from_lt": { "type": "string", "format": "date-time" },
+            "quantity_min": { "type": "number", "minimum": 0 },
+            "condition": { "type": "string", "minLength": 1 },
+            "updated_since": { "type": "string", "format": "date-time" }
+          }
+        },
+        "auth": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": {
+            "mode": { "type": "string", "enum": ["public-lab", "bearer", "node-signature"] },
+            "subject_node": { "type": "string" }
+          }
+        },
+        "strict_filtering": {
+          "type": "boolean",
+          "default": false
+        },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "cursor": {
+          "type": "string",
+          "pattern": "^cur_[A-Za-z0-9_-]{16,200}$"
+        },
+        "consistency": {
+          "type": "string",
+          "enum": ["snapshot", "eventual"],
+          "default": "snapshot"
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "scope": { "const": "cross-node" } }, "required": ["scope"] },
+          "then": {
+            "required": ["auth", "consistency"],
+            "properties": {
+              "auth": {
+                "required": ["mode"],
+                "properties": {
+                  "mode": { "const": "node-signature" }
+                }
+              },
+              "consistency": { "const": "eventual" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "scope": { "const": "local" } }, "required": ["scope"] },
+          "then": {
+            "properties": {
+              "auth": {
+                "properties": {
+                  "mode": { "enum": ["public-lab", "bearer", "node-signature"] }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "searchResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entity_type", "results", "ordering", "consistency", "provenance"],
+      "properties": {
+        "entity_type": { "type": "string", "enum": ["material", "product"] },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["id", "source_node", "record_hash_sha256", "updated_at"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "source_node": { "type": "string", "minLength": 3 },
+              "record_hash_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "updated_at": { "type": "string", "format": "date-time" }
+            }
+          }
+        },
+        "ordering": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["primary", "tie_break"],
+          "properties": {
+            "primary": { "const": "updated_at_asc" },
+            "tie_break": { "const": "id_asc" }
+          }
+        },
+        "next_cursor": {
+          "type": "string",
+          "pattern": "^cur_[A-Za-z0-9_-]{16,200}$"
+        },
+        "consistency": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": {
+            "mode": { "type": "string", "enum": ["snapshot", "eventual"] },
+            "snapshot_id": { "type": "string", "pattern": "^snap_[A-Za-z0-9_-]{8,80}$" },
+            "as_of": { "type": "string", "format": "date-time" }
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["queried_nodes"],
+          "properties": {
+            "queried_nodes": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 3 }
+            },
+            "omitted_nodes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["node_id", "reason"],
+                "properties": {
+                  "node_id": { "type": "string" },
+                  "reason": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "consistency": {
+                "properties": { "mode": { "const": "snapshot" } },
+                "required": ["mode"]
+              }
+            },
+            "required": ["consistency"]
+          },
+          "then": {
+            "properties": {
+              "consistency": {
+                "required": ["snapshot_id"]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

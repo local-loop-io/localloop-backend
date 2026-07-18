@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/error.schema.json",
+  "title": "Core-DP Error",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["code", "message", "retryable", "correlation_id"],
+  "properties": {
+    "code": {
+      "type": "string",
+      "enum": [
+        "invalid_request",
+        "unauthorized",
+        "forbidden",
+        "not_found",
+        "conflict",
+        "duplicate",
+        "stale_message",
+        "unsupported_profile_version",
+        "signature_invalid",
+        "schema_invalid",
+        "timeout",
+        "partition",
+        "internal_error"
+      ]
+    },
+    "message": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "retryable": { "type": "boolean" },
+    "correlation_id": { "type": "string", "pattern": "^(msg|conv)_[A-Za-z0-9_-]{16,80}$" },
+    "details": { "type": "object", "additionalProperties": true }
+  }
+}

@@ -213,10 +213,10 @@
       "type": "array",
       "items": {
         "type": "string",
-        "pattern": "^[A-Z]{2}-[A-Z]{3}-\\d{4}-[A-Z]+-[A-Z0-9]{6,}$"
+        "pattern": "^MAT-[A-Z]{2}-[A-Z]{3}-\\d{4}-[A-Z]+-[A-Z0-9]{6,}$"
       },
       "examples": [
-        ["DE-MUC-2025-METAL-4EB84C", "DE-MUC-2025-PLASTIC-96FE78"]
+        ["MAT-DE-MUC-2025-METAL-4EB84C", "MAT-DE-MUC-2025-PLASTIC-96FE78"]
       ]
     },
     "dimensions": {

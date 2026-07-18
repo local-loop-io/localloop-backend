@@ -1,6 +1,6 @@
 {
   "name": "@local-loop/localloop-backend",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "private": true,
   "description": "Backend API for localLOOP expression-of-interest submissions",
   "author": "Mycel UG (haftungsbeschränkt) <dev@mycel-ai.de>",
@@ -24,7 +24,9 @@
     "lab:demo": "bun run scripts/lab-demo.ts",
     "simulate:federation": "bun run scripts/simulate-federation.ts",
     "lab:federation": "bun run scripts/lab-federation.ts",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "sync:schemas": "bun run scripts/sync-schemas.ts",
+    "check:schemas": "bun run scripts/sync-schemas.ts --check"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1053.0",

@@ -1,4 +1,5 @@
-import type { FastifyInstance, FastifyReply } from 'fastify';
+import { randomBytes } from 'node:crypto';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../config';
 import {
   createLoopMaterial,
@@ -22,18 +23,24 @@ import {
   listLoopMatches,
   getLoopTransferById,
   listLoopTransfers,
+  searchLoopMaterials,
+  searchLoopProducts,
   LoopStateError,
   type LoopMaterialPayload,
   type LoopProductPayload,
   type LoopOfferPayload,
   type LoopMatchPayload,
   type LoopTransferPayload,
+  type LoopSearchFilters,
+  type LoopSearchResult,
 } from '../db/loop';
 import { broadcastLoopEvent, registerLoopStream } from '../realtime/loopStream';
 import { incrementMetric } from '../metrics';
 import { loopSchemaIds } from '../schemas/loopSchemas';
 import { requireApiKey } from '../security/apiKey';
 import { loopContentType } from '../protocol';
+import { CoreDpError, sendCoreDpError, toCoreDpError } from '../errors';
+import { withIdempotency } from '../idempotency';
 
 const createResponseSchema = {
   type: 'object',
@@ -146,6 +153,8 @@ type LoopDeps = {
   listLoopMatches: typeof listLoopMatches;
   getLoopTransferById: typeof getLoopTransferById;
   listLoopTransfers: typeof listLoopTransfers;
+  searchLoopMaterials: typeof searchLoopMaterials;
+  searchLoopProducts: typeof searchLoopProducts;
   broadcastLoopEvent: typeof broadcastLoopEvent;
 };
 
@@ -171,6 +180,8 @@ const defaultDeps: LoopDeps = {
   listLoopMatches,
   getLoopTransferById,
   listLoopTransfers,
+  searchLoopMaterials,
+  searchLoopProducts,
   broadcastLoopEvent,
 };
 
@@ -218,10 +229,22 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     }
 
     const payload = request.body as LoopMaterialPayload;
-    let created;
+    const idempotencyKey = request.headers['idempotency-key'] as string | undefined;
+    let outcome: { status: 201; body: { id: string; created_at: string } };
     try {
-      created = await deps.createLoopMaterial(payload);
+      outcome = await withIdempotency('material.create', idempotencyKey, payload, async () => {
+        const created = await deps.createLoopMaterial(payload);
+        deps.broadcastLoopEvent(created.event);
+        incrementMetric('loop_material_created');
+        incrementMetric('loop_event_emitted');
+        request.log.info({ materialId: created.id }, 'Loop material created');
+        return { status: 201, body: { id: created.id, created_at: created.created_at } };
+      }) as { status: 201; body: { id: string; created_at: string } };
     } catch (error) {
+      if (error instanceof CoreDpError) {
+        sendCoreDpError(reply, error);
+        return;
+      }
       if (sendWriteConflict(error, reply)) {
         return;
       }
@@ -231,12 +254,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       throw error;
     }
 
-    deps.broadcastLoopEvent(created.event);
-    incrementMetric('loop_material_created');
-    incrementMetric('loop_event_emitted');
-    request.log.info({ materialId: created.id }, 'Loop material created');
-
-    reply.code(201).send({ id: created.id, created_at: created.created_at });
+    reply.code(outcome.status).send(outcome.body);
   });
 
   app.post('/api/v1/product', {
@@ -253,10 +271,22 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     }
 
     const payload = request.body as LoopProductPayload;
-    let created;
+    const idempotencyKey = request.headers['idempotency-key'] as string | undefined;
+    let outcome: { status: 201; body: { id: string; created_at: string } };
     try {
-      created = await deps.createLoopProduct(payload);
+      outcome = await withIdempotency('product.create', idempotencyKey, payload, async () => {
+        const created = await deps.createLoopProduct(payload);
+        deps.broadcastLoopEvent(created.event);
+        incrementMetric('loop_product_created');
+        incrementMetric('loop_event_emitted');
+        request.log.info({ productId: created.id }, 'Loop product created');
+        return { status: 201, body: { id: created.id, created_at: created.created_at } };
+      }) as { status: 201; body: { id: string; created_at: string } };
     } catch (error) {
+      if (error instanceof CoreDpError) {
+        sendCoreDpError(reply, error);
+        return;
+      }
       if (sendWriteConflict(error, reply)) {
         return;
       }
@@ -266,12 +296,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       throw error;
     }
 
-    deps.broadcastLoopEvent(created.event);
-    incrementMetric('loop_product_created');
-    incrementMetric('loop_event_emitted');
-    request.log.info({ productId: created.id }, 'Loop product created');
-
-    reply.code(201).send({ id: created.id, created_at: created.created_at });
+    reply.code(outcome.status).send(outcome.body);
   });
 
   app.post('/api/v1/offer', {
@@ -303,10 +328,22 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       }
     }
 
-    let created;
+    const idempotencyKey = request.headers['idempotency-key'] as string | undefined;
+    let outcome: { status: 201; body: { id: string; created_at: string } };
     try {
-      created = await deps.createLoopOffer(payload);
+      outcome = await withIdempotency('offer.create', idempotencyKey, payload, async () => {
+        const created = await deps.createLoopOffer(payload);
+        deps.broadcastLoopEvent(created.event);
+        incrementMetric('loop_offer_created');
+        incrementMetric('loop_event_emitted');
+        request.log.info({ offerId: created.id, materialId: payload.material_id, productId: payload.product_id }, 'Loop offer created');
+        return { status: 201, body: { id: created.id, created_at: created.created_at } };
+      }) as { status: 201; body: { id: string; created_at: string } };
     } catch (error) {
+      if (error instanceof CoreDpError) {
+        sendCoreDpError(reply, error);
+        return;
+      }
       if (sendWriteConflict(error, reply)) {
         return;
       }
@@ -315,12 +352,8 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       }
       throw error;
     }
-    deps.broadcastLoopEvent(created.event);
-    incrementMetric('loop_offer_created');
-    incrementMetric('loop_event_emitted');
-    request.log.info({ offerId: created.id, materialId: payload.material_id, productId: payload.product_id }, 'Loop offer created');
 
-    reply.code(201).send({ id: created.id, created_at: created.created_at });
+    reply.code(outcome.status).send(outcome.body);
   });
 
   app.post('/api/v1/match', {
@@ -363,10 +396,22 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       return;
     }
 
-    let created;
+    const idempotencyKey = request.headers['idempotency-key'] as string | undefined;
+    let outcome: { status: 201; body: { id: string; created_at: string } };
     try {
-      created = await deps.createLoopMatch(payload);
+      outcome = await withIdempotency('match.create', idempotencyKey, payload, async () => {
+        const created = await deps.createLoopMatch(payload);
+        deps.broadcastLoopEvent(created.event);
+        incrementMetric('loop_match_created');
+        incrementMetric('loop_event_emitted');
+        request.log.info({ matchId: created.id, offerId: payload.offer_id }, 'Loop match created');
+        return { status: 201, body: { id: created.id, created_at: created.created_at } };
+      }) as { status: 201; body: { id: string; created_at: string } };
     } catch (error) {
+      if (error instanceof CoreDpError) {
+        sendCoreDpError(reply, error);
+        return;
+      }
       if (sendWriteConflict(error, reply)) {
         return;
       }
@@ -375,12 +420,8 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       }
       throw error;
     }
-    deps.broadcastLoopEvent(created.event);
-    incrementMetric('loop_match_created');
-    incrementMetric('loop_event_emitted');
-    request.log.info({ matchId: created.id, offerId: payload.offer_id }, 'Loop match created');
 
-    reply.code(201).send({ id: created.id, created_at: created.created_at });
+    reply.code(outcome.status).send(outcome.body);
   });
 
   app.post('/api/v1/transfer', {
@@ -423,10 +464,22 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       return;
     }
 
-    let created;
+    const idempotencyKey = request.headers['idempotency-key'] as string | undefined;
+    let outcome: { status: 201; body: { id: string; created_at: string } };
     try {
-      created = await deps.createLoopTransfer(payload);
+      outcome = await withIdempotency('transfer.create', idempotencyKey, payload, async () => {
+        const created = await deps.createLoopTransfer(payload);
+        deps.broadcastLoopEvent(created.event);
+        incrementMetric('loop_transfer_created');
+        incrementMetric('loop_event_emitted');
+        request.log.info({ transferId: created.id, matchId: payload.match_id }, 'Loop transfer created');
+        return { status: 201, body: { id: created.id, created_at: created.created_at } };
+      }) as { status: 201; body: { id: string; created_at: string } };
     } catch (error) {
+      if (error instanceof CoreDpError) {
+        sendCoreDpError(reply, error);
+        return;
+      }
       if (sendWriteConflict(error, reply)) {
         return;
       }
@@ -435,12 +488,8 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       }
       throw error;
     }
-    deps.broadcastLoopEvent(created.event);
-    incrementMetric('loop_transfer_created');
-    incrementMetric('loop_event_emitted');
-    request.log.info({ transferId: created.id, matchId: payload.match_id }, 'Loop transfer created');
 
-    reply.code(201).send({ id: created.id, created_at: created.created_at });
+    reply.code(outcome.status).send(outcome.body);
   });
 
   app.post('/api/v1/material-status', {
@@ -657,5 +706,140 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     incrementMetric('loop_event_relayed');
 
     reply.code(202).send({ status: 'accepted', id: created.id });
+  });
+
+  // --- Core-DP local search (MaterialDNA / ProductDNA) -----------------------
+  // Request body is validated against a plain Fastify/AJV schema rather than
+  // profiles/core-dp/schemas/search-contract.schema.json's compound oneOf/$defs
+  // directly, since that schema mixes request and response shapes behind
+  // conditionals AJV draft/version support in Fastify's default compiler isn't
+  // guaranteed to handle identically; loop-protocol's own `npm run
+  // validate:schemas` is the source of truth for full schema conformance, this
+  // is an operational-level guard.
+  const searchFiltersSchema = {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      category_prefix: { type: 'string', minLength: 1 },
+      id_prefix: { type: 'string', minLength: 3 },
+      origin_city: { type: 'string', minLength: 1 },
+      current_city: { type: 'string', minLength: 1 },
+      available_from_gte: { type: 'string' },
+      available_from_lt: { type: 'string' },
+      quantity_min: { type: 'number', minimum: 0 },
+      condition: { type: 'string', minLength: 1 },
+      updated_since: { type: 'string' },
+    },
+  };
+
+  const searchRequestSchema = {
+    type: 'object',
+    required: ['limit'],
+    additionalProperties: false,
+    properties: {
+      scope: { type: 'string', enum: ['local', 'cross-node'] },
+      filters: searchFiltersSchema,
+      auth: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          mode: { type: 'string', enum: ['public-lab', 'bearer', 'node-signature'] },
+          subject_node: { type: 'string' },
+        },
+      },
+      strict_filtering: { type: 'boolean' },
+      limit: { type: 'integer', minimum: 1, maximum: 100 },
+      cursor: { type: 'string', pattern: '^cur_[A-Za-z0-9_-]{16,200}$' },
+      consistency: { type: 'string', enum: ['snapshot', 'eventual'] },
+    },
+  };
+
+  const searchResponseSchema = { type: 'object', additionalProperties: true };
+
+  type LoopSearchRequestBody = {
+    scope?: 'local' | 'cross-node';
+    filters?: LoopSearchFilters;
+    auth?: { mode?: 'public-lab' | 'bearer' | 'node-signature'; subject_node?: string };
+    strict_filtering?: boolean;
+    limit: number;
+    cursor?: string;
+    consistency?: 'snapshot' | 'eventual';
+  };
+
+  async function handleLoopSearch(
+    entityType: 'material' | 'product',
+    search: (opts: {
+      filters: LoopSearchFilters;
+      limit: number;
+      cursor?: string;
+      strictFiltering?: boolean;
+    }) => Promise<LoopSearchResult>,
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ) {
+    const body = request.body as LoopSearchRequestBody;
+
+    if (body.scope === 'cross-node') {
+      sendCoreDpError(
+        reply,
+        new CoreDpError(
+          'invalid_request',
+          'Cross-node search requires the signed envelope/federation layer, which this lab preview does not implement yet.',
+        ),
+      );
+      return;
+    }
+
+    if (body.auth?.mode === 'node-signature') {
+      // No signature-verification exists yet for this mode. Reject explicitly
+      // rather than silently treating it like no-auth-supplied, so a caller
+      // can never get an unverified trust claim honored — even accidentally —
+      // once cross-node search is wired on top of this same gate.
+      sendCoreDpError(
+        reply,
+        new CoreDpError('invalid_request', 'auth.mode "node-signature" is not implemented in this lab preview.'),
+      );
+      return;
+    }
+
+    if (body.auth?.mode === 'bearer' && !requireApiKey(request, reply)) {
+      return;
+    }
+
+    let result: LoopSearchResult;
+    try {
+      result = await search({
+        filters: body.filters ?? {},
+        limit: body.limit,
+        cursor: body.cursor,
+        strictFiltering: body.strict_filtering,
+      });
+    } catch (error) {
+      sendCoreDpError(reply, toCoreDpError(error));
+      return;
+    }
+
+    reply.send({
+      entity_type: entityType,
+      results: result.results,
+      ordering: { primary: 'updated_at_asc', tie_break: 'id_asc' },
+      ...(result.next_cursor ? { next_cursor: result.next_cursor } : {}),
+      consistency: { mode: 'snapshot', snapshot_id: `snap_${randomBytes(8).toString('hex')}` },
+      provenance: { queried_nodes: [config.node.id] },
+    });
+  }
+
+  app.post('/api/v1/material/search', {
+    config: { rateLimit: writeRateLimit },
+    schema: { body: searchRequestSchema, response: { 200: searchResponseSchema } },
+  }, async (request, reply) => {
+    await handleLoopSearch('material', deps.searchLoopMaterials, request, reply);
+  });
+
+  app.post('/api/v1/product/search', {
+    config: { rateLimit: writeRateLimit },
+    schema: { body: searchRequestSchema, response: { 200: searchResponseSchema } },
+  }, async (request, reply) => {
+    await handleLoopSearch('product', deps.searchLoopProducts, request, reply);
   });
 }

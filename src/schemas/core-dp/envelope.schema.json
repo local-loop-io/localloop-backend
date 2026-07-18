@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/envelope.schema.json",
+  "title": "Core-DP Signed Message Envelope",
+  "description": "LAB-ONLY Core-DP envelope for deterministic two-node delivery. signature.value is a detached Ed25519 signature over the documented canonical UTF-8 JSON signing input. This is not a production security claim.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile",
+    "profile_version",
+    "message_id",
+    "message_type",
+    "created_at",
+    "expires_at",
+    "sender",
+    "receiver",
+    "idempotency_key",
+    "replay_window_seconds",
+    "body_schema",
+    "body",
+    "signature"
+  ],
+  "properties": {
+    "profile": { "const": "core-dp" },
+    "profile_version": { "const": "0.1.0-lab" },
+    "message_id": {
+      "type": "string",
+      "pattern": "^msg_[A-Za-z0-9_-]{16,80}$"
+    },
+    "message_type": {
+      "type": "string",
+      "enum": [
+        "capabilities.announce",
+        "capabilities.response",
+        "material.register",
+        "material.read",
+        "material.search",
+        "product.register",
+        "product.read",
+        "product.search",
+        "offer.publish",
+        "offer.ack",
+        "offer.reject",
+        "match.propose",
+        "match.accept",
+        "match.reject",
+        "transfer.dispatch",
+        "transfer.receive",
+        "transfer.ack",
+        "error"
+      ]
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "sender": { "$ref": "#/$defs/nodeRef" },
+    "receiver": { "$ref": "#/$defs/nodeRef" },
+    "idempotency_key": {
+      "type": "string",
+      "pattern": "^idem_[A-Za-z0-9_-]{16,120}$"
+    },
+    "replay_window_seconds": {
+      "type": "integer",
+      "minimum": 60,
+      "maximum": 900,
+      "default": 300
+    },
+    "version_negotiation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requested", "supported"],
+      "properties": {
+        "requested": { "const": "0.1.0-lab" },
+        "supported": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^0\\.\\d+\\.\\d+(-lab)?$" },
+          "contains": { "const": "0.1.0-lab" }
+        }
+      }
+    },
+    "body_schema": {
+      "type": "string",
+      "enum": [
+        "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/choreography-message.schema.json",
+        "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/dna-operation.schema.json",
+        "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/search-contract.schema.json",
+        "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/error.schema.json"
+      ]
+    },
+    "body": { "type": "object" },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "alg",
+        "key_id",
+        "signing_input_sha256",
+        "value"
+      ],
+      "properties": {
+        "alg": {
+          "const": "Ed25519-lab-detached-v1",
+          "description": "Detached Ed25519 signature over the canonical UTF-8 JSON signing input."
+        },
+        "key_id": {
+          "type": "string",
+          "description": "MUST match sender.key_id.",
+          "pattern": "^key_[A-Za-z0-9_.:-]{8,120}$"
+        },
+        "signing_input_sha256": {
+          "type": "string",
+          "description": "Diagnostic SHA-256 of the canonical UTF-8 JSON signing input; implementations verify this and the detached signature.",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "value": {
+          "type": "string",
+          "description": "Base64url-encoded 64-byte detached Ed25519 signature.",
+          "pattern": "^[A-Za-z0-9_-]{86}$"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "message_type": { "enum": ["capabilities.announce", "capabilities.response", "offer.publish", "offer.ack", "offer.reject", "match.propose", "match.accept", "match.reject", "transfer.dispatch", "transfer.receive", "transfer.ack"] } }, "required": ["message_type"] },
+      "then": {
+        "properties": {
+          "body_schema": { "const": "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/choreography-message.schema.json" },
+          "body": { "$ref": "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/choreography-message.schema.json" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "capabilities.announce" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "message_type": { "const": "capabilities.announce" } }, "required": ["message_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "capabilities.response" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "message_type": { "const": "capabilities.response" } }, "required": ["message_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "offer.publish" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "message_type": { "const": "offer.publish" } }, "required": ["message_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "offer.ack" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "message_type": { "const": "offer.ack" } }, "required": ["message_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "offer.reject" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "message_type": { "const": "offer.reject" } }, "required": ["message_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "match.propose" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "message_type": { "const": "match.propose" } }, "required": ["message_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "match.accept" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "message_type": { "const": "match.accept" } }, "required": ["message_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "match.reject" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "message_type": { "const": "match.reject" } }, "required": ["message_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "transfer.dispatch" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "message_type": { "const": "transfer.dispatch" } }, "required": ["message_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "transfer.receive" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "message_type": { "const": "transfer.receive" } }, "required": ["message_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "transfer.ack" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "message_type": { "const": "transfer.ack" } }, "required": ["message_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "enum": ["material.register", "material.read", "product.register", "product.read"] } }, "required": ["message_type"] },
+      "then": {
+        "properties": {
+          "body_schema": { "const": "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/dna-operation.schema.json" },
+          "body": { "$ref": "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/dna-operation.schema.json" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "material.register" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "message_type": { "const": "material.register" }, "entity_type": { "const": "material" } }, "required": ["message_type", "entity_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "material.read" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "message_type": { "const": "material.read" }, "entity_type": { "const": "material" } }, "required": ["message_type", "entity_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "product.register" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "message_type": { "const": "product.register" }, "entity_type": { "const": "product" } }, "required": ["message_type", "entity_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "product.read" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "message_type": { "const": "product.read" }, "entity_type": { "const": "product" } }, "required": ["message_type", "entity_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "enum": ["material.search", "product.search"] } }, "required": ["message_type"] },
+      "then": {
+        "properties": {
+          "body_schema": { "const": "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/search-contract.schema.json" },
+          "body": { "$ref": "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/search-contract.schema.json" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "material.search" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "entity_type": { "const": "material" } }, "required": ["entity_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "product.search" } }, "required": ["message_type"] },
+      "then": { "properties": { "body": { "properties": { "entity_type": { "const": "product" } }, "required": ["entity_type"] } } }
+    },
+    {
+      "if": { "properties": { "message_type": { "const": "error" } }, "required": ["message_type"] },
+      "then": {
+        "properties": {
+          "body_schema": { "const": "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/error.schema.json" },
+          "body": { "$ref": "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/error.schema.json" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "nodeRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_id", "endpoint", "key_id"],
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9.-]{2,120}$"
+        },
+        "endpoint": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://"
+        },
+        "key_id": {
+          "type": "string",
+          "pattern": "^key_[A-Za-z0-9_.:-]{8,120}$"
+        }
+      }
+    }
+  }
+}

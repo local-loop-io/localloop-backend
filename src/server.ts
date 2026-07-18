@@ -13,6 +13,7 @@ import { registerDocsRoutes } from './routes/docs';
 import { registerCityRoutes } from './routes/cities';
 import { registerPaymentRoutes } from './routes/payments';
 import { registerLoopRoutes } from './routes/loop';
+import { registerEvidenceRoutes } from './routes/evidence';
 import { registerMetricsRoutes } from './routes/metrics';
 import { registerPrivacyRoutes } from './routes/privacy';
 import { registerFederationRoutes } from './routes/federation';
@@ -89,6 +90,7 @@ export async function buildServer(options: BuildOptions = {}) {
   await registerCityRoutes(app);
   await registerPaymentRoutes(app);
   await registerLoopRoutes(app);
+  await registerEvidenceRoutes(app);
   await registerFederationRoutes(app);
   await registerAuthStatusRoutes(app);
   await registerMetricsRoutes(app);
