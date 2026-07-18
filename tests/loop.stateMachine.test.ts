@@ -97,7 +97,10 @@ afterAll(async () => {
       await pool.query('DELETE FROM loop_materials WHERE id = $1', [id]);
     }
   }
-  await pool.end();
+  // NOTE: does not call pool.end() — `pool` is a shared module-level singleton
+  // across every test file in this `bun test` run (not just this one), and other
+  // DB-backed suites (loop.search, evidence, idempotency) need it to stay open
+  // regardless of file execution order.
 });
 
 describe('loop state machine (db-backed)', () => {

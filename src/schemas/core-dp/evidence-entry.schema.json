@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/evidence-entry.schema.json",
+  "title": "Core-DP Append-Only Evidence Entry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "sequence",
+    "recorded_at",
+    "node_id",
+    "subject",
+    "event_type",
+    "immutable",
+    "payload_hash_sha256",
+    "retention"
+  ],
+  "properties": {
+    "event_id": { "type": "string", "pattern": "^evt_[A-Za-z0-9_-]{16,80}$" },
+    "sequence": { "type": "integer", "minimum": 1 },
+    "predecessor_event_id": { "type": "string", "pattern": "^evt_[A-Za-z0-9_-]{16,80}$" },
+    "recorded_at": { "type": "string", "format": "date-time" },
+    "observed_at": { "type": "string", "format": "date-time" },
+    "node_id": { "type": "string", "minLength": 3 },
+    "actor_node_id": { "type": "string", "minLength": 3 },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["material", "product", "offer", "match", "transfer", "envelope"]
+        },
+        "id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "registered",
+        "read",
+        "searched",
+        "offer-published",
+        "offer-acked",
+        "offer-rejected",
+        "match-proposed",
+        "match-accepted",
+        "match-rejected",
+        "transfer-dispatched",
+        "transfer-received",
+        "transfer-acked",
+        "error-recorded",
+        "key-rotated"
+      ]
+    },
+    "immutable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "sequence", "subject", "event_type", "payload_hash_sha256"],
+      "properties": {
+        "event_id": { "type": "string" },
+        "sequence": { "type": "integer" },
+        "subject": { "type": "object" },
+        "event_type": { "type": "string" },
+        "payload_hash_sha256": { "type": "string" }
+      }
+    },
+    "payload_hash_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "envelope_message_id": { "type": "string", "pattern": "^msg_[A-Za-z0-9_-]{16,80}$" },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["retain_until", "exportable", "redaction_status"],
+      "properties": {
+        "retain_until": { "type": "string", "format": "date-time" },
+        "exportable": { "type": "boolean" },
+        "redaction_status": { "type": "string", "enum": ["none", "redacted", "tombstoned"] },
+        "redaction_reason": { "type": "string", "maxLength": 500 }
+      }
+    },
+    "redactions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field", "method"],
+        "properties": {
+          "field": { "type": "string" },
+          "method": { "type": "string", "enum": ["remove", "hash", "generalize"] }
+        }
+      }
+    }
+  }
+}

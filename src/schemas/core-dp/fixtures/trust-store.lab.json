@@ -1,0 +1,44 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-07-18T00:00:00Z",
+  "keys": [
+    {
+      "node_id": "lab-hub.loop",
+      "key_id": "key_lab_hub_2026_07",
+      "public_key_jwk": {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "x": "j55YnuZx0W4sjiFO2wP26HIPUu6TqYrx5E1aqSonke8"
+      },
+      "lifecycle_status": "active",
+      "valid_from": "2026-01-01T00:00:00Z",
+      "valid_until": "2027-01-01T00:00:00Z"
+    },
+    {
+      "node_id": "lab-hub.loop",
+      "key_id": "key_lab_hub_2025_01",
+      "public_key_jwk": {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "x": "QaASoC14o5XzZWW2e1Aqh6QjFqIF46uU7TpbVzPpi7k"
+      },
+      "lifecycle_status": "rotated",
+      "valid_from": "2025-01-01T00:00:00Z",
+      "valid_until": "2026-01-01T00:00:00Z",
+      "rotated_to_key_id": "key_lab_hub_2026_07"
+    },
+    {
+      "node_id": "lab-hub.loop",
+      "key_id": "key_lab_hub_revoked_001",
+      "public_key_jwk": {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "x": "51Q7NLKrZZn6BW7UgUJbhqbZJR1Me7hjT9VXZ-n_a9w"
+      },
+      "lifecycle_status": "revoked",
+      "valid_from": "2024-01-01T00:00:00Z",
+      "valid_until": "2025-01-01T00:00:00Z",
+      "revoked_at": "2024-11-01T00:00:00Z"
+    }
+  ]
+}

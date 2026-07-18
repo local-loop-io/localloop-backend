@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-18
+
+### Added
+- Core-DP local search for MaterialDNA/ProductDNA: `POST /api/v1/material/search`
+  and `POST /api/v1/product/search`, with filters, opaque cursor pagination, and
+  deterministic ordering.
+- Append-only evidence log, enforced at the database level (rejects `UPDATE`,
+  `DELETE`, and `TRUNCATE`), recorded automatically on every material/product/
+  offer/match/transfer creation; exposed via `GET /api/v1/evidence/:event_id`,
+  `GET /api/v1/evidence`, and `POST /api/v1/evidence/search`.
+- Signed Core-DP message envelope (`src/envelope.ts`): Ed25519 sign/verify over
+  a canonical signing input, replay-window validation, and peer-key trust-store
+  lifecycle checks (active/rotated/revoked).
+- `Idempotency-Key` header support on material/product/offer/match/transfer
+  creation, safe under concurrent retries.
+- Standardized Core-DP error response shape (`src/errors.ts`) for the new
+  search and evidence endpoints.
+- `bun run sync:schemas` / `check:schemas` to keep this repo's schema copies
+  verified byte-identical against `loop-protocol`'s canonical source.
+
+### Fixed
+- `product-dna.schema.json`'s related-materials id pattern was missing the
+  required `MAT-` prefix — a drift from the canonical `loop-protocol` schema,
+  corrected by the new schema sync.
+
 ## [0.2.4] - 2026-05-27
 
 ### Fixed
