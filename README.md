@@ -130,7 +130,7 @@ See `.env.example` for the full list with descriptions. Key variables:
 | `NODE_CAPABILITIES` | `material-registry,loopsignal` | Advertised capabilities; canonical enum only |
 | `NODE_LAT` / `NODE_LON` | `48.1351` / `11.582` | Node location (required by canonical node-info schema; powers `radius_km` search) |
 | `NODE_CITY` / `NODE_COUNTRY` | — | Optional node location metadata |
-| `RATE_LIMIT_MAX` | `60` | Global rate limit per window |
+| `RATE_LIMIT_MAX` | `600` | Global read-route limit per window; write routes use `RATE_LIMIT_WRITE_MAX` |
 | `RATE_LIMIT_WRITE_MAX` | `20` | Write route rate limit per window |
 | `REQUEST_TIMEOUT_MS` | `30000` | Server connection timeout |
 | `AUTH_ENABLED` | `false` | Enable BetterAuth |

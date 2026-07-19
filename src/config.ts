@@ -34,7 +34,9 @@ const envSchema = z.object({
   REQUEST_TIMEOUT_MS: z.coerce.number().default(30000),
   PUBLIC_LIMIT: z.coerce.number().default(100),
   ALLOWED_ORIGINS: z.string().default('https://localloop.urbnia.com'),
-  RATE_LIMIT_MAX: z.coerce.number().default(60),
+  // Read-only lab views make several parallel requests; write routes retain
+  // their separately enforced, stricter RATE_LIMIT_WRITE_MAX allowance.
+  RATE_LIMIT_MAX: z.coerce.number().default(600),
   RATE_LIMIT_WRITE_MAX: z.coerce.number().default(20),
   RATE_LIMIT_WINDOW: z.string().default('15 minutes'),
   RATE_LIMIT_WRITE_WINDOW: z.string().default('15 minutes'),

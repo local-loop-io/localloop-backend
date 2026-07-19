@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-07-19
+
+### Fixed
+- Raised the read-only route allowance to 600 requests per 15-minute window so
+  the public DEMO City view remains available for shared-network visitors;
+  write routes remain independently limited to 20 requests per window.
+
 ## [0.4.0] - 2026-07-19
 
 ### Added
@@ -173,3 +180,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Loop event log + SSE stream for demo state updates.
 - Lab demo scripts (seed + simulate + one-command runner).
 - Privacy notice endpoint and in-memory metrics snapshot.
+
+[Unreleased]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.0...v0.4.1
