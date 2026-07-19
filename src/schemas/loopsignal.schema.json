@@ -1,0 +1,246 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://localloop.urbnia.com/projects/loop-protocol/schemas/v0.2.0/loopsignal.schema.json",
+  "title": "LoopSignal",
+  "description": "Schema for LoopSignal configuration and voting",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/LoopSignalConfig"
+    },
+    {
+      "$ref": "#/definitions/LoopVote"
+    },
+    {
+      "$ref": "#/definitions/SignalProposal"
+    }
+  ],
+  "definitions": {
+    "LoopSignalConfig": {
+      "type": "object",
+      "required": [
+        "@context",
+        "@type",
+        "node",
+        "signals",
+        "valid_from",
+        "valid_until"
+      ],
+      "properties": {
+        "@context": {
+          "type": "string",
+          "enum": [
+            "https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld",
+            "https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld"
+          ]
+        },
+        "@type": {
+          "type": "string",
+          "const": "LoopSignalConfig"
+        },
+        "schema_version": {
+          "description": "Optional schema version identifier.",
+          "type": "string",
+          "pattern": "^0\\.[1-9]\\d*\\.\\d+$",
+          "examples": ["0.2.0"]
+        },
+        "node": {
+          "description": "Node identifier",
+          "type": "string",
+          "pattern": "^[a-z0-9\\-]+\\.loop$",
+          "examples": [
+            "munich.loop"
+          ]
+        },
+        "signals": {
+          "description": "Signal values by category",
+          "type": "object",
+          "properties": {
+            "plastic-pet": { "$ref": "#/definitions/signalValue" },
+            "plastic-hdpe": { "$ref": "#/definitions/signalValue" },
+            "plastic-pvc": { "$ref": "#/definitions/signalValue" },
+            "plastic-ldpe": { "$ref": "#/definitions/signalValue" },
+            "plastic-pp": { "$ref": "#/definitions/signalValue" },
+            "plastic-ps": { "$ref": "#/definitions/signalValue" },
+            "plastic-mixed": { "$ref": "#/definitions/signalValue" },
+            "metal-steel": { "$ref": "#/definitions/signalValue" },
+            "metal-aluminum": { "$ref": "#/definitions/signalValue" },
+            "metal-copper": { "$ref": "#/definitions/signalValue" },
+            "metal-mixed": { "$ref": "#/definitions/signalValue" },
+            "organic-food": { "$ref": "#/definitions/signalValue" },
+            "organic-garden": { "$ref": "#/definitions/signalValue" },
+            "organic-wood": { "$ref": "#/definitions/signalValue" },
+            "glass-clear": { "$ref": "#/definitions/signalValue" },
+            "glass-brown": { "$ref": "#/definitions/signalValue" },
+            "glass-green": { "$ref": "#/definitions/signalValue" },
+            "glass-mixed": { "$ref": "#/definitions/signalValue" },
+            "paper-clean": { "$ref": "#/definitions/signalValue" },
+            "paper-newsprint": { "$ref": "#/definitions/signalValue" },
+            "cardboard": { "$ref": "#/definitions/signalValue" },
+            "paper-mixed": { "$ref": "#/definitions/signalValue" },
+            "textile-cotton": { "$ref": "#/definitions/signalValue" },
+            "textile-wool": { "$ref": "#/definitions/signalValue" },
+            "textile-synthetic": { "$ref": "#/definitions/signalValue" },
+            "textile-mixed": { "$ref": "#/definitions/signalValue" },
+            "ewaste-computers": { "$ref": "#/definitions/signalValue" },
+            "ewaste-phones": { "$ref": "#/definitions/signalValue" },
+            "ewaste-batteries": { "$ref": "#/definitions/signalValue" },
+            "ewaste-mixed": { "$ref": "#/definitions/signalValue" },
+            "default": { "$ref": "#/definitions/signalValue" }
+          },
+          "additionalProperties": false
+        },
+        "valid_from": {
+          "description": "When signals become active",
+          "type": "string",
+          "format": "date-time",
+          "examples": ["2025-06-01T00:00:00Z"]
+        },
+        "valid_until": {
+          "description": "When signals expire",
+          "type": "string",
+          "format": "date-time",
+          "examples": ["2025-06-30T23:59:59Z"]
+        },
+        "approved_by": {
+          "description": "Voting record",
+          "type": "object",
+          "properties": {
+            "vote_id": { "type": "string", "examples": ["2025-05-vote"] },
+            "turnout": { "type": "number", "minimum": 0, "maximum": 1, "examples": [0.35] },
+            "approval": { "type": "number", "minimum": 0, "maximum": 1, "examples": [0.68] }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "LoopVote": {
+      "type": "object",
+      "required": [
+        "@context",
+        "@type",
+        "node",
+        "vote_id",
+        "proposals",
+        "voting_period",
+        "results"
+      ],
+      "properties": {
+        "@context": {
+          "type": "string",
+          "enum": [
+            "https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld",
+            "https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld"
+          ]
+        },
+        "@type": {
+          "type": "string",
+          "const": "LoopVote"
+        },
+        "schema_version": {
+          "description": "Optional schema version identifier.",
+          "type": "string",
+          "pattern": "^0\\.[1-9]\\d*\\.\\d+$",
+          "examples": ["0.2.0"]
+        },
+        "node": {
+          "type": "string",
+          "pattern": "^[a-z0-9\\-]+\\.loop$"
+        },
+        "vote_id": {
+          "type": "string",
+          "examples": ["2025-05-plastic-increase"]
+        },
+        "proposals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["category", "current_value", "proposed_value"],
+            "properties": {
+              "category": { "type": "string" },
+              "current_value": { "$ref": "#/definitions/signalValue" },
+              "proposed_value": { "$ref": "#/definitions/signalValue" },
+              "rationale": { "type": "string", "maxLength": 500 }
+            }
+          }
+        },
+        "voting_period": {
+          "type": "object",
+          "required": ["start", "end"],
+          "properties": {
+            "start": { "type": "string", "format": "date-time" },
+            "end": { "type": "string", "format": "date-time" }
+          }
+        },
+        "results": {
+          "type": "object",
+          "required": ["total_eligible", "total_voted", "votes_for", "votes_against", "status"],
+          "properties": {
+            "total_eligible": { "type": "integer", "minimum": 0 },
+            "total_voted": { "type": "integer", "minimum": 0 },
+            "votes_for": { "type": "integer", "minimum": 0 },
+            "votes_against": { "type": "integer", "minimum": 0 },
+            "status": { "type": "string", "enum": ["passed", "failed", "pending"] }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "SignalProposal": {
+      "type": "object",
+      "required": [
+        "@context",
+        "@type",
+        "node",
+        "changes",
+        "voting_opens",
+        "voting_closes"
+      ],
+      "properties": {
+        "@context": {
+          "type": "string",
+          "enum": [
+            "https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld",
+            "https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld"
+          ]
+        },
+        "@type": {
+          "type": "string",
+          "const": "SignalProposal"
+        },
+        "schema_version": {
+          "description": "Optional schema version identifier.",
+          "type": "string",
+          "pattern": "^0\\.[1-9]\\d*\\.\\d+$",
+          "examples": ["0.2.0"]
+        },
+        "node": {
+          "type": "string",
+          "pattern": "^[a-z0-9\\-]+\\.loop$"
+        },
+        "changes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["category", "current", "proposed"],
+            "properties": {
+              "category": { "type": "string" },
+              "current": { "$ref": "#/definitions/signalValue" },
+              "proposed": { "$ref": "#/definitions/signalValue" },
+              "reason": { "type": "string", "maxLength": 500 }
+            }
+          }
+        },
+        "voting_opens": { "type": "string", "format": "date-time" },
+        "voting_closes": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": true
+    },
+    "signalValue": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Signal strength (0.0 to 1.0)"
+    }
+  }
+}

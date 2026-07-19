@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SOURCE_DIR="$ROOT_DIR/../loop-protocol"
 TEMP_DIR=""
-SCHEMAS=(material-dna offer match transfer material-status handshake)
+SCHEMAS=(material-dna product-dna offer match transfer material-status transaction loopsignal node-info handshake)
 
 cleanup() {
   if [[ -n "$TEMP_DIR" && -d "$TEMP_DIR" ]]; then

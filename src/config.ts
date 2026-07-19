@@ -55,7 +55,14 @@ const envSchema = z.object({
   PUBLIC_BASE_URL: z.string().default('https://loop-api.urbnia.com'),
   NODE_ID: z.string().default('lab-hub.loop'),
   NODE_NAME: z.string().default('localLOOP Lab Hub'),
-  NODE_CAPABILITIES: z.string().default('material-registry,lab-relay'),
+  NODE_CAPABILITIES: z.string().default('material-registry,loopsignal'),
+  // Node location is REQUIRED by the canonical node-info schema (spec §8.1) and
+  // also powers radius_km filtering in protocol-mode material search. Defaults
+  // are the lab hub's illustrative coordinates from the spec examples.
+  NODE_LAT: z.coerce.number().min(-90).max(90).default(48.1351),
+  NODE_LON: z.coerce.number().min(-180).max(180).default(11.582),
+  NODE_CITY: z.string().optional(),
+  NODE_COUNTRY: z.string().regex(/^[A-Z]{2}$/).optional(),
   AUTH_TRUSTED_ORIGINS: z.string().optional(),
   BETTER_AUTH_SECRET: z.string().optional(),
   AUTH_ENABLED: z.string().optional(),
@@ -84,6 +91,14 @@ const hasWeakDatabasePassword = (databaseUrl: string) => {
   }
 };
 
+const hasUrlPassword = (url: string) => {
+  try {
+    return new URL(url).password.length > 0;
+  } catch {
+    return false;
+  }
+};
+
 const ensureSecureProductionConfig = () => {
   if (parsed.NODE_ENV.toLowerCase() !== 'production') return;
 
@@ -92,6 +107,9 @@ const ensureSecureProductionConfig = () => {
   }
   if (hasWeakDatabasePassword(parsed.DATABASE_URL)) {
     throw new Error('Insecure database password in DATABASE_URL for production');
+  }
+  if (!hasUrlPassword(parsed.REDIS_URL)) {
+    throw new Error('Insecure REDIS_URL for production: Redis must require a password');
   }
   if (booleanFromEnv(parsed.AUTH_ENABLED, false)) {
     if (!parsed.BETTER_AUTH_SECRET || weakSecrets.has(parsed.BETTER_AUTH_SECRET.toLowerCase())) {
@@ -106,6 +124,38 @@ const ensureSecureProductionConfig = () => {
 };
 
 ensureSecureProductionConfig();
+
+/** Capabilities defined by the canonical node-info schema (spec §8.1). */
+export const CANONICAL_NODE_CAPABILITIES = [
+  'material-registry',
+  'loopcoin',
+  'loopsignal',
+  'smart-contracts',
+  'bulk-operations',
+  'websocket',
+  'graphql',
+] as const;
+
+const nodeCapabilities = parsed.NODE_CAPABILITIES.split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+const nonCanonicalCapabilities = nodeCapabilities.filter(
+  (value) => !(CANONICAL_NODE_CAPABILITIES as readonly string[]).includes(value),
+);
+if (nonCanonicalCapabilities.length > 0) {
+  console.warn(
+    `[config] NODE_CAPABILITIES contains values outside the canonical node-info schema enum: ${nonCanonicalCapabilities.join(', ')}. ` +
+    'GET /api/v1/node/info will not validate against the canonical schema until these are removed.',
+  );
+}
+
+const nodeLocation = {
+  lat: parsed.NODE_LAT,
+  lon: parsed.NODE_LON,
+  ...(parsed.NODE_CITY ? { city: parsed.NODE_CITY } : {}),
+  ...(parsed.NODE_COUNTRY ? { country: parsed.NODE_COUNTRY } : {}),
+};
 
 export const config = {
   port: parsed.PORT,
@@ -149,9 +199,8 @@ export const config = {
   node: {
     id: parsed.NODE_ID,
     name: parsed.NODE_NAME,
-    capabilities: parsed.NODE_CAPABILITIES.split(',')
-      .map((value) => value.trim())
-      .filter(Boolean),
+    capabilities: nodeCapabilities,
+    location: nodeLocation,
   },
   workerEnabled: booleanFromEnv(parsed.WORKER_ENABLED, false),
   paymentsEnabled: booleanFromEnv(parsed.PAYMENTS_ENABLED, false),

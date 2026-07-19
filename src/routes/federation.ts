@@ -31,13 +31,24 @@ const listResponseSchema = {
 
 const nodeInfoResponseSchema = {
   type: 'object',
-  required: ['@context', '@type', 'id', 'name', 'version', 'endpoint', 'capabilities', 'lab_only'],
+  required: ['@context', '@type', 'id', 'name', 'version', 'location', 'endpoint', 'capabilities', 'lab_only'],
   properties: {
     '@context': { type: 'string' },
     '@type': { type: 'string', const: 'NodeInfo' },
+    schema_version: { type: 'string' },
     id: { type: 'string' },
     name: { type: 'string' },
     version: { type: 'string' },
+    location: {
+      type: 'object',
+      required: ['lat', 'lon'],
+      properties: {
+        lat: { type: 'number' },
+        lon: { type: 'number' },
+        city: { type: 'string' },
+        country: { type: 'string' },
+      },
+    },
     endpoint: { type: 'string' },
     capabilities: { type: 'array', items: { type: 'string' } },
     lab_only: { type: 'boolean', const: true },
@@ -77,9 +88,11 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
     return {
       '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
       '@type': 'NodeInfo',
+      schema_version: '0.2.0',
       id: local.node_id,
       name: local.name,
       version: packageInfo.version,
+      location: config.node.location,
       endpoint: resolveNodeApiEndpoint(config.publicBaseUrl),
       capabilities: local.capabilities,
       lab_only: true,

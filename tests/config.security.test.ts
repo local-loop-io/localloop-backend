@@ -42,11 +42,23 @@ describe('production config security checks', () => {
     ).rejects.toThrow('Insecure database password in DATABASE_URL for production');
   });
 
+  it('rejects REDIS_URL without password in production', async () => {
+    await expect(
+      loadConfig({
+        NODE_ENV: 'production',
+        DATABASE_URL: 'postgresql://localloop:VeryStrongPass123!@localhost:55432/localloop',
+        MINIO_SECRET_KEY: 'strong-minio-secret',
+        REDIS_URL: 'redis://localhost:6381',
+      }),
+    ).rejects.toThrow('Insecure REDIS_URL for production');
+  });
+
   it('allows strong secrets in production', async () => {
     const module = await loadConfig({
       NODE_ENV: 'production',
       DATABASE_URL: 'postgresql://localloop:VeryStrongPass123!@localhost:55432/localloop',
       MINIO_SECRET_KEY: 'strong-minio-secret',
+      REDIS_URL: 'redis://:StrongRedisPass456!@localhost:6381',
     });
 
     expect(module.config.databaseUrl).toContain('VeryStrongPass123');

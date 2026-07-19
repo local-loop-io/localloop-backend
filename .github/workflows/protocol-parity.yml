@@ -1,4 +1,4 @@
-name: Protocol Schema Parity
+name: Protocol Conformance
 
 on:
   pull_request:
@@ -6,12 +6,34 @@ on:
     branches: [main]
 
 jobs:
-  parity:
+  conformance:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify protocol schema parity
-        env:
-          PROTOCOL_SYNC_TOKEN: ${{ secrets.DOCS_SYNC_TOKEN }}
-          GITHUB_TOKEN: ${{ github.token }}
-        run: bash scripts/check-protocol-parity.sh
+        with:
+          path: localloop-backend
+      - name: Check out loop-protocol (canonical schemas + openapi.json)
+        uses: actions/checkout@v4
+        with:
+          repository: local-loop-io/loop-protocol
+          path: loop-protocol
+          token: ${{ secrets.DOCS_SYNC_TOKEN }}
+      - name: Check out localloop-site (docs-hub mirror)
+        uses: actions/checkout@v4
+        with:
+          repository: local-loop-io/localloop-site
+          path: localloop-site
+          token: ${{ secrets.DOCS_SYNC_TOKEN }}
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: 'latest'
+      - name: Install dependencies
+        run: bun install
+        working-directory: localloop-backend
+      - name: Generate Prisma client
+        run: bun run prisma:generate
+        working-directory: localloop-backend
+      - name: Three-way conformance gate (backend <-> loop-protocol <-> docs hub)
+        run: bun run check:conformance
+        working-directory: localloop-backend

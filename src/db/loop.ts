@@ -701,3 +701,178 @@ export async function searchLoopMaterials(opts: LoopSearchOptions): Promise<Loop
 export async function searchLoopProducts(opts: LoopSearchOptions): Promise<LoopSearchResult> {
   return runEntitySearch(PRODUCT_SEARCH_CONFIG, opts);
 }
+
+// --- LoopSignal configuration (SPEC §6, §8.1 GET /api/v1/signals) -------------
+
+export type LoopSignalConfigRow = {
+  signals: Record<string, number>;
+  valid_from: string;
+  valid_until: string;
+  updated_at: string;
+};
+
+export async function getLoopSignalConfig(): Promise<LoopSignalConfigRow | undefined> {
+  const { rows } = await pool.query(
+    'SELECT signals, valid_from, valid_until, updated_at FROM loop_signal_config WHERE id = 1',
+  );
+  const row = rows[0] as { signals: Record<string, number>; valid_from: Date; valid_until: Date; updated_at: Date } | undefined;
+  if (!row) return undefined;
+  return {
+    signals: row.signals,
+    valid_from: new Date(row.valid_from).toISOString(),
+    valid_until: new Date(row.valid_until).toISOString(),
+    updated_at: new Date(row.updated_at).toISOString(),
+  };
+}
+
+// --- Transactions (SPEC §8.1 POST /api/v1/transaction, §3.6 states) -----------
+
+/**
+ * A transaction payload as validated against the canonical transaction schema
+ * (oneOf MaterialTransaction | Settlement | TransactionStatus). The handler
+ * derives the stored id/status per @type; everything else is preserved as-is.
+ */
+export type LoopTransactionPayload = {
+  '@type'?: string;
+  id?: string;
+  transaction_id?: string;
+  status?: string;
+  [key: string]: unknown;
+};
+
+export type LoopTransactionRow = {
+  id: string;
+  status: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Map a validated transaction payload to its stored id + initial status. */
+export function transactionIdentity(payload: LoopTransactionPayload): { id: string; status: string } {
+  if (payload['@type'] === 'MaterialTransaction') {
+    return { id: payload.id as string, status: payload.status ?? 'pending' };
+  }
+  if (payload['@type'] === 'Settlement') {
+    // A recorded settlement marks the referenced transaction as settled.
+    return { id: payload.transaction_id as string, status: 'completed' };
+  }
+  // TransactionStatus
+  return { id: payload.transaction_id as string, status: payload.status as string };
+}
+
+export async function createLoopTransaction(payload: LoopTransactionPayload): Promise<LoopCreateResult> {
+  return withTransaction(async (client) => {
+    const { id, status } = transactionIdentity(payload);
+    const { rows } = await client.query(
+      `INSERT INTO loop_transactions (id, status, payload)
+       VALUES ($1, $2, $3)
+       RETURNING id, created_at`,
+      [id, status, payload],
+    );
+    const created = rows[0] as { id: string; created_at: string };
+    const event = buildLoopEvent('transaction.created', 'transaction', created.id, payload, created.created_at);
+    await insertLoopEvent(
+      { event_type: 'transaction.created', entity_type: 'transaction', entity_id: created.id, payload: event },
+      client,
+    );
+    return { id: created.id, created_at: created.created_at, event };
+  });
+}
+
+export async function getLoopTransactionById(id: string): Promise<LoopTransactionRow | undefined> {
+  const { rows } = await pool.query(
+    'SELECT id, status, payload, created_at, updated_at FROM loop_transactions WHERE id = $1',
+    [id],
+  );
+  const row = rows[0] as { id: string; status: string; payload: Record<string, unknown>; created_at: Date; updated_at: Date } | undefined;
+  if (!row) return undefined;
+  return {
+    id: row.id,
+    status: row.status,
+    payload: row.payload,
+    created_at: new Date(row.created_at).toISOString(),
+    updated_at: new Date(row.updated_at).toISOString(),
+  };
+}
+
+// --- Protocol-mode material search (SPEC §8.1 POST /api/v1/material/search) ---
+// The protocol contract ({category, radius_km, min_quantity, max_loop_cost} ->
+// {results, total, next?}) is distinct from the additive Core-DP search
+// contract above; both are served by the same route (see routes/loop.ts).
+
+export type ProtocolMaterialSearchFilters = {
+  category?: string;
+  radius_km?: number;
+  min_quantity?: number;
+};
+
+export type ProtocolMaterialSearchResult = {
+  results: Record<string, unknown>[];
+  total: number;
+};
+
+export async function searchLoopMaterialsProtocol(
+  filters: ProtocolMaterialSearchFilters,
+  nodeLocation: { lat: number; lon: number },
+  limit = 50,
+): Promise<ProtocolMaterialSearchResult> {
+  const conditions: string[] = [];
+  const values: unknown[] = [];
+
+  function push(sql: string, value: unknown) {
+    values.push(value);
+    conditions.push(sql.replace('?', `$${values.length}`));
+  }
+
+  if (filters.category) {
+    // Spec examples use trailing-glob patterns ("plastic-*"); a bare value is
+    // an exact category match.
+    if (filters.category.endsWith('*')) {
+      push(`category LIKE ? ESCAPE '\\'`, `${escapeLikePrefix(filters.category.slice(0, -1))}%`);
+    } else {
+      push('category = ?', filters.category);
+    }
+  }
+  if (filters.min_quantity !== undefined) {
+    push('quantity_value >= ?', filters.min_quantity);
+  }
+  if (filters.radius_km !== undefined) {
+    // Distance from this node's published location. Materials whose payload
+    // carries no parseable location are excluded from radius-filtered results.
+    // The CASE guard keeps malformed payload coordinates from aborting the query.
+    values.push(nodeLocation.lon, nodeLocation.lat, filters.radius_km * 1000);
+    const [lonParam, latParam, metersParam] = [values.length - 2, values.length - 1, values.length];
+    conditions.push(`(
+      CASE
+        WHEN payload->'location'->>'lat' ~ '^-?[0-9]+(\\.[0-9]+)?$'
+         AND payload->'location'->>'lon' ~ '^-?[0-9]+(\\.[0-9]+)?$'
+        THEN ST_DistanceSphere(
+          ST_MakePoint($${lonParam}, $${latParam}),
+          ST_MakePoint(
+            (payload->'location'->>'lon')::float8,
+            (payload->'location'->>'lat')::float8
+          )
+        )
+      END
+    ) <= $${metersParam}`);
+  }
+
+  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const { rows: countRows } = await pool.query(
+    `SELECT COUNT(*)::int AS total FROM loop_materials ${whereClause}`,
+    values,
+  );
+  const total = (countRows[0] as { total: number }).total;
+
+  const cappedLimit = Math.min(Math.max(limit, 1), 100);
+  values.push(cappedLimit);
+  const { rows } = await pool.query(
+    `SELECT payload FROM loop_materials ${whereClause}
+     ORDER BY created_at DESC, id ASC LIMIT $${values.length}`,
+    values,
+  );
+
+  return { results: rows.map((row: { payload: Record<string, unknown> }) => row.payload), total };
+}

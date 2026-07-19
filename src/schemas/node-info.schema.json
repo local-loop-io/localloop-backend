@@ -1,0 +1,207 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://localloop.urbnia.com/projects/loop-protocol/schemas/v0.2.0/node-info.schema.json",
+  "title": "NodeInfo",
+  "description": "Schema for LOOP node information and registry",
+  "oneOf": [
+    { "$ref": "#/definitions/NodeInfo" },
+    { "$ref": "#/definitions/NodeRegistry" },
+    { "$ref": "#/definitions/NodeStatus" }
+  ],
+  "definitions": {
+    "NodeInfo": {
+      "type": "object",
+      "required": ["@context", "@type", "id", "name", "version", "location", "capabilities", "endpoint"],
+      "properties": {
+        "@context": {
+          "type": "string",
+          "enum": [
+            "https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld",
+            "https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld"
+          ]
+        },
+        "@type": { "type": "string", "const": "NodeInfo" },
+        "schema_version": {
+          "description": "Optional schema version identifier.",
+          "type": "string",
+          "pattern": "^0\\.[1-9]\\d*\\.\\d+$",
+          "examples": ["0.2.0"]
+        },
+        "id": {
+          "description": "Unique node identifier",
+          "type": "string",
+          "pattern": "^[a-z0-9\\-]+\\.loop$",
+          "examples": ["munich.loop"]
+        },
+        "name": {
+          "description": "Human-readable node name",
+          "type": "string",
+          "examples": ["Munich LOOP Node"]
+        },
+        "version": {
+          "description": "LOOP version",
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "examples": ["0.2.0"]
+        },
+        "location": {
+          "description": "Geographic location",
+          "type": "object",
+          "required": ["lat", "lon"],
+          "properties": {
+            "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+            "lon": { "type": "number", "minimum": -180, "maximum": 180 },
+            "city": { "type": "string", "examples": ["Munich"] },
+            "country": { "type": "string", "pattern": "^[A-Z]{2}$", "examples": ["DE"] }
+          }
+        },
+        "capabilities": {
+          "description": "Supported features",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["material-registry", "loopcoin", "loopsignal", "smart-contracts", "bulk-operations", "websocket", "graphql"]
+          },
+          "minItems": 1
+        },
+        "endpoint": {
+          "description": "API endpoint URL",
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "examples": ["https://munich.loop/api/v1"]
+        },
+        "public_key": {
+          "description": "Ed25519 public key for verification",
+          "type": "string",
+          "pattern": "^-----BEGIN PUBLIC KEY-----[\\s\\S]+-----END PUBLIC KEY-----$"
+        },
+        "statistics": {
+          "description": "Node statistics",
+          "type": "object",
+          "properties": {
+            "materials_active": { "type": "integer", "minimum": 0 },
+            "transactions_daily": { "type": "integer", "minimum": 0 },
+            "transactions_total": { "type": "integer", "minimum": 0 },
+            "loopcoin_supply": { "type": "integer", "minimum": 0 },
+            "users_active": { "type": "integer", "minimum": 0 },
+            "businesses_registered": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "contact": {
+          "description": "Node operator contact",
+          "type": "object",
+          "properties": {
+            "email": { "type": "string", "format": "email" },
+            "phone": { "type": "string" },
+            "website": { "type": "string", "format": "uri" }
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "operator": { "type": "string", "examples": ["City of Munich"] },
+            "established": { "type": "string", "format": "date" },
+            "population_served": { "type": "integer", "minimum": 0 },
+            "languages": { "type": "array", "items": { "type": "string", "pattern": "^[a-z]{2}$" } }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "NodeRegistry": {
+      "type": "object",
+      "required": ["@context", "@type", "version", "nodes"],
+      "properties": {
+        "@context": {
+          "type": "string",
+          "enum": [
+            "https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld",
+            "https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld"
+          ]
+        },
+        "@type": { "type": "string", "const": "NodeRegistry" },
+        "schema_version": {
+          "description": "Optional schema version identifier.",
+          "type": "string",
+          "pattern": "^0\\.[1-9]\\d*\\.\\d+$",
+          "examples": ["0.2.0"]
+        },
+        "version": {
+          "description": "Registry version date",
+          "type": "string",
+          "format": "date",
+          "examples": ["2025-05-27"]
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "endpoint", "location", "status"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z0-9\\-]+\\.loop$" },
+              "endpoint": { "type": "string", "format": "uri" },
+              "public_key": { "type": "string" },
+              "location": {
+                "type": "object",
+                "required": ["lat", "lon"],
+                "properties": {
+                  "lat": { "type": "number" },
+                  "lon": { "type": "number" }
+                }
+              },
+              "status": { "type": "string", "enum": ["active", "inactive", "maintenance", "suspended"] },
+              "last_seen": { "type": "string", "format": "date-time" },
+              "capabilities": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "NodeStatus": {
+      "type": "object",
+      "required": ["@context", "@type", "node", "status", "timestamp"],
+      "properties": {
+        "@context": {
+          "type": "string",
+          "enum": [
+            "https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld",
+            "https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld"
+          ]
+        },
+        "@type": { "type": "string", "const": "NodeStatus" },
+        "schema_version": {
+          "description": "Optional schema version identifier.",
+          "type": "string",
+          "pattern": "^0\\.[1-9]\\d*\\.\\d+$",
+          "examples": ["0.2.0"]
+        },
+        "node": { "type": "string", "pattern": "^[a-z0-9\\-]+\\.loop$" },
+        "status": { "type": "string", "enum": ["online", "offline", "degraded", "maintenance"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "health": {
+          "type": "object",
+          "properties": {
+            "api_response_time_ms": { "type": "number", "minimum": 0 },
+            "database_status": { "type": "string", "enum": ["healthy", "degraded", "error"] },
+            "disk_usage_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+            "memory_usage_percent": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        },
+        "peers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "node": { "type": "string", "pattern": "^[a-z0-9\\-]+\\.loop$" },
+              "latency_ms": { "type": "number", "minimum": 0 },
+              "last_contact": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

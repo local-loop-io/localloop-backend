@@ -1,10 +1,12 @@
-version: '3.9'
-
 services:
   api:
     build: .
     env_file:
       - .env.docker
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     deploy:
       resources:
         limits:
@@ -35,6 +37,8 @@ services:
 
   postgres:
     image: postgis/postgis:18-3.6
+    security_opt:
+      - no-new-privileges:true
     deploy:
       resources:
         limits:
@@ -66,13 +70,18 @@ services:
         reservations:
           memory: 64M
     image: redis@sha256:3aaec283e6e593bde528077d60280ac1589887067a39273348860837c9346d7e
+    security_opt:
+      - no-new-privileges:true
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     ports:
       - "127.0.0.1:6381:6379"
     volumes:
       - ./data/redis:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -86,6 +95,8 @@ services:
         reservations:
           memory: 64M
     image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    security_opt:
+      - no-new-privileges:true
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-localloop}
@@ -110,6 +121,8 @@ services:
         reservations:
           memory: 64M
     image: nginx:1.27-alpine
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       minio:
         condition: service_healthy

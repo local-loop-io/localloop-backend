@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-19
+
+### Added
+- Spec-required endpoints implemented (SPECIFICATION §8 / openapi.json):
+  - `GET /api/v1/signals` — LoopSignalConfig JSON-LD published by the node
+    (migration 015 seeds the §6.1 example configuration).
+  - `POST /api/v1/transaction` — records MaterialTransaction / Settlement /
+    TransactionStatus payloads validated against the canonical transaction
+    schema; responds with TransactionStatus and a resolvable `settlement_url`.
+  - `GET /api/v1/transaction/:id` — TransactionStatus lookup.
+  - `POST /api/v1/federate/announce` and `POST /api/v1/federate/offer` —
+    spec §8.2 node-to-node endpoints enforcing the §9.2 headers
+    (`X-Node-ID`, `X-Node-Signature`, `X-Timestamp` ±5 minutes; signature
+    presence enforced, cryptographic verification remains a documented lab
+    limitation).
+- `POST /api/v1/material/search` now also serves the spec §8.1 protocol
+  contract (`category` glob, `radius_km` via the node's published location,
+  `min_quantity` → `{results, total}`) alongside the additive Core-DP
+  contract; `max_loop_cost` is rejected explicitly (LoopCost requires offer
+  pricing).
+- Spec §8.3 error envelope (`{error: {code, message, details}}`) on all new
+  protocol endpoints.
+- Three-way conformance gate `bun run check:conformance` (backend ↔
+  loop-protocol ↔ docs-hub mirror): schema byte-parity, mirrored artifacts,
+  and the full openapi.json route surface are verified; wired into
+  `tests/conformance.test.ts` and the `protocol-parity.yml` CI workflow.
+- `tests/specResponses.test.ts` validates node/info, signals, and transaction
+  responses against the canonical JSON schemas.
+- `NODE_LAT`/`NODE_LON` (+ optional `NODE_CITY`/`NODE_COUNTRY`) config for the
+  node location required by the canonical node-info schema.
+- Production config now refuses a password-less `REDIS_URL`; compose redis
+  service requires `REDIS_PASSWORD`.
+
+### Changed
+- `GET /api/v1/node/info` includes the required `location` object and
+  `schema_version`, and validates against the canonical node-info schema.
+- Default `NODE_CAPABILITIES` is now `material-registry,loopsignal`; values
+  outside the canonical enum trigger a startup warning.
+- Docker Compose hardening: API container drops all capabilities, all
+  services set `no-new-privileges`, redis requires authentication.
+- Schema sync now also covers `transaction`, `loopsignal`, and `node-info`
+  canonical schemas.
+
+### Fixed
+- Docs-hub mirror drift: `localloop-site`'s `openapi.json` copy resynced to
+  the canonical loop-protocol contract (caught by the new conformance gate).
+- `GET /api/v1/events` responses carried empty `payload: {}` objects —
+  fast-json-stringify was stripping event contents (missing
+  `additionalProperties` on the response schema).
+
 ## [0.3.1] - 2026-07-18
 
 ### Added

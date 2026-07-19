@@ -41,10 +41,15 @@ bun test                      # run all tests
 | `POST` | `/api/v1/material` | Register a MaterialDNA record |
 | `GET` | `/api/v1/material/:id` | Retrieve a material by ID |
 | `GET` | `/api/v1/material` | List materials (`limit`, `category`) |
-| `GET` | `/api/v1/node/info` | Return local node metadata for the lab backend |
+| `POST` | `/api/v1/material/search` | Spec §8.1 protocol search (`category` glob, `radius_km`, `min_quantity`) and additive Core-DP contract (`limit` + filters + cursor) |
+| `GET` | `/api/v1/node/info` | NodeInfo JSON-LD (validates against canonical node-info schema) |
+| `GET` | `/api/v1/signals` | LoopSignalConfig JSON-LD published by this node (spec §8.1) |
+| `POST` | `/api/v1/transaction` | Record a transaction (canonical transaction schema); responds TransactionStatus |
+| `GET` | `/api/v1/transaction/:id` | Resolve a transaction's `settlement_url` |
 | `POST` | `/api/v1/product` | Register a ProductDNA record |
 | `GET` | `/api/v1/product/:id` | Retrieve a product by ID |
 | `GET` | `/api/v1/product` | List products (`limit`, `category`) |
+| `POST` | `/api/v1/product/search` | Core-DP search (additive lab profile) |
 | `POST` | `/api/v1/offer` | Create an Offer |
 | `GET` | `/api/v1/offer/:id` | Retrieve an offer by ID |
 | `GET` | `/api/v1/offer` | List offers (`limit`, `status`) |
@@ -64,6 +69,8 @@ bun test                      # run all tests
 | --- | --- | --- |
 | `GET` | `/api/v1/federation/nodes` | List known federation nodes |
 | `POST` | `/api/v1/federation/handshake` | Register a federation node (lab-only handshake) |
+| `POST` | `/api/v1/federate/announce` | Spec §8.2 MaterialAnnouncement (requires §9.2 node headers) |
+| `POST` | `/api/v1/federate/offer` | Spec §8.2 inbound MaterialOffer for a locally hosted material |
 
 ### Cities
 | Method | Path | Description |
@@ -81,8 +88,28 @@ bun test                      # run all tests
 | `GET` | `/docs` | Redoc UI |
 
 LOOP write routes accept both `application/json` and `application/ld+json`.
-The backend also serves `GET /api/v1/node/info` as a minimal lab-only node metadata endpoint.
-Spec endpoints that remain unimplemented in this repo are `/api/v1/material/search`, `/api/v1/signals`, `/api/v1/transaction`, `/api/v1/federate/announce`, and `/api/v1/federate/offer`.
+Protocol GET endpoints (`/api/v1/node/info`, `/api/v1/signals`, `/api/v1/transaction/:id`) respond with `application/ld+json`.
+Node-to-node routes (`/api/v1/federate/*`) require the spec §9.2 headers
+`X-Node-ID`, `X-Node-Signature`, and `X-Timestamp` (±5 minutes). Signature
+presence and timestamp freshness are enforced; cryptographic verification is
+not implemented in this lab preview.
+
+## Spec conformance
+
+This repo aims to be the reference implementation of
+[loop-protocol](https://github.com/local-loop-io/loop-protocol) v0.2.0: every
+endpoint required by SPECIFICATION.md §8 and `openapi.json` is implemented and
+validated against the canonical JSON schemas (synced byte-identical into
+`src/schemas/`).
+
+- Compliance matrix: [docs/SPEC-COMPLIANCE.md](docs/SPEC-COMPLIANCE.md)
+- `bun run check:conformance` — three-way drift gate (backend ↔ loop-protocol
+  ↔ docs-hub mirror at `localloop-site/public/projects/loop-protocol/`):
+  schema copies, mirrored artifacts, and the implemented route surface must
+  not drift. Runs in tests (`tests/conformance.test.ts`) and in CI
+  (`protocol-parity.yml`).
+- `tests/specResponses.test.ts` validates live route responses against the
+  canonical JSON schemas.
 
 ## Environment variables
 
@@ -95,9 +122,14 @@ See `.env.example` for the full list with descriptions. Key variables:
 | `DB_POOL_SIZE` | `20` | Max pool connections |
 | `DB_IDLE_TIMEOUT_MS` | `30000` | Close idle connections after ms |
 | `DB_CONNECTION_TIMEOUT_MS` | `5000` | Fail if no pool slot in ms |
-| `REDIS_URL` | — | Redis connection string |
+| `REDIS_URL` | — | Redis connection string (must embed a password in production) |
+| `REDIS_PASSWORD` | — | Redis password for the compose redis service |
 | `MINIO_SECRET_KEY` | — | MinIO secret (required) |
 | `ALLOWED_ORIGINS` | `https://localloop.urbnia.com` | CORS allowlist (comma-separated) |
+| `NODE_ID` | `lab-hub.loop` | Node identifier (pattern: `*.loop`) |
+| `NODE_CAPABILITIES` | `material-registry,loopsignal` | Advertised capabilities; canonical enum only |
+| `NODE_LAT` / `NODE_LON` | `48.1351` / `11.582` | Node location (required by canonical node-info schema; powers `radius_km` search) |
+| `NODE_CITY` / `NODE_COUNTRY` | — | Optional node location metadata |
 | `RATE_LIMIT_MAX` | `60` | Global rate limit per window |
 | `RATE_LIMIT_WRITE_MAX` | `20` | Write route rate limit per window |
 | `REQUEST_TIMEOUT_MS` | `30000` | Server connection timeout |

@@ -25,6 +25,7 @@ import {
   listLoopTransfers,
   searchLoopMaterials,
   searchLoopProducts,
+  searchLoopMaterialsProtocol,
   LoopStateError,
   type LoopMaterialPayload,
   type LoopProductPayload,
@@ -33,6 +34,7 @@ import {
   type LoopTransferPayload,
   type LoopSearchFilters,
   type LoopSearchResult,
+  type ProtocolMaterialSearchFilters,
 } from '../db/loop';
 import { broadcastLoopEvent, registerLoopStream } from '../realtime/loopStream';
 import { incrementMetric } from '../metrics';
@@ -40,6 +42,7 @@ import { loopSchemaIds } from '../schemas/loopSchemas';
 import { requireApiKey } from '../security/apiKey';
 import { loopContentType } from '../protocol';
 import { CoreDpError, sendCoreDpError, toCoreDpError } from '../errors';
+import { sendSpecError } from '../specErrors';
 import { withIdempotency } from '../idempotency';
 
 const createResponseSchema = {
@@ -89,7 +92,9 @@ const listEventsSchema = {
           event_type: { type: 'string' },
           entity_type: { type: 'string' },
           entity_id: { type: 'string' },
-          payload: { type: 'object' },
+          // additionalProperties required — fast-json-stringify otherwise
+          // serializes payload as `{}` and the event log loses its contents.
+          payload: { type: 'object', additionalProperties: true },
           created_at: { type: 'string' },
         },
       },
@@ -155,6 +160,7 @@ type LoopDeps = {
   listLoopTransfers: typeof listLoopTransfers;
   searchLoopMaterials: typeof searchLoopMaterials;
   searchLoopProducts: typeof searchLoopProducts;
+  searchLoopMaterialsProtocol: typeof searchLoopMaterialsProtocol;
   broadcastLoopEvent: typeof broadcastLoopEvent;
 };
 
@@ -182,6 +188,7 @@ const defaultDeps: LoopDeps = {
   listLoopTransfers,
   searchLoopMaterials,
   searchLoopProducts,
+  searchLoopMaterialsProtocol,
   broadcastLoopEvent,
 };
 
@@ -756,6 +763,75 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
 
   const searchResponseSchema = { type: 'object', additionalProperties: true };
 
+  // SPEC §8.1 protocol contract for POST /api/v1/material/search, as published
+  // in loop-protocol/openapi.json (MaterialSearchRequest -> {results, total,
+  // next?}). The same route also serves the additive Core-DP contract below.
+  // The two contracts are disjoint on `limit` (required by Core-DP, absent
+  // from the protocol contract).
+  //
+  // NOTE: a oneOf of the two contracts is NOT expressible here — Fastify's
+  // AJV runs with `removeAdditional: true`, which strips undeclared keys
+  // instead of failing additionalProperties:false, so a Core-DP body would
+  // match BOTH oneOf branches. Instead the union of properties is declared
+  // once, and the handler rejects mixed bodies explicitly.
+  const CORE_DP_SEARCH_KEYS = ['scope', 'filters', 'auth', 'strict_filtering', 'limit', 'cursor', 'consistency'] as const;
+  const PROTOCOL_SEARCH_KEYS = ['category', 'radius_km', 'min_quantity', 'max_loop_cost'] as const;
+
+  const materialSearchBodySchema = {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      ...searchRequestSchema.properties,
+      category: { type: 'string' },
+      radius_km: { type: 'number', minimum: 0 },
+      min_quantity: { type: 'number', minimum: 0 },
+      max_loop_cost: { type: 'number', minimum: 0 },
+    },
+  };
+
+  type ProtocolMaterialSearchRequestBody = {
+    category?: string;
+    radius_km?: number;
+    min_quantity?: number;
+    max_loop_cost?: number;
+  };
+
+  async function handleProtocolMaterialSearch(
+    body: ProtocolMaterialSearchRequestBody,
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ) {
+    if (body.max_loop_cost !== undefined) {
+      // LoopCost is defined over offers/transactions (a price is required);
+      // bare MaterialDNA records carry no price, so this filter cannot be
+      // evaluated honestly by a material registry. Reject explicitly rather
+      // than silently ignoring it.
+      sendSpecError(
+        reply,
+        'INVALID_REQUEST',
+        'max_loop_cost filtering is not supported by this lab node: LoopCost requires offer pricing, which MaterialDNA records do not carry',
+      );
+      return;
+    }
+
+    const filters: ProtocolMaterialSearchFilters = {
+      ...(body.category !== undefined ? { category: body.category } : {}),
+      ...(body.radius_km !== undefined ? { radius_km: body.radius_km } : {}),
+      ...(body.min_quantity !== undefined ? { min_quantity: body.min_quantity } : {}),
+    };
+
+    let result;
+    try {
+      result = await deps.searchLoopMaterialsProtocol(filters, config.node.location);
+    } catch (error) {
+      request.log.error({ err: error }, 'Protocol material search failed');
+      sendSpecError(reply, 'INTERNAL_ERROR', 'Material search failed');
+      return;
+    }
+
+    reply.send({ results: result.results, total: result.total });
+  }
+
   type LoopSearchRequestBody = {
     scope?: 'local' | 'cross-node';
     filters?: LoopSearchFilters;
@@ -831,9 +907,30 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
 
   app.post('/api/v1/material/search', {
     config: { rateLimit: writeRateLimit },
-    schema: { body: searchRequestSchema, response: { 200: searchResponseSchema } },
+    schema: {
+      consumes: ['application/json', loopContentType],
+      body: materialSearchBodySchema,
+      response: { 200: searchResponseSchema },
+    },
   }, async (request, reply) => {
-    await handleLoopSearch('material', deps.searchLoopMaterials, request, reply);
+    const body = request.body as LoopSearchRequestBody & ProtocolMaterialSearchRequestBody;
+    if (body.limit !== undefined) {
+      if (PROTOCOL_SEARCH_KEYS.some((key) => (body as Record<string, unknown>)[key] !== undefined)) {
+        sendSpecError(
+          reply,
+          'INVALID_REQUEST',
+          'Protocol search filters (category, radius_km, min_quantity, max_loop_cost) cannot be combined with the Core-DP search contract',
+        );
+        return;
+      }
+      await handleLoopSearch('material', deps.searchLoopMaterials, request, reply);
+      return;
+    }
+    if (CORE_DP_SEARCH_KEYS.some((key) => (body as Record<string, unknown>)[key] !== undefined)) {
+      sendSpecError(reply, 'INVALID_REQUEST', 'The Core-DP search contract requires a limit');
+      return;
+    }
+    await handleProtocolMaterialSearch(body, request, reply);
   });
 
   app.post('/api/v1/product/search', {

@@ -18,6 +18,9 @@ const BASE_SCHEMAS = [
   'offer.schema.json',
   'match.schema.json',
   'transfer.schema.json',
+  'transaction.schema.json',
+  'loopsignal.schema.json',
+  'node-info.schema.json',
 ];
 
 const CORE_DP_SCHEMAS = [
@@ -34,6 +37,15 @@ const CORE_DP_SCHEMAS = [
 type Mode = 'sync' | 'check';
 
 function run(mode: Mode): boolean {
+  if (!existsSync(SOURCE_BASE)) {
+    // Mirrors scripts/check-protocol-parity.sh: without the sibling protocol
+    // checkout (e.g. backend-only CI) there is nothing to compare against.
+    // The full gate runs in .github/workflows/protocol-parity.yml, which
+    // checks out all three repos.
+    console.log('[sync-schemas] SKIP: loop-protocol sibling checkout unavailable.');
+    return true;
+  }
+
   let drift = false;
   const jobs = [
     ...BASE_SCHEMAS.map((name) => ({ src: join(SOURCE_BASE, name), dest: join(DEST_BASE, name) })),
