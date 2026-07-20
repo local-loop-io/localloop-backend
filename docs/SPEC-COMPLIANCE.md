@@ -20,7 +20,7 @@ end-to-end against the running lab node", not production readiness.
 | `POST /api/v1/product/search` | Core-DP (openapi tag) | ✅ Implemented | Additive lab profile endpoint |
 | `GET /api/v1/node/info` | MUST (§8.1) | ✅ Implemented | Validates against canonical node-info schema (location, capability enum enforced via config warning) |
 | `GET /api/v1/signals` | MUST (§8.1) | ✅ Implemented (v0.4.0) | LoopSignalConfig from `loop_signal_config` table; seeded per §6.1 example |
-| `POST /api/v1/transaction` | MUST (§8.1) | ✅ Implemented (v0.4.0) | Canonical transaction schema (oneOf MaterialTransaction / Settlement / TransactionStatus); responds TransactionStatus with resolvable `settlement_url`; §3.6 status values enforced by DB CHECK |
+| `POST /api/v1/transaction` | MUST (§8.1) | ✅ Implemented (v0.4.0) | Canonical transaction schema (oneOf MaterialTransaction / Settlement / TransactionStatus); responds TransactionStatus with resolvable `settlement_url`; §3.6 status values enforced by DB CHECK; Idempotency-Key conflicts answered with the Core-DP `conflict` body (fixed v0.4.3) |
 | `POST /api/v1/federate/announce` | MUST (§8.2) | ✅ Implemented (v0.4.0) | §9.2 headers enforced (see below) |
 | `POST /api/v1/federate/offer` | MUST (§8.2) | ✅ Implemented (v0.4.0) | §9.2 headers enforced; material must be hosted locally; expired offers rejected |
 | `POST /api/v1/material-status` | Optional (lab ext) | ✅ Implemented | Lab-only extension, excluded from protocol openapi.json |

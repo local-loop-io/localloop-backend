@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-07-20
+
+### Fixed
+- `POST /api/v1/transaction` now answers an `Idempotency-Key` reused with a
+  different body with the Core-DP `conflict` body (409), matching the other
+  write routes; previously the conflict fell through to the global error
+  handler and surfaced as a 500 `INTERNAL_ERROR`. The route's declared 409
+  response schema is now a passthrough so both the §8.3 envelope and the
+  Core-DP body serialize correctly.
+
 ## [0.4.2] - 2026-07-20
 
 ### Changed
@@ -193,6 +203,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lab demo scripts (seed + simulate + one-command runner).
 - Privacy notice endpoint and in-memory metrics snapshot.
 
-[Unreleased]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.3...HEAD
+[0.4.3]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.0...v0.4.1

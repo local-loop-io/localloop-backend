@@ -12,6 +12,7 @@ import { loopSchemaIds } from '../schemas/loopSchemas';
 import { requireApiKey } from '../security/apiKey';
 import { loopContentType } from '../protocol';
 import { sendSpecError, specErrorResponseSchema } from '../specErrors';
+import { CoreDpError, sendCoreDpError } from '../errors';
 import { withIdempotency } from '../idempotency';
 import { LOOP_V0_2_CONTEXT } from './signals';
 
@@ -30,6 +31,12 @@ const transactionStatusResponseSchema = {
 };
 
 const apiKeySecurity = [{ ApiKeyAuth: [] }];
+
+// The write-route 409 can carry either the §8.3 envelope (duplicate
+// transaction id via the database) or the Core-DP error body (Idempotency-Key
+// conflict via withIdempotency), so that status cannot use a strict
+// single-envelope response schema — same pattern as the loop write routes.
+const mixedWriteErrorResponseSchema = { type: 'object', additionalProperties: true };
 
 const writeRateLimit = {
   max: config.rateLimitWriteMax,
@@ -75,7 +82,7 @@ export async function registerTransactionRoutes(app: FastifyInstance, deps: Tran
       response: {
         201: transactionStatusResponseSchema,
         400: specErrorResponseSchema,
-        409: specErrorResponseSchema,
+        409: mixedWriteErrorResponseSchema,
       },
     },
   }, async (request, reply) => {
@@ -100,6 +107,10 @@ export async function registerTransactionRoutes(app: FastifyInstance, deps: Tran
         };
       }) as { status: 201; body: Record<string, unknown> };
     } catch (error) {
+      if (error instanceof CoreDpError) {
+        sendCoreDpError(reply, error);
+        return;
+      }
       const pgError = error as DbLikeError;
       if (pgError?.code === '23505') {
         sendSpecError(reply, 'CONFLICT', 'Transaction with this id already exists');

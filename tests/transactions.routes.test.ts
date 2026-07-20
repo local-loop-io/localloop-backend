@@ -1,9 +1,11 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, afterAll, beforeAll } from 'bun:test';
 import Fastify from 'fastify';
 import { registerLoopProtocolParsers } from '../src/protocol';
 import { registerLoopSchemas } from '../src/schemas/loopSchemas';
 import { registerTransactionRoutes } from '../src/routes/transactions';
 import { transactionIdentity } from '../src/db/loop';
+import { pool } from '../src/db/pool';
+import { runMigrations } from '../src/db/migrate';
 
 const materialTransactionPayload = {
   '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
@@ -133,6 +135,86 @@ describe('POST /api/v1/transaction', () => {
       payload: { ...materialTransactionPayload, id: 'not-a-txn-id' },
     });
     expect(response.statusCode).toBe(400);
+  });
+});
+
+describe('POST /api/v1/transaction Idempotency-Key handling', () => {
+  let dbReady = false;
+  const createdKeys: string[] = [];
+  const suffix = () => Math.random().toString(16).slice(2, 10);
+
+  beforeAll(async () => {
+    try {
+      await runMigrations();
+      dbReady = true;
+    } catch (error) {
+      console.warn('[transactions] Postgres unavailable — skipping idempotency tests:', (error as Error).message);
+      dbReady = false;
+    }
+  });
+
+  afterAll(async () => {
+    if (dbReady) {
+      for (const key of createdKeys) {
+        await pool.query('DELETE FROM loop_idempotency_keys WHERE key = $1', [key]);
+      }
+    }
+  });
+
+  it('answers a key reused with a different body with the Core-DP conflict body (not a 500)', async () => {
+    if (!dbReady) return;
+    const { app, deps } = buildApp();
+    await registerTransactionRoutes(app, deps);
+
+    const key = `idem-txn-${suffix()}`;
+    createdKeys.push(key);
+
+    const first = await app.inject({
+      method: 'POST',
+      url: '/api/v1/transaction',
+      headers: { 'idempotency-key': key },
+      payload: materialTransactionPayload,
+    });
+    expect(first.statusCode).toBe(201);
+
+    const conflicting = await app.inject({
+      method: 'POST',
+      url: '/api/v1/transaction',
+      headers: { 'idempotency-key': key },
+      payload: settlementPayload,
+    });
+    expect(conflicting.statusCode).toBe(409);
+    const body = conflicting.json();
+    expect(body.code).toBe('conflict');
+    expect(body.retryable).toBe(false);
+    expect(typeof body.correlation_id).toBe('string');
+    expect(body.details.idempotency_key).toBe(key);
+  });
+
+  it('replays the cached TransactionStatus for a repeated key with the same body', async () => {
+    if (!dbReady) return;
+    const { app, deps } = buildApp();
+    await registerTransactionRoutes(app, deps);
+
+    const key = `idem-txn-${suffix()}`;
+    createdKeys.push(key);
+
+    const first = await app.inject({
+      method: 'POST',
+      url: '/api/v1/transaction',
+      headers: { 'idempotency-key': key },
+      payload: materialTransactionPayload,
+    });
+    expect(first.statusCode).toBe(201);
+
+    const replay = await app.inject({
+      method: 'POST',
+      url: '/api/v1/transaction',
+      headers: { 'idempotency-key': key },
+      payload: materialTransactionPayload,
+    });
+    expect(replay.statusCode).toBe(201);
+    expect(replay.json()).toEqual(first.json());
   });
 });
 
