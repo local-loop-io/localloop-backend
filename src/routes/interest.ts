@@ -5,6 +5,7 @@ import { insertInterest, listInterests, countInterests } from '../db/interest';
 import { enqueueInterest } from '../queue';
 import { broadcastInterest, registerInterestStream } from '../realtime/interestStream';
 import { requireApiKey } from '../security/apiKey';
+import { sendSpecError, specErrorResponseSchema } from '../specErrors';
 
 const interestBodySchema = {
   type: 'object',
@@ -29,14 +30,6 @@ const interestResponseSchema = {
   properties: {
     id: { type: 'number' },
     created_at: { type: 'string' },
-  },
-};
-
-const errorResponseSchema = {
-  type: 'object',
-  properties: {
-    error: { type: 'string' },
-    details: { type: 'object' },
   },
 };
 
@@ -125,7 +118,7 @@ export async function registerInterestRoutes(app: FastifyInstance, deps: Interes
       body: interestBodySchema,
       response: {
         201: interestResponseSchema,
-        400: errorResponseSchema,
+        400: specErrorResponseSchema,
       },
     },
   }, async (request, reply) => {
@@ -135,7 +128,7 @@ export async function registerInterestRoutes(app: FastifyInstance, deps: Interes
 
     const validation = validateInterest(request.body);
     if (!validation.ok) {
-      reply.code(400).send({ error: 'Invalid request', details: validation.errors });
+      sendSpecError(reply, 'INVALID_REQUEST', 'Invalid request', { validation: validation.errors });
       return;
     }
 

@@ -1,12 +1,13 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../config';
+import { sendSpecErrorForStatus } from '../specErrors';
 
 const clients = new Set<FastifyReply>();
 const heartbeatTimers = new Map<FastifyReply, ReturnType<typeof setInterval>>();
 
 export function registerLoopStream(request: FastifyRequest, reply: FastifyReply) {
   if (clients.size >= config.sseMaxClients) {
-    reply.code(429).send({ error: 'Too many active stream connections' });
+    sendSpecErrorForStatus(reply, 429, 'Too many active stream connections');
     return;
   }
 

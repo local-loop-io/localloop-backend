@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../config';
+import { sendSpecError, sendSpecErrorForStatus } from '../specErrors';
 
 const extractApiKey = (request: FastifyRequest) => {
   const direct = request.headers['x-api-key'];
@@ -29,13 +30,13 @@ export function requireApiKey(request: FastifyRequest, reply: FastifyReply) {
   if (!config.auth.apiKeyEnabled) return true;
 
   if (!config.auth.apiKey) {
-    reply.code(503).send({ error: 'API key protection is enabled but no API_KEY is configured' });
+    sendSpecErrorForStatus(reply, 503, 'API key protection is enabled but no API_KEY is configured');
     return false;
   }
 
   const provided = extractApiKey(request);
   if (!provided || !safeCompare(provided, config.auth.apiKey)) {
-    reply.code(401).send({ error: 'Unauthorized' });
+    sendSpecError(reply, 'UNAUTHORIZED', 'Unauthorized');
     return false;
   }
 

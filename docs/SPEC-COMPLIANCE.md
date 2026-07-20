@@ -39,8 +39,8 @@ end-to-end against the running lab node", not production readiness.
 | Surface | Status |
 | --- | --- |
 | New protocol endpoints (signals, transaction, federate/*, protocol-mode search) | ✅ `{error: {code, message, details?}}` with canonical codes |
-| Pre-existing lab routes (loop CRUD, interest, cities, payments, evidence) | ⚠️ Legacy flat `{error: "message"}` shape — migration to the §8.3 envelope is follow-up work |
-| Fastify schema-validation rejections (400) | ⚠️ Fastify's default validation error shape |
+| Pre-existing lab routes (loop CRUD, interest, cities, payments, evidence) | ✅ Migrated to the §8.3 envelope. HTTP statuses unchanged; statuses outside the canonical six map to the nearest canonical code (429 → `INVALID_REQUEST`, 503 → `INTERNAL_ERROR`) via `specErrorCodeForStatus`. Mixed write-route 409s can still carry the Core-DP error body (Idempotency-Key conflicts) |
+| Fastify schema-validation rejections (400) | ✅ Global error handler emits `INVALID_REQUEST` envelope with `details.validation`; global 404 handler emits `NOT_FOUND` envelope |
 
 ## §3.6 lifecycle invariants
 

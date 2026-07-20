@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth';
 import { Pool } from 'pg';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { config } from './config';
+import { sendSpecErrorForStatus } from './specErrors';
 
 const authEnabled = config.auth.enabled && Boolean(config.auth.secret);
 if (config.auth.enabled && !config.auth.secret) {
@@ -25,7 +26,7 @@ export const auth = authEnabled
 
 export async function handleAuth(request: FastifyRequest, reply: FastifyReply) {
   if (!auth) {
-    reply.code(503).send({ error: 'Auth is disabled' });
+    sendSpecErrorForStatus(reply, 503, 'Auth is disabled');
     return;
   }
 

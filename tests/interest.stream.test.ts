@@ -64,7 +64,9 @@ describe('interest stream', () => {
     registerInterestStream(request, reply as any);
 
     expect(reply.getStatus()).toBe(429);
-    expect(reply.getPayload()).toEqual({ error: 'Too many active stream connections' });
+    expect(reply.getPayload()).toEqual({
+      error: { code: 'INVALID_REQUEST', message: 'Too many active stream connections' },
+    });
     config.sseMaxClients = previousMax;
     config.sseKeepAliveMs = previousKeepAlive;
   });

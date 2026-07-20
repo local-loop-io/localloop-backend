@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { config } from '../config';
 import { getCity, listCities, listCitiesGeoJson } from '../db/cities';
+import { sendSpecError, specErrorResponseSchema } from '../specErrors';
 
 type CityFilters = {
   limit: number;
@@ -25,13 +26,6 @@ const citySchema = {
     country: { type: ['string', 'null'] },
     center: { type: ['object', 'null'] },
     created_at: { type: 'string' },
-  },
-};
-
-const errorResponseSchema = {
-  type: 'object',
-  properties: {
-    error: { type: 'string' },
   },
 };
 
@@ -155,7 +149,7 @@ export async function registerCityRoutes(app: FastifyInstance, deps: CityDeps = 
             results: { type: 'array', items: citySchema },
           },
         },
-        400: errorResponseSchema,
+        400: specErrorResponseSchema,
       },
       querystring: {
         type: 'object',
@@ -170,7 +164,7 @@ export async function registerCityRoutes(app: FastifyInstance, deps: CityDeps = 
   }, async (request, reply) => {
     const parsed = parseFilters(request.query as Record<string, string | undefined>);
     if (!parsed.ok) {
-      reply.code(400).send({ error: parsed.error });
+      sendSpecError(reply, 'INVALID_REQUEST', parsed.error);
       return;
     }
 
@@ -182,17 +176,14 @@ export async function registerCityRoutes(app: FastifyInstance, deps: CityDeps = 
     schema: {
       response: {
         200: citySchema,
-        404: {
-          type: 'object',
-          properties: { error: { type: 'string' } },
-        },
+        404: specErrorResponseSchema,
       },
     },
   }, async (request, reply) => {
     const { slug } = request.params as { slug: string };
     const city = await deps.getCity(slug);
     if (!city) {
-      reply.code(404).send({ error: 'Not found' });
+      sendSpecError(reply, 'NOT_FOUND', 'Not found');
       return;
     }
     return city;
@@ -202,7 +193,7 @@ export async function registerCityRoutes(app: FastifyInstance, deps: CityDeps = 
     schema: {
       response: {
         200: geoJsonSchema,
-        400: errorResponseSchema,
+        400: specErrorResponseSchema,
       },
       querystring: {
         type: 'object',
@@ -217,7 +208,7 @@ export async function registerCityRoutes(app: FastifyInstance, deps: CityDeps = 
   }, async (request, reply) => {
     const parsed = parseFilters(request.query as Record<string, string | undefined>);
     if (!parsed.ok) {
-      reply.code(400).send({ error: parsed.error });
+      sendSpecError(reply, 'INVALID_REQUEST', parsed.error);
       return;
     }
 

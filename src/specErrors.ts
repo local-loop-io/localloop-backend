@@ -1,11 +1,12 @@
 import type { FastifyReply } from 'fastify';
 
 /**
- * Error envelope required by SPECIFICATION §8.3 for protocol endpoints:
+ * Error envelope required by SPECIFICATION §8.3:
  * `{ "error": { "code", "message", "details?" } }` with the canonical code set.
- * New protocol endpoints (signals, transaction, federate/*, protocol-mode
- * search) use this envelope; older lab routes predate it and still return the
- * legacy flat `{ "error": "message" }` shape (tracked in SPEC-COMPLIANCE.md).
+ * All lab API surfaces use this envelope — protocol endpoints (signals,
+ * transaction, federate/*, protocol-mode search) via sendSpecError, and
+ * pre-existing lab routes plus framework-level rejections via
+ * sendSpecErrorForStatus (which preserves their pre-existing HTTP statuses).
  */
 export const SPEC_ERROR_CODES = [
   'INVALID_REQUEST',
@@ -55,6 +56,50 @@ export function sendSpecError(
   reply.code(HTTP_STATUS_BY_CODE[code]).send({
     error: {
       code,
+      message,
+      ...(details ? { details } : {}),
+    },
+  });
+}
+
+/**
+ * Maps an HTTP status code to the closest canonical §8.3 code. The canonical
+ * set covers 400/401/403/404/409/500 directly; other client rejections
+ * (e.g. 429) fall back to INVALID_REQUEST, other server-side failures
+ * (e.g. 503 feature-disabled) to INTERNAL_ERROR. The HTTP status itself is
+ * always preserved unchanged by sendSpecErrorForStatus.
+ */
+export function specErrorCodeForStatus(statusCode: number): SpecErrorCode {
+  switch (statusCode) {
+    case 400:
+      return 'INVALID_REQUEST';
+    case 401:
+      return 'UNAUTHORIZED';
+    case 403:
+      return 'FORBIDDEN';
+    case 404:
+      return 'NOT_FOUND';
+    case 409:
+      return 'CONFLICT';
+    default:
+      return statusCode >= 500 ? 'INTERNAL_ERROR' : 'INVALID_REQUEST';
+  }
+}
+
+/**
+ * §8.3 envelope for surfaces whose HTTP status predates the envelope
+ * migration (legacy lab routes, Fastify rejections such as 415/429). Keeps
+ * the original status code while normalizing the body shape.
+ */
+export function sendSpecErrorForStatus(
+  reply: FastifyReply,
+  statusCode: number,
+  message: string,
+  details?: Record<string, unknown>,
+) {
+  reply.code(statusCode).send({
+    error: {
+      code: specErrorCodeForStatus(statusCode),
       message,
       ...(details ? { details } : {}),
     },

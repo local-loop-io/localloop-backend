@@ -42,7 +42,7 @@ import { loopSchemaIds } from '../schemas/loopSchemas';
 import { requireApiKey } from '../security/apiKey';
 import { loopContentType } from '../protocol';
 import { CoreDpError, sendCoreDpError, toCoreDpError } from '../errors';
-import { sendSpecError } from '../specErrors';
+import { sendSpecError, specErrorResponseSchema } from '../specErrors';
 import { withIdempotency } from '../idempotency';
 
 const createResponseSchema = {
@@ -53,12 +53,10 @@ const createResponseSchema = {
   },
 };
 
-const errorResponseSchema = {
-  type: 'object',
-  properties: {
-    error: { type: 'string' },
-  },
-};
+// Write-route 409s can carry either the §8.3 envelope (unique/FK conflicts via
+// sendWriteConflict) or the Core-DP error body (Idempotency-Key conflicts via
+// withIdempotency), so that status cannot use a strict single-envelope schema.
+const mixedWriteErrorResponseSchema = { type: 'object', additionalProperties: true };
 
 const relayBodySchema = {
   type: 'object',
@@ -195,11 +193,11 @@ const defaultDeps: LoopDeps = {
 function sendWriteConflict(error: unknown, reply: FastifyReply) {
   const pgError = error as DbLikeError;
   if (pgError?.code === '23505') {
-    reply.code(409).send({ error: 'Resource already exists' });
+    sendSpecError(reply, 'CONFLICT', 'Resource already exists');
     return true;
   }
   if (pgError?.code === '23503') {
-    reply.code(409).send({ error: 'Related resource was not found' });
+    sendSpecError(reply, 'CONFLICT', 'Related resource was not found');
     return true;
   }
   return false;
@@ -207,7 +205,7 @@ function sendWriteConflict(error: unknown, reply: FastifyReply) {
 
 function sendStateError(error: unknown, reply: FastifyReply) {
   if (error instanceof LoopStateError) {
-    reply.code(error.kind === 'not_found' ? 404 : 400).send({ error: error.message });
+    sendSpecError(reply, error.kind === 'not_found' ? 'NOT_FOUND' : 'INVALID_REQUEST', error.message);
     return true;
   }
   return false;
@@ -228,7 +226,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       consumes: ['application/json', loopContentType],
       security: apiKeySecurity,
       body: { $ref: `${loopSchemaIds.material}#` },
-      response: { 201: createResponseSchema, 400: errorResponseSchema, 409: errorResponseSchema },
+      response: { 201: createResponseSchema, 400: specErrorResponseSchema, 409: mixedWriteErrorResponseSchema },
     },
   }, async (request, reply) => {
     if (!requireApiKey(request, reply)) {
@@ -270,7 +268,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       consumes: ['application/json', loopContentType],
       security: apiKeySecurity,
       body: { $ref: `${loopSchemaIds.product}#` },
-      response: { 201: createResponseSchema, 400: errorResponseSchema, 409: errorResponseSchema },
+      response: { 201: createResponseSchema, 400: specErrorResponseSchema, 409: mixedWriteErrorResponseSchema },
     },
   }, async (request, reply) => {
     if (!requireApiKey(request, reply)) {
@@ -312,7 +310,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       consumes: ['application/json', loopContentType],
       security: apiKeySecurity,
       body: { $ref: `${loopSchemaIds.offer}#` },
-      response: { 201: createResponseSchema, 400: errorResponseSchema, 409: errorResponseSchema },
+      response: { 201: createResponseSchema, 400: specErrorResponseSchema, 409: mixedWriteErrorResponseSchema },
     },
   }, async (request, reply) => {
     if (!requireApiKey(request, reply)) {
@@ -323,14 +321,14 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     if (payload.material_id) {
       const material = await deps.getLoopMaterial(payload.material_id);
       if (!material) {
-        reply.code(400).send({ error: 'Unknown material_id' });
+        sendSpecError(reply, 'INVALID_REQUEST', 'Unknown material_id');
         return;
       }
     }
     if (payload.product_id) {
       const product = await deps.getLoopProduct(payload.product_id);
       if (!product) {
-        reply.code(400).send({ error: 'Unknown product_id' });
+        sendSpecError(reply, 'INVALID_REQUEST', 'Unknown product_id');
         return;
       }
     }
@@ -369,7 +367,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       consumes: ['application/json', loopContentType],
       security: apiKeySecurity,
       body: { $ref: `${loopSchemaIds.match}#` },
-      response: { 201: createResponseSchema, 400: errorResponseSchema, 409: errorResponseSchema },
+      response: { 201: createResponseSchema, 400: specErrorResponseSchema, 409: mixedWriteErrorResponseSchema },
     },
   }, async (request, reply) => {
     if (!requireApiKey(request, reply)) {
@@ -380,26 +378,26 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     if (payload.material_id) {
       const material = await deps.getLoopMaterial(payload.material_id);
       if (!material) {
-        reply.code(400).send({ error: 'Unknown material_id' });
+        sendSpecError(reply, 'INVALID_REQUEST', 'Unknown material_id');
         return;
       }
     }
     if (payload.product_id) {
       const product = await deps.getLoopProduct(payload.product_id);
       if (!product) {
-        reply.code(400).send({ error: 'Unknown product_id' });
+        sendSpecError(reply, 'INVALID_REQUEST', 'Unknown product_id');
         return;
       }
     }
     const offer = await deps.getLoopOffer(payload.offer_id);
     if (!offer) {
-      reply.code(400).send({ error: 'Unknown offer_id' });
+      sendSpecError(reply, 'INVALID_REQUEST', 'Unknown offer_id');
       return;
     }
     const subjectId = payload.material_id || payload.product_id;
     const offerSubjectId = offer.material_id || offer.product_id;
     if (subjectId && offerSubjectId && offerSubjectId !== subjectId) {
-      reply.code(400).send({ error: 'Offer does not match subject' });
+      sendSpecError(reply, 'INVALID_REQUEST', 'Offer does not match subject');
       return;
     }
 
@@ -437,7 +435,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       consumes: ['application/json', loopContentType],
       security: apiKeySecurity,
       body: { $ref: `${loopSchemaIds.transfer}#` },
-      response: { 201: createResponseSchema, 400: errorResponseSchema, 409: errorResponseSchema },
+      response: { 201: createResponseSchema, 400: specErrorResponseSchema, 409: mixedWriteErrorResponseSchema },
     },
   }, async (request, reply) => {
     if (!requireApiKey(request, reply)) {
@@ -448,26 +446,26 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     if (payload.material_id) {
       const material = await deps.getLoopMaterial(payload.material_id);
       if (!material) {
-        reply.code(400).send({ error: 'Unknown material_id' });
+        sendSpecError(reply, 'INVALID_REQUEST', 'Unknown material_id');
         return;
       }
     }
     if (payload.product_id) {
       const product = await deps.getLoopProduct(payload.product_id);
       if (!product) {
-        reply.code(400).send({ error: 'Unknown product_id' });
+        sendSpecError(reply, 'INVALID_REQUEST', 'Unknown product_id');
         return;
       }
     }
     const match = await deps.getLoopMatch(payload.match_id);
     if (!match) {
-      reply.code(400).send({ error: 'Unknown match_id' });
+      sendSpecError(reply, 'INVALID_REQUEST', 'Unknown match_id');
       return;
     }
     const subjectId = payload.material_id || payload.product_id;
     const matchSubjectId = match.material_id || match.product_id;
     if (subjectId && matchSubjectId && matchSubjectId !== subjectId) {
-      reply.code(400).send({ error: 'Match does not match subject' });
+      sendSpecError(reply, 'INVALID_REQUEST', 'Match does not match subject');
       return;
     }
 
@@ -505,7 +503,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       consumes: ['application/json', loopContentType],
       security: apiKeySecurity,
       body: { $ref: `${loopSchemaIds.materialStatus}#` },
-      response: { 201: createResponseSchema, 400: errorResponseSchema },
+      response: { 201: createResponseSchema, 400: specErrorResponseSchema },
     },
   }, async (request, reply) => {
     if (!requireApiKey(request, reply)) {
@@ -515,7 +513,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     const payload = request.body as LoopMaterialStatusPayload;
     const material = await deps.getLoopMaterial(payload.material_id);
     if (!material) {
-      reply.code(400).send({ error: 'Unknown material_id' });
+      sendSpecError(reply, 'INVALID_REQUEST', 'Unknown material_id');
       return;
     }
 
@@ -580,11 +578,11 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   const entityListResponseSchema = { type: 'array', items: { type: 'object', additionalProperties: true } };
 
   app.get('/api/v1/material/:id', {
-    schema: { response: { 200: entityResponseSchema, 404: errorResponseSchema } },
+    schema: { response: { 200: entityResponseSchema, 404: specErrorResponseSchema } },
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const result = await deps.getLoopMaterialById(id);
-    if (!result) return reply.code(404).send({ error: 'Not found' });
+    if (!result) return sendSpecError(reply, 'NOT_FOUND', 'Not found');
     return result;
   });
 
@@ -596,11 +594,11 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   });
 
   app.get('/api/v1/product/:id', {
-    schema: { response: { 200: entityResponseSchema, 404: errorResponseSchema } },
+    schema: { response: { 200: entityResponseSchema, 404: specErrorResponseSchema } },
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const result = await deps.getLoopProductById(id);
-    if (!result) return reply.code(404).send({ error: 'Not found' });
+    if (!result) return sendSpecError(reply, 'NOT_FOUND', 'Not found');
     return result;
   });
 
@@ -612,11 +610,11 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   });
 
   app.get('/api/v1/offer/:id', {
-    schema: { response: { 200: entityResponseSchema, 404: errorResponseSchema } },
+    schema: { response: { 200: entityResponseSchema, 404: specErrorResponseSchema } },
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const result = await deps.getLoopOfferById(id);
-    if (!result) return reply.code(404).send({ error: 'Not found' });
+    if (!result) return sendSpecError(reply, 'NOT_FOUND', 'Not found');
     return result;
   });
 
@@ -628,11 +626,11 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   });
 
   app.get('/api/v1/match/:id', {
-    schema: { response: { 200: entityResponseSchema, 404: errorResponseSchema } },
+    schema: { response: { 200: entityResponseSchema, 404: specErrorResponseSchema } },
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const result = await deps.getLoopMatchById(id);
-    if (!result) return reply.code(404).send({ error: 'Not found' });
+    if (!result) return sendSpecError(reply, 'NOT_FOUND', 'Not found');
     return result;
   });
 
@@ -644,11 +642,11 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   });
 
   app.get('/api/v1/transfer/:id', {
-    schema: { response: { 200: entityResponseSchema, 404: errorResponseSchema } },
+    schema: { response: { 200: entityResponseSchema, 404: specErrorResponseSchema } },
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const result = await deps.getLoopTransferById(id);
-    if (!result) return reply.code(404).send({ error: 'Not found' });
+    if (!result) return sendSpecError(reply, 'NOT_FOUND', 'Not found');
     return result;
   });
 
@@ -667,7 +665,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       body: relayBodySchema,
       response: {
         202: relayResponseSchema,
-        400: errorResponseSchema,
+        400: specErrorResponseSchema,
       },
     },
   }, async (request, reply) => {
@@ -684,7 +682,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     };
 
     if (!isAllowedRelayEvent(payload.entity_type, payload.event_type)) {
-      reply.code(400).send({ error: 'Unsupported relay event_type for entity_type' });
+      sendSpecError(reply, 'INVALID_REQUEST', 'Unsupported relay event_type for entity_type');
       return;
     }
 

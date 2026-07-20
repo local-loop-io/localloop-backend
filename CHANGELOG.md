@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-07-20
+
+### Changed
+- All remaining lab surfaces migrated to the spec §8.3 error envelope
+  (`{error: {code, message, details?}}`): legacy lab routes (loop CRUD,
+  interest, cities, payments, auth/api-key guards, SSE stream limits), the
+  global 404 handler, and Fastify schema-validation rejections (now
+  `INVALID_REQUEST` with `details.validation`). HTTP statuses are unchanged;
+  statuses outside the canonical six map to the nearest canonical code
+  (429 → `INVALID_REQUEST`, 503 → `INTERNAL_ERROR`). Mixed write-route 409s
+  can still carry the Core-DP error body for Idempotency-Key conflicts.
+
 ## [0.4.1] - 2026-07-19
 
 ### Fixed
@@ -181,5 +193,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lab demo scripts (seed + simulate + one-command runner).
 - Privacy notice endpoint and in-memory metrics snapshot.
 
-[Unreleased]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.0...v0.4.1

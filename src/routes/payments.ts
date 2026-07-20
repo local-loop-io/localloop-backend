@@ -3,6 +3,7 @@ import { config } from '../config';
 import { insertPaymentIntent, insertPaymentWebhook } from '../db/payments';
 import { validatePaymentIntent } from '../validation';
 import { requireApiKey } from '../security/apiKey';
+import { sendSpecError, sendSpecErrorForStatus, specErrorResponseSchema } from '../specErrors';
 
 const intentBodySchema = {
   type: 'object',
@@ -56,24 +57,13 @@ export async function registerPaymentRoutes(
       body: intentBodySchema,
       response: {
         201: intentResponseSchema,
-        400: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-            details: { type: 'object' },
-          },
-        },
-        503: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-          },
-        },
+        400: specErrorResponseSchema,
+        503: specErrorResponseSchema,
       },
     },
   }, async (request, reply) => {
     if (!enabled) {
-      reply.code(503).send({ error: 'Payments are disabled' });
+      sendSpecErrorForStatus(reply, 503, 'Payments are disabled');
       return;
     }
 
@@ -83,7 +73,7 @@ export async function registerPaymentRoutes(
 
     const validation = validatePaymentIntent(request.body);
     if (!validation.ok) {
-      reply.code(400).send({ error: 'Invalid request', details: validation.errors });
+      sendSpecError(reply, 'INVALID_REQUEST', 'Invalid request', { validation: validation.errors });
       return;
     }
 
@@ -118,17 +108,12 @@ export async function registerPaymentRoutes(
             status: { type: 'string' },
           },
         },
-        503: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-          },
-        },
+        503: specErrorResponseSchema,
       },
     },
   }, async (request, reply) => {
     if (!enabled) {
-      reply.code(503).send({ error: 'Payments are disabled' });
+      sendSpecErrorForStatus(reply, 503, 'Payments are disabled');
       return;
     }
 

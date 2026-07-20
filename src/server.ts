@@ -27,6 +27,7 @@ import { pool } from './db/pool';
 import { registerLoopSchemas } from './schemas/loopSchemas';
 import { registerFederationSchemas } from './schemas/federationSchemas';
 import { registerLoopProtocolParsers } from './protocol';
+import { sendSpecError, sendSpecErrorForStatus } from './specErrors';
 
 type BuildOptions = {
   logger?: boolean;
@@ -108,22 +109,25 @@ export async function buildServer(options: BuildOptions = {}) {
   });
 
   app.setNotFoundHandler((request, reply) => {
-    reply.code(404).send({ error: 'Not found' });
+    sendSpecError(reply, 'NOT_FOUND', 'Not found');
   });
 
   app.setErrorHandler((error, request, reply) => {
     const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
     const message = error instanceof Error ? error.message : 'Request failed';
     if (statusCode >= 400 && statusCode < 500) {
-      reply.code(statusCode).send({
-        error: message,
-        details: (error as { validation?: unknown }).validation,
-      });
+      const validation = (error as { validation?: unknown }).validation;
+      sendSpecErrorForStatus(
+        reply,
+        statusCode,
+        message,
+        validation ? { validation } : undefined,
+      );
       return;
     }
 
     request.log.error({ err: error }, 'Unhandled error');
-    reply.code(500).send({ error: 'Internal server error' });
+    sendSpecError(reply, 'INTERNAL_ERROR', 'Internal server error');
   });
 
   return app;
