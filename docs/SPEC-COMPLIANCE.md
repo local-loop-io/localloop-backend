@@ -13,10 +13,10 @@ end-to-end against the running lab node", not production readiness.
 | Spec endpoint | Requirement | Status | Notes |
 | --- | --- | --- | --- |
 | `POST /api/v1/material` | MUST (§8.1) | ✅ Implemented | Canonical material-dna schema validation |
-| `GET /api/v1/material/{id}` | MUST (§8.1) | ✅ Implemented | |
+| `GET /api/v1/material/{id}` | MUST (§8.1) | ✅ Implemented | Returns the stored canonical MaterialDNA document over `application/ld+json` (fixed v0.4.4: previously leaked the internal DB row); response validated against the canonical schema in `tests/specResponses.test.ts` |
 | `POST /api/v1/material/search` | MUST (§8.1) | ✅ Implemented | Dual contract: protocol shape `{category, radius_km, min_quantity, max_loop_cost}` → `{results, total}` and additive Core-DP shape (`limit` + filters + cursor). `max_loop_cost` rejected with `400 INVALID_REQUEST` (LoopCost needs offer pricing; MaterialDNA carries none). `radius_km` measured from the node's published location (PostGIS). |
 | `POST /api/v1/product` | MUST (§8.1, v0.2.0) | ✅ Implemented | Canonical product-dna schema validation |
-| `GET /api/v1/product/{id}` | MUST (§8.1, v0.2.0) | ✅ Implemented | |
+| `GET /api/v1/product/{id}` | MUST (§8.1, v0.2.0) | ✅ Implemented | Returns the stored canonical ProductDNA document over `application/ld+json` (fixed v0.4.4); canonical-schema validated in `tests/specResponses.test.ts` |
 | `POST /api/v1/product/search` | Core-DP (openapi tag) | ✅ Implemented | Additive lab profile endpoint |
 | `GET /api/v1/node/info` | MUST (§8.1) | ✅ Implemented | Validates against canonical node-info schema (location, capability enum enforced via config warning) |
 | `GET /api/v1/signals` | MUST (§8.1) | ✅ Implemented (v0.4.0) | LoopSignalConfig from `loop_signal_config` table; seeded per §6.1 example |

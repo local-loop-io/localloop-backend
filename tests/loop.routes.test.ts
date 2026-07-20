@@ -155,10 +155,10 @@ const buildApp = () => {
     insertLoopEvent: async () => ({ id: 1, created_at: new Date().toISOString() }),
     listLoopEvents: async () => ([{ id: 1, event_type: 'material.created', entity_type: 'material', entity_id: materialPayload.id, payload: {}, created_at: new Date().toISOString() }]),
     getLoopMaterial: async (id: string) => (id === materialPayload.id ? { id } : undefined),
-    getLoopMaterialById: async (id: string) => (id === materialPayload.id ? fakeMaterialRecord : undefined),
+    getLoopMaterialById: async (id: string) => (id === materialPayload.id ? { ...fakeMaterialRecord, payload: materialPayload } : undefined),
     listLoopMaterials: async () => ([fakeMaterialRecord]),
     getLoopProduct: async (id: string) => (id === productPayload.id ? { id } : undefined),
-    getLoopProductById: async (id: string) => (id === productPayload.id ? fakeProductRecord : undefined),
+    getLoopProductById: async (id: string) => (id === productPayload.id ? { ...fakeProductRecord, payload: productPayload } : undefined),
     listLoopProducts: async () => ([fakeProductRecord]),
     getLoopOffer: async (id: string) => {
       if (id === offerPayload.id) return { id, material_id: materialPayload.id, product_id: null, status: 'open' };
@@ -534,15 +534,20 @@ describe('loop routes', () => {
     expect(response.statusCode).toBe(404);
   });
 
-  it('retrieves a material by id', async () => {
+  it('retrieves a material by id as the canonical MaterialDNA document', async () => {
     const { app, deps } = buildApp();
     await registerLoopRoutes(app, deps);
 
     const response = await app.inject({ method: 'GET', url: `/api/v1/material/${materialPayload.id}` });
     expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('application/ld+json');
     const body = response.json();
+    expect(body['@type']).toBe('MaterialDNA');
     expect(body.id).toBe(materialPayload.id);
     expect(body.category).toBe(materialPayload.category);
+    // The openapi.json contract is MaterialDNA — internal DB columns must not leak.
+    expect(body.quantity_value).toBeUndefined();
+    expect(body.payload).toBeUndefined();
   });
 
   it('returns 404 for unknown material id', async () => {
@@ -564,14 +569,18 @@ describe('loop routes', () => {
     expect(body.length).toBeGreaterThan(0);
   });
 
-  it('retrieves a product by id', async () => {
+  it('retrieves a product by id as the canonical ProductDNA document', async () => {
     const { app, deps } = buildApp();
     await registerLoopRoutes(app, deps);
 
     const response = await app.inject({ method: 'GET', url: `/api/v1/product/${productPayload.id}` });
     expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('application/ld+json');
     const body = response.json();
+    expect(body['@type']).toBe('ProductDNA');
     expect(body.id).toBe(productPayload.id);
+    expect(body.quantity_value).toBeUndefined();
+    expect(body.payload).toBeUndefined();
   });
 
   it('returns 404 for unknown product id', async () => {

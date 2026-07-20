@@ -581,9 +581,12 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     schema: { response: { 200: entityResponseSchema, 404: specErrorResponseSchema } },
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const result = await deps.getLoopMaterialById(id);
-    if (!result) return sendSpecError(reply, 'NOT_FOUND', 'Not found');
-    return result;
+    const row = await deps.getLoopMaterialById(id);
+    if (!row) return sendSpecError(reply, 'NOT_FOUND', 'Not found');
+    // openapi.json contracts this route as MaterialDNA over application/ld+json:
+    // answer with the stored canonical document, not the internal DB row.
+    reply.type(loopContentType);
+    return row.payload;
   });
 
   app.get('/api/v1/material', {
@@ -597,9 +600,12 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     schema: { response: { 200: entityResponseSchema, 404: specErrorResponseSchema } },
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const result = await deps.getLoopProductById(id);
-    if (!result) return sendSpecError(reply, 'NOT_FOUND', 'Not found');
-    return result;
+    const row = await deps.getLoopProductById(id);
+    if (!row) return sendSpecError(reply, 'NOT_FOUND', 'Not found');
+    // openapi.json contracts this route as ProductDNA over application/ld+json:
+    // answer with the stored canonical document, not the internal DB row.
+    reply.type(loopContentType);
+    return row.payload;
   });
 
   app.get('/api/v1/product', {

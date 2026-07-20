@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-07-20
+
+### Fixed
+- `GET /api/v1/material/:id` and `GET /api/v1/product/:id` now answer with
+  the stored canonical MaterialDNA / ProductDNA document over
+  `application/ld+json`, as openapi.json contracts; previously they leaked
+  the internal database row (snake_case columns, nested `payload`,
+  `application/json`). Responses are now validated against the canonical
+  material-dna / product-dna schemas in `tests/specResponses.test.ts`.
+
 ## [0.4.3] - 2026-07-20
 
 ### Fixed
@@ -203,7 +213,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lab demo scripts (seed + simulate + one-command runner).
 - Privacy notice endpoint and in-memory metrics snapshot.
 
-[Unreleased]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.3...HEAD
+[Unreleased]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.4...HEAD
+[0.4.4]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.0...v0.4.1
