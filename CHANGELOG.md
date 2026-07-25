@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `GET /health` includes package `version` for deploy forensics (agent cycle 010).
+
 ### Fixed
 - CORS `allowedHeaders` includes `Idempotency-Key` so browser clients can send
   write idempotency headers without preflight failure (agent cycle 009).

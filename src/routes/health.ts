@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import IORedis from 'ioredis';
 import { config } from '../config';
@@ -46,6 +48,17 @@ export async function defaultCheckRedis(): Promise<RedisHealth> {
   }
 }
 
+function readPackageVersion(): string {
+  try {
+    const pkg = JSON.parse(readFileSync(join(import.meta.dir, '..', '..', 'package.json'), 'utf8')) as { version?: string };
+    return pkg.version ?? '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
+
+const PACKAGE_VERSION = readPackageVersion();
+
 const defaultDeps: HealthDeps = {
   checkDb: defaultCheckDb,
   checkRedis: defaultCheckRedis,
@@ -59,6 +72,7 @@ const healthResponseSchema = {
     uptime: { type: 'number' },
     db: { type: 'string' },
     redis: { type: 'string' },
+    version: { type: 'string' },
   },
 };
 
@@ -88,6 +102,7 @@ export async function registerHealthRoutes(
       uptime: process.uptime(),
       db: dbStatus,
       redis: redisStatus,
+      version: PACKAGE_VERSION,
     };
 
     reply.header('Cache-Control', 'no-store');
