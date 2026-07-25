@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `GET /health` sends `Cache-Control: no-store` so proxies never cache readiness (agent cycle 005).
+
 ### Fixed
 - Privacy regression test types compile under `tsc --noEmit` (`consentPublic`
   required on insertInterest fixture; agent cycle 004).
