@@ -17,3 +17,15 @@ describe('auth status routes', () => {
     expect(payload.apiKeyEnabled).toBeBoolean();
   });
 });
+
+describe('auth status cache', () => {
+  it('sends Cache-Control no-store', async () => {
+    const Fastify = (await import('fastify')).default;
+    const { registerAuthStatusRoutes } = await import('../src/routes/auth');
+    const app = Fastify({ logger: false });
+    await registerAuthStatusRoutes(app);
+    const response = await app.inject({ method: 'GET', url: '/api/auth/status' });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['cache-control']).toBe('no-store');
+  });
+});

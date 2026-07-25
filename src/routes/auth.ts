@@ -18,7 +18,8 @@ export async function registerAuthStatusRoutes(app: FastifyInstance) {
         },
       },
     },
-  }, async () => {
+  }, async (_request, reply) => {
+    reply.header('Cache-Control', 'no-store');
     const active = Boolean(auth);
     return {
       enabled: config.auth.enabled,

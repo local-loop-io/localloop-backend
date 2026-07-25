@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- `/api/auth/status` sends `Cache-Control: no-store` (agent cycle 012).
+
+### Changed
 - `/api/privacy` and `/api/metrics` send `Cache-Control: no-store` (agent cycle 011).
 
 ### Added
