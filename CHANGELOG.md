@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- City routes call `setNoStore` (agent cycle 021; retries cycle 014).
+
+### Changed
 - `GET /api/v1/signals` uses short public cache (30s) (agent cycle 018).
 
 ### Changed

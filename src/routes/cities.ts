@@ -1,3 +1,4 @@
+import { setNoStore } from '../httpCache';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../config';
 import { getCity, listCities, listCitiesGeoJson } from '../db/cities';
@@ -140,6 +141,10 @@ const parseFilters = (query: Record<string, string | undefined>) => {
 };
 
 export async function registerCityRoutes(app: FastifyInstance, deps: CityDeps = defaultDeps) {
+  app.addHook('onRequest', async (_req, reply) => {
+    setNoStore(reply);
+  });
+
   app.get('/api/cities', {
     schema: {
       response: {
