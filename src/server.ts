@@ -47,7 +47,7 @@ export async function buildServer(options: BuildOptions = {}) {
     origin: config.allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Request-Id', 'X-API-Key'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Request-Id', 'X-API-Key', 'Idempotency-Key'],
     exposedHeaders: ['X-Request-Id'],
     maxAge: 600,
   });

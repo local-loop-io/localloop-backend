@@ -39,3 +39,14 @@ describe('cors headers', () => {
     }
   });
 });
+
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+describe('CORS allowed headers', () => {
+  it('allows Idempotency-Key for browser write retries', () => {
+    const src = readFileSync(join(import.meta.dir, '..', 'src', 'server.ts'), 'utf8');
+    expect(src).toContain("'Idempotency-Key'");
+  });
+});
+
