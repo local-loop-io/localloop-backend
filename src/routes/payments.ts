@@ -1,3 +1,4 @@
+import { setNoStore } from '../httpCache';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../config';
 import { insertPaymentIntent, insertPaymentWebhook } from '../db/payments';
@@ -50,6 +51,8 @@ export async function registerPaymentRoutes(
   deps: PaymentDeps = defaultDeps,
   enabled = config.paymentsEnabled
 ) {
+  app.addHook('onRequest', async (_req, reply) => { setNoStore(reply); });
+
   app.post('/api/payments/intent', {
     config: { rateLimit: writeRateLimit },
     schema: {
