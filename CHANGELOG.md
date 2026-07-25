@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Metrics response schema now allows numeric additionalProperties so Fastify
+  serialization no longer strips counter keys to `{}` (agent cycle 007).
+
 ### Changed
 - `GET /api/metrics` always lists known metric keys at zero so dashboards do not
   treat a quiet node as missing metrics (agent cycle 006).

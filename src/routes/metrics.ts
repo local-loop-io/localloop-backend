@@ -10,7 +10,7 @@ export async function registerMetricsRoutes(app: FastifyInstance) {
           properties: {
             startedAt: { type: 'string' },
             uptimeSeconds: { type: 'number' },
-            metrics: { type: 'object' },
+            metrics: { type: 'object', additionalProperties: { type: 'number' } },
           },
         },
       },
