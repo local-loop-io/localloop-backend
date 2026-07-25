@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Interest routes set `Cache-Control: no-store` (agent cycle 015).
+
+### Changed
+- City routes set `Cache-Control: no-store` (agent cycle 014).
+
+### Changed
 - Dockerfile copies `src` with `--chown=app:app` and avoids a second full-tree `chown` after source copy (agent cycle 013).
 
 ### Changed
