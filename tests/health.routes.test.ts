@@ -22,6 +22,8 @@ describe('GET /health', () => {
     expect(typeof body.time).toBe('string');
     expect(typeof body.uptime).toBe('number');
     expect(response.headers['cache-control']).toBe('no-store');
+    expect(typeof body.version).toBe('string');
+    expect(body.version.length).toBeGreaterThan(0);
   });
 
   it('treats redis skipped as healthy when db is ok', async () => {
