@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Metrics key regression guard (agent cycle 052).
+
+### Fixed
 - Metrics key regression guard (agent cycle 048).
 
 ### Fixed
