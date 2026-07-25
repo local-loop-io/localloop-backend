@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Shared `httpCache` helpers for public short cache and no-store (agent cycle 016).
+
 ### Changed
 - Interest routes set `Cache-Control: no-store` (agent cycle 015).
 
