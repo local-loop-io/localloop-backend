@@ -1,3 +1,4 @@
+import { setNoStore } from '../httpCache';
 import { setPublicShortCache } from '../httpCache';
 import { randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
@@ -221,6 +222,8 @@ function isAllowedRelayEvent(entityType: string, eventType: string) {
 }
 
 export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = defaultDeps) {
+  app.addHook('onRequest', async (_req, reply) => { setNoStore(reply); });
+
   app.post('/api/v1/material', {
     config: { rateLimit: writeRateLimit },
     schema: {
