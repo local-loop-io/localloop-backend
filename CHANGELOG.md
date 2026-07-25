@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Privacy regression test types compile under `tsc --noEmit` (`consentPublic`
+  required on insertInterest fixture; agent cycle 004).
+
+### Fixed
 - Interest search (`GET /api/interest?search=`) now redacts `email` from the live
   `share_email` flag instead of the materialized view snapshot, so revoking
   email sharing is effective immediately without waiting for a view refresh

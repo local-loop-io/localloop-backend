@@ -33,13 +33,14 @@ describe('interest list email privacy', () => {
     const created = await insertInterest({
       name: marker,
       organization: 'Privacy Lab',
-      role: null,
+      role: undefined,
       country: 'DE',
       city: 'Berlin',
-      website: null,
+      website: undefined,
       email: `${marker}@example.com`,
       message: `searchable-${marker}`,
       shareEmail: true,
+      consentPublic: true,
     });
     createdIds.push(created.id);
 
