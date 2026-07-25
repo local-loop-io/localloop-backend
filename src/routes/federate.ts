@@ -1,3 +1,4 @@
+import { setNoStore } from '../httpCache';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../config';
 import { getLoopMaterial, insertLoopEvent } from '../db/loop';
@@ -107,6 +108,8 @@ function requireNodeHeaders(request: FastifyRequest, reply: FastifyReply): boole
 }
 
 export async function registerFederateRoutes(app: FastifyInstance, deps: FederateDeps = defaultDeps) {
+  app.addHook('onRequest', async (_req, reply) => { setNoStore(reply); });
+
   app.post('/api/v1/federate/announce', {
     config: { rateLimit: writeRateLimit },
     schema: {
