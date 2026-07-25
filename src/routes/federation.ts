@@ -1,3 +1,4 @@
+import { setNoStore } from '../httpCache';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../config';
 import { incrementMetric } from '../metrics';
@@ -75,6 +76,8 @@ const defaultDeps: FederationDeps = {
 };
 
 export async function registerFederationRoutes(app: FastifyInstance, deps: FederationDeps = defaultDeps) {
+  app.addHook('onRequest', async (_req, reply) => { setNoStore(reply); });
+
   registerFederationSchemas(app);
 
   app.get('/api/v1/node/info', {
