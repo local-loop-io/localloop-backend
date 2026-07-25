@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- CORS `allowedHeaders` includes `Idempotency-Key` so browser clients can send
+  write idempotency headers without preflight failure (agent cycle 009).
+
 ### Changed
 - README documents Redis probe and `Cache-Control: no-store` on `/health` (agent cycle 008).
 
