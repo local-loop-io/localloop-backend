@@ -79,11 +79,15 @@ export async function insertInterest(input: InterestInput) {
 
 export async function listInterests(limit: number, search?: string) {
   if (search) {
+    // include share_email so public listings never leak an unshared address
     const query = Prisma.sql`
-      SELECT id, name, organization, role, country, city, website, email, message, is_demo, created_at
-      FROM interests_search
-      WHERE document @@ plainto_tsquery('simple', ${search})
-      ORDER BY ts_rank(document, plainto_tsquery('simple', ${search})) DESC, created_at DESC
+      SELECT i.id, i.name, i.organization, i.role, i.country, i.city, i.website,
+             CASE WHEN i.share_email THEN i.email ELSE NULL END AS email,
+             i.message, i.is_demo, i.created_at
+      FROM interests_search s
+      JOIN interests i ON i.id = s.id
+      WHERE s.document @@ plainto_tsquery('simple', ${search})
+      ORDER BY ts_rank(s.document, plainto_tsquery('simple', ${search})) DESC, i.created_at DESC
       LIMIT ${limit};
     `;
     const result = await prisma.$queryRaw<InterestRow[]>(query);

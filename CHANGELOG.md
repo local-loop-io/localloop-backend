@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Interest search (`GET /api/interest?search=`) now redacts `email` from the live
+  `share_email` flag instead of the materialized view snapshot, so revoking
+  email sharing is effective immediately without waiting for a view refresh
+  (agent cycle 003).
+
 ### Added
 - `GET /health` now reports a `redis` probe (`ok` | `error` | `skipped`) alongside
   the existing database check. Either probe failure yields HTTP 503 / `degraded`
