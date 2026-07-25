@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `GET /api/v1/signals` uses short public cache (30s) (agent cycle 018).
+
+### Changed
+- `GET /api/v1/node/info` uses short public cache (30s) (agent cycle 017).
+
 ### Added
 - Shared `httpCache` helpers for public short cache and no-store (agent cycle 016).
 
