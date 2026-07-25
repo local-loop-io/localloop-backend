@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- federate routes set no-store (agent cycle 029).
+
+### Changed
 - Federation routes set no-store (agent cycle 025).
 
 ### Changed
