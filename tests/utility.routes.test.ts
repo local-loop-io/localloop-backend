@@ -14,6 +14,7 @@ describe('utility routes', () => {
     expect(payload.metrics).toBeDefined();
     expect(payload.metrics.loop_material_created).toBe(0);
     expect(payload.metrics.loop_transaction_created).toBe(0);
+    expect(response.headers['cache-control']).toBe('no-store');
   });
 
   it('returns privacy notice', async () => {
@@ -24,5 +25,6 @@ describe('utility routes', () => {
     expect(response.statusCode).toBe(200);
     const payload = response.json();
     expect(payload.scope).toBe('Lab demo only');
+    expect(response.headers['cache-control']).toBe('no-store');
   });
 });

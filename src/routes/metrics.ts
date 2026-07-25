@@ -15,5 +15,9 @@ export async function registerMetricsRoutes(app: FastifyInstance) {
         },
       },
     },
-  }, async () => getMetricsSnapshot());
+  }, async (_request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return getMetricsSnapshot();
+  });
 }
+

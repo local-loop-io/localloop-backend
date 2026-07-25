@@ -26,5 +26,9 @@ export async function registerPrivacyRoutes(app: FastifyInstance) {
         },
       },
     },
-  }, async () => privacyPayload);
+  }, async (_request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return privacyPayload;
+  });
 }
+

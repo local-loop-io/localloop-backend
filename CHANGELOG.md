@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `/api/privacy` and `/api/metrics` send `Cache-Control: no-store` (agent cycle 011).
+
 ### Added
 - `GET /health` includes package `version` for deploy forensics (agent cycle 010).
 
