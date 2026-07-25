@@ -12,6 +12,8 @@ describe('utility routes', () => {
     expect(response.statusCode).toBe(200);
     const payload = response.json();
     expect(payload.metrics).toBeDefined();
+    expect(payload.metrics.loop_material_created).toBe(0);
+    expect(payload.metrics.loop_transaction_created).toBe(0);
   });
 
   it('returns privacy notice', async () => {
