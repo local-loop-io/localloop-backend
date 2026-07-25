@@ -1,3 +1,4 @@
+import { setNoStore } from '../httpCache';
 import type { FastifyInstance } from 'fastify';
 import {
   getLoopEvidenceByEventId,
@@ -65,6 +66,8 @@ async function runList(query: EvidenceListQuery) {
 }
 
 export async function registerEvidenceRoutes(app: FastifyInstance) {
+  app.addHook('onRequest', async (_req, reply) => { setNoStore(reply); });
+
   app.get('/api/v1/evidence/:event_id', {
     schema: { response: { 200: evidenceResponseSchema } },
   }, async (request, reply) => {
