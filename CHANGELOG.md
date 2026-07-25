@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Metrics expose package `version`; remove broken nodeInfo cache source test that
+  asserted the wrong route file (residual after agent cycles 001-100).
+
+### Fixed
 - Metrics key regression guard (agent cycle 100).
 
 ### Fixed
