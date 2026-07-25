@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `GET /health` now reports a `redis` probe (`ok` | `error` | `skipped`) alongside
+  the existing database check. Either probe failure yields HTTP 503 / `degraded`
+  so Traefik and Docker healthchecks surface Redis outages (agent cycle 001).
+
 ## [0.4.4] - 2026-07-20
 
 ### Fixed
