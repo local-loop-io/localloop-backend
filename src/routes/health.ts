@@ -90,6 +90,7 @@ export async function registerHealthRoutes(
       redis: redisStatus,
     };
 
+    reply.header('Cache-Control', 'no-store');
     if (!healthy) {
       reply.code(503);
     }
