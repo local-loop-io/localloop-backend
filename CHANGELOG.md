@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Replaced source-string "theater" cache/metrics tests with handler inject tests
+  that assert real `Cache-Control` response headers and live metrics counters
+  (agent residual: honest tests).
+
+### Fixed
 - Metrics expose package `version`; remove broken nodeInfo cache source test that
   asserted the wrong route file (residual after agent cycles 001-100).
 
