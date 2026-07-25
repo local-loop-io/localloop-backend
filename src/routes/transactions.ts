@@ -1,3 +1,4 @@
+import { setNoStore } from '../httpCache';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../config';
 import {
@@ -70,6 +71,8 @@ function transactionStatusBody(transactionId: string, status: string, updatedAt:
 }
 
 export async function registerTransactionRoutes(app: FastifyInstance, deps: TransactionDeps = defaultDeps) {
+  app.addHook('onRequest', async (_req, reply) => { setNoStore(reply); });
+
   // SPEC §8.1: create a transaction. The request body is validated against the
   // canonical transaction schema (MaterialTransaction | Settlement |
   // TransactionStatus); the response is a TransactionStatus JSON-LD object.

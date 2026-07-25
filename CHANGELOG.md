@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Transaction routes set no-store (agent cycle 023).
+
+### Changed
 - City routes call `setNoStore` (agent cycle 021; retries cycle 014).
 
 ### Changed
