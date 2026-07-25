@@ -1,3 +1,4 @@
+import { setPublicShortCache } from '../httpCache';
 import { randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../config';

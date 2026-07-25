@@ -1,3 +1,4 @@
+import { setPublicShortCache } from '../httpCache';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../config';
 import { getLoopSignalConfig } from '../db/loop';
@@ -37,7 +38,8 @@ export async function registerSignalsRoutes(app: FastifyInstance, deps: SignalsD
         404: specErrorResponseSchema,
       },
     },
-  }, async (request, reply) => {
+  }, async (_request, reply) => {
+    setPublicShortCache(reply, 30);
     const row = await deps.getLoopSignalConfig();
     if (!row) {
       sendSpecError(reply, 'NOT_FOUND', 'No LoopSignal configuration is published by this node');
