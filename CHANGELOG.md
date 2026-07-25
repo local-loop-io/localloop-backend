@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Dockerfile copies `src` with `--chown=app:app` and avoids a second full-tree `chown` after source copy (agent cycle 013).
+
+### Changed
 - `/api/auth/status` sends `Cache-Control: no-store` (agent cycle 012).
 
 ### Changed

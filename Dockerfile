@@ -9,11 +9,11 @@ COPY prisma ./prisma
 COPY prisma.config.ts ./
 RUN bun install --production
 RUN bun run prisma:generate
-
-COPY src ./src
-COPY .env.example ./
-
 RUN chown -R app:app /app
+
+COPY --chown=app:app src ./src
+COPY --chown=app:app .env.example ./
+
 USER app
 
 EXPOSE 8088
