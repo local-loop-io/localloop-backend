@@ -26,7 +26,7 @@ bun test                      # run all tests
 ### Health
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/health` | Service + DB status. Returns `503` if DB unreachable. |
+| `GET` | `/health` | Service + DB + Redis status (`db`, `redis`). Returns `503` if either probe fails. `Cache-Control: no-store`. |
 
 ### Interest
 | Method | Path | Description |

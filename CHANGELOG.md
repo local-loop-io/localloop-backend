@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- README documents Redis probe and `Cache-Control: no-store` on `/health` (agent cycle 008).
+
 ### Fixed
 - Metrics response schema now allows numeric additionalProperties so Fastify
   serialization no longer strips counter keys to `{}` (agent cycle 007).
