@@ -58,4 +58,4 @@ Fail-closed auth guards prevent unverified trust claims from being honored accid
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `945a446` | implementation | yes |
-| `localloop-backend` | (this commit) | plan close (HEAD) | yes (`origin/main`) |
+| `localloop-backend` | `d5275ea` | plan close (HEAD) | yes (`origin/main`) |
