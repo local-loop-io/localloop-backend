@@ -51,4 +51,4 @@ Product and relay are the remaining lab write routes excluded from cycles 0003â€
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `dbe0fcc` | implementation | yes |
-| `localloop-backend` | (pending) | plan close (HEAD) | â€” |
+| `localloop-backend` | `4276df1` | plan close (HEAD) | yes (`origin/main`) |
