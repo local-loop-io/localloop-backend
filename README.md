@@ -18,7 +18,7 @@ bun install
 cp .env.example .env          # adjust values as needed
 docker compose up -d          # start Postgres, Redis, MinIO
 bun run dev                   # API on :8088
-bun test                      # run all tests
+bun run test                  # run all tests (--isolate; see CONTRIBUTING.md)
 ```
 
 ## API
