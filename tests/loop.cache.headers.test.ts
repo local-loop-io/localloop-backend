@@ -68,6 +68,28 @@ const materialStatusPayload = {
   metadata: { ticket: 'LAB-42' },
 };
 
+const productPayload = {
+  '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+  '@type': 'ProductDNA',
+  schema_version: '0.2.0',
+  id: 'PRD-DE-MUC-2025-DESK-F4A7B2',
+  product_category: 'furniture-office',
+  name: 'Standing Desk — Ergotron WorkFit',
+  condition: 'good',
+  quantity: { value: 12, unit: 'piece' },
+  origin_city: 'Munich',
+  current_city: 'Munich',
+  available_from: '2026-03-15T08:00:00Z',
+};
+
+const relayPayload = {
+  event_type: 'material.created',
+  entity_type: 'material',
+  entity_id: materialPayload.id,
+  payload: { hello: 'world' },
+  source_node: 'node-a',
+};
+
 const eventFor = (type: string, entity: string, entity_id: string, data: unknown) => ({
   type,
   entity,
@@ -87,7 +109,11 @@ const buildApp = async () => {
       created_at: new Date().toISOString(),
       event: eventFor('material.created', 'material', payload.id, payload),
     }),
-    createLoopProduct: async () => ({ id: 'unused', created_at: new Date().toISOString(), event: eventFor('product.created', 'product', 'unused', {}) }),
+    createLoopProduct: async (payload: { id: string }) => ({
+      id: payload.id,
+      created_at: new Date().toISOString(),
+      event: eventFor('product.created', 'product', payload.id, payload),
+    }),
     createLoopOffer: async (payload: { id: string }) => ({
       id: payload.id,
       created_at: new Date().toISOString(),
@@ -131,15 +157,17 @@ const buildApp = async () => {
 
 describe('loop write routes Cache-Control', () => {
   it.each([
-    ['/api/v1/material', materialPayload],
-    ['/api/v1/offer', offerPayload],
-    ['/api/v1/match', matchPayload],
-    ['/api/v1/transfer', transferPayload],
-    ['/api/v1/material-status', materialStatusPayload],
-  ])('returns no-store on POST %s', async (url, payload) => {
+    ['/api/v1/material', materialPayload, 201],
+    ['/api/v1/offer', offerPayload, 201],
+    ['/api/v1/match', matchPayload, 201],
+    ['/api/v1/transfer', transferPayload, 201],
+    ['/api/v1/material-status', materialStatusPayload, 201],
+    ['/api/v1/product', productPayload, 201],
+    ['/api/v1/relay', relayPayload, 202],
+  ])('returns no-store on POST %s', async (url, payload, expectedStatus) => {
     const app = await buildApp();
     const response = await app.inject({ method: 'POST', url, payload });
-    expect(response.statusCode).toBe(201);
+    expect(response.statusCode).toBe(expectedStatus);
     expect(response.headers['cache-control']).toBe('no-store');
   });
 });
