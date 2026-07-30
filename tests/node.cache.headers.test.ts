@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'bun:test';
 import Fastify from 'fastify';
+import { registerLoopProtocolParsers } from '../src/protocol';
+import { registerFederationSchemas } from '../src/schemas/federationSchemas';
 import { registerFederationRoutes } from '../src/routes/federation';
+
+const handshakePayload = {
+  '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
+  '@type': 'NodeHandshake',
+  schema_version: '0.1.1',
+  node_id: 'munich.loop',
+  name: 'DEMO Munich Node',
+  endpoint: 'https://demo-munich.loop/api',
+  capabilities: ['material-registry', 'lab-relay'],
+  timestamp: '2025-12-20T10:00:00Z',
+};
 
 const localNode = {
   node_id: 'lab-hub.loop',
@@ -39,5 +52,21 @@ describe('node info route Cache-Control', () => {
     const response = await app.inject({ method: 'GET', url: '/api/v1/federation/nodes' });
     expect(response.statusCode).toBe(200);
     expect(response.headers['cache-control']).toBe('no-store');
+  });
+
+  it('returns no-store on POST /api/v1/federation/handshake', async () => {
+    const app = Fastify({ logger: false });
+    registerLoopProtocolParsers(app);
+    registerFederationSchemas(app);
+    await registerFederationRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/federation/handshake',
+      payload: handshakePayload,
+    });
+    expect(response.statusCode).toBe(202);
+    expect(response.headers['cache-control']).toBe('no-store');
+    expect(response.json()['@type']).toBe('NodeHandshakeResponse');
   });
 });
