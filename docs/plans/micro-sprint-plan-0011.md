@@ -53,4 +53,4 @@ Smallest independently valuable maintainability fix; zero behavioral change; cle
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `e431856` | implementation | yes |
-| `localloop-backend` | `8ad0f3e` | plan close (HEAD) | yes (`origin/main`) |
+| `localloop-backend` | `25c4e41` | plan close (HEAD) | yes (`origin/main`) |
