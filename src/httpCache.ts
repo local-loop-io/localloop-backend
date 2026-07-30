@@ -8,3 +8,10 @@ export function setPublicShortCache(reply: FastifyReply, seconds = 30) {
 export function setNoStore(reply: FastifyReply) {
   reply.header('Cache-Control', 'no-store');
 }
+
+/** Set no-store only when Cache-Control is not already set (onSend hooks). */
+export function setNoStoreIfUnset(reply: FastifyReply) {
+  if (!reply.getHeader('Cache-Control')) {
+    setNoStore(reply);
+  }
+}

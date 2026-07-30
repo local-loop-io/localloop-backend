@@ -6,6 +6,7 @@ import { enqueueInterest } from '../queue';
 import { broadcastInterest, registerInterestStream } from '../realtime/interestStream';
 import { requireApiKey } from '../security/apiKey';
 import { sendSpecError, specErrorResponseSchema } from '../specErrors';
+import { setNoStoreIfUnset } from '../httpCache';
 
 const interestBodySchema = {
   type: 'object',
@@ -84,9 +85,7 @@ const defaultDeps: InterestDeps = {
 
 export async function registerInterestRoutes(app: FastifyInstance, deps: InterestDeps = defaultDeps) {
   app.addHook('onSend', async (_req, reply) => {
-    if (!reply.getHeader('Cache-Control')) {
-      reply.header('Cache-Control', 'no-store');
-    }
+    setNoStoreIfUnset(reply);
   });
   app.get('/api/interest', {
     schema: {
