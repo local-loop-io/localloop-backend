@@ -55,4 +55,4 @@ Completes the §9.2 lab-boundary test trilogy started in cycles 0023–0024. Pre
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `b365f57` | implementation | yes |
-| `localloop-backend` | — | plan close (HEAD) | — |
+| `localloop-backend` | `e107573` | plan close (HEAD) | yes |
