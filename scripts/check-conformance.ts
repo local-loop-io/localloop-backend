@@ -6,7 +6,8 @@
  *      (delegates to scripts/sync-schemas.ts --check).
  *   B. The docs-hub mirror (localloop-site/public/projects/loop-protocol) must
  *      carry byte-identical copies of the canonical schemas/, contexts/,
- *      docs/, examples/, openapi.json, and SPECIFICATION.md. Skipped with a notice
+ *      docs/, examples/, rfcs/, openapi.json, and SPECIFICATION.md. Skipped with a
+ *      notice
  *      when the sibling site checkout is unavailable (e.g. backend-only CI).
  *   C. Every path+method in loop-protocol/openapi.json must be registered in
  *      the built Fastify app (spec-required endpoints may not drift).
@@ -74,7 +75,7 @@ if (!existsSync(PROTOCOL_ROOT)) {
     compareFile(join(PROTOCOL_ROOT, rel), join(SITE_MIRROR, rel), rel);
     checked += 1;
   }
-  for (const dir of ['schemas', 'contexts', 'docs', 'examples']) {
+  for (const dir of ['schemas', 'contexts', 'docs', 'examples', 'rfcs']) {
     const canonicalDir = join(PROTOCOL_ROOT, dir);
     for (const file of walk(canonicalDir)) {
       const rel = file.slice(canonicalDir.length + 1);
