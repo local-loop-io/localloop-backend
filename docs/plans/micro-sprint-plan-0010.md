@@ -56,4 +56,4 @@ Federate routes use a separate plugin hook from loop/federation cache tests. Nod
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `d73f680` | implementation | yes |
-| `localloop-backend` | — | plan close (HEAD) | — |
+| `localloop-backend` | `0c72b3c` | plan close (HEAD) | yes (`origin/main`) |
