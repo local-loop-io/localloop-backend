@@ -128,3 +128,57 @@ describe('federation routes', () => {
     expect(response.statusCode).toBe(400);
   });
 });
+
+describe('federation handshake lab boundary (no §9.2 headers, SPEC-COMPLIANCE §9.2)', () => {
+  const buildHandshakeApp = async (upsertSpy?: { node?: string }) => {
+    const app = Fastify({ logger: false });
+    registerLoopProtocolParsers(app);
+    registerFederationSchemas(app);
+    await registerFederationRoutes(app, {
+      listNodes: async () => [],
+      upsertNode: async (node) => {
+        if (upsertSpy) upsertSpy.node = node.node_id;
+        return {
+          ...node,
+          last_seen: '2025-12-20T10:00:00Z',
+          lab_only: true as const,
+        };
+      },
+      getLocalNode: () => localNode,
+    });
+    return app;
+  };
+
+  it('accepts handshake without X-Node-ID, X-Node-Signature, or X-Timestamp', async () => {
+    const calls: { node?: string } = {};
+    const app = await buildHandshakeApp(calls);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/federation/handshake',
+      payload: handshakePayload,
+    });
+
+    expect(response.statusCode).toBe(202);
+    expect(response.json().status).toBe('accepted');
+    expect(calls.node).toBe('munich.loop');
+  });
+
+  it('accepts handshake even when §9.2 headers are present but invalid', async () => {
+    const app = await buildHandshakeApp();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/federation/handshake',
+      headers: {
+        'x-node-id': '',
+        'x-node-signature': '',
+        'x-timestamp': new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+      },
+      payload: handshakePayload,
+    });
+
+    expect(response.statusCode).toBe(202);
+    expect(response.json().status).toBe('accepted');
+  });
+});
