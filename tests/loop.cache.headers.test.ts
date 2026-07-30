@@ -171,3 +171,17 @@ describe('loop write routes Cache-Control', () => {
     expect(response.headers['cache-control']).toBe('no-store');
   });
 });
+
+describe('loop read and search routes Cache-Control', () => {
+  it.each([
+    ['GET', '/api/v1/material', undefined, 200],
+    ['GET', '/api/v1/events', undefined, 200],
+    ['POST', '/api/v1/material/search', { limit: 10 }, 200],
+    ['POST', '/api/v1/product/search', { limit: 10 }, 200],
+  ] as const)('returns no-store on %s %s', async (method, url, payload, expectedStatus) => {
+    const app = await buildApp();
+    const response = await app.inject({ method, url, payload });
+    expect(response.statusCode).toBe(expectedStatus);
+    expect(response.headers['cache-control']).toBe('no-store');
+  });
+});
