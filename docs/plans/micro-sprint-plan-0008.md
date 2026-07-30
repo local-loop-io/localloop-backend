@@ -52,4 +52,4 @@ GET list and search routes are the highest-value remaining cache-policy gaps fro
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `57f3531` | implementation | yes |
-| `localloop-backend` | (pending) | plan close (HEAD) | — |
+| `localloop-backend` | `ec5c827` | plan close (HEAD) | yes (`origin/main`) |
