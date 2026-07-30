@@ -53,4 +53,5 @@ Complements cycle 0021 fail-closed guards. Bearer mode is the only remaining aut
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | `b836bb9` | implementation | pending |
+| `localloop-backend` | `b836bb9` | implementation | yes |
+| `localloop-backend` | `3353b12` | plan close (HEAD) | yes (`origin/main`) |
