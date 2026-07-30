@@ -1,6 +1,7 @@
-import { afterAll, describe, expect, it, mock } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import Fastify from 'fastify';
 import type { EvidenceEntry } from '../src/db/evidence';
+import { registerEvidenceRoutes } from '../src/routes/evidence';
 
 const sampleEntry: EvidenceEntry = {
   event_id: 'evt_cache_test_0000000000000001',
@@ -26,23 +27,14 @@ const sampleEntry: EvidenceEntry = {
 
 const listResult = { results: [sampleEntry], next_cursor: undefined };
 
-const realEvidenceModule = await import('../src/db/evidence');
-
-mock.module('../src/db/evidence', () => ({
-  getLoopEvidenceByEventId: async (eventId: string) =>
-    (eventId === sampleEntry.event_id ? sampleEntry : undefined),
-  listLoopEvidence: async () => listResult,
-}));
-
-const { registerEvidenceRoutes } = await import('../src/routes/evidence');
-
-afterAll(() => {
-  mock.module('../src/db/evidence', () => realEvidenceModule);
-});
-
 const buildApp = async () => {
   const app = Fastify({ logger: false });
-  await registerEvidenceRoutes(app);
+  const deps = {
+    getLoopEvidenceByEventId: async (eventId: string) =>
+      (eventId === sampleEntry.event_id ? sampleEntry : undefined),
+    listLoopEvidence: async () => listResult,
+  };
+  await registerEvidenceRoutes(app, deps);
   return app;
 };
 

@@ -41,7 +41,20 @@ type EvidenceListQuery = {
   cursor?: string;
 };
 
-async function runList(query: EvidenceListQuery) {
+type EvidenceDeps = {
+  getLoopEvidenceByEventId: typeof getLoopEvidenceByEventId;
+  listLoopEvidence: typeof listLoopEvidence;
+};
+
+const defaultDeps: EvidenceDeps = {
+  getLoopEvidenceByEventId,
+  listLoopEvidence,
+};
+
+async function runList(
+  query: EvidenceListQuery,
+  listEvidence: EvidenceDeps['listLoopEvidence'],
+) {
   if (query.subject_type !== undefined && !isSubjectType(query.subject_type)) {
     throw new CoreDpError('invalid_request', `Unknown subject_type '${query.subject_type}'`);
   }
@@ -55,7 +68,7 @@ async function runList(query: EvidenceListQuery) {
 
   const limit = Math.min(Math.max(query.limit ?? 20, 1), 100);
 
-  return listLoopEvidence({
+  return listEvidence({
     subjectType: query.subject_type,
     subjectId: query.subject_id,
     eventTypeIn: query.event_type_in,
@@ -65,7 +78,10 @@ async function runList(query: EvidenceListQuery) {
   });
 }
 
-export async function registerEvidenceRoutes(app: FastifyInstance) {
+export async function registerEvidenceRoutes(
+  app: FastifyInstance,
+  deps: EvidenceDeps = defaultDeps,
+) {
   app.addHook('onRequest', async (_req, reply) => { setNoStore(reply); });
 
   app.get('/api/v1/evidence/:event_id', {
@@ -76,7 +92,7 @@ export async function registerEvidenceRoutes(app: FastifyInstance) {
     }
 
     const { event_id } = request.params as { event_id: string };
-    const entry = await getLoopEvidenceByEventId(event_id);
+    const entry = await deps.getLoopEvidenceByEventId(event_id);
     if (!entry) {
       sendCoreDpError(reply, new CoreDpError('not_found', `No evidence entry with event_id '${event_id}'`));
       return;
@@ -121,7 +137,7 @@ export async function registerEvidenceRoutes(app: FastifyInstance) {
         since: q.since,
         limit: q.limit,
         cursor: q.cursor,
-      });
+      }, deps.listLoopEvidence);
       reply.send(result);
     } catch (error) {
       sendCoreDpError(reply, toCoreDpError(error));
@@ -152,7 +168,7 @@ export async function registerEvidenceRoutes(app: FastifyInstance) {
     const body = request.body as EvidenceListQuery;
 
     try {
-      const result = await runList(body);
+      const result = await runList(body, deps.listLoopEvidence);
       reply.send(result);
     } catch (error) {
       sendCoreDpError(reply, toCoreDpError(error));
