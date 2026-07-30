@@ -1,7 +1,7 @@
 # Micro-sprint plan 0020 — align README test command with CONTRIBUTING
 
 ## Status
-IN_PROGRESS
+COMPLETED
 
 ## Cycle
 20
@@ -25,7 +25,7 @@ Direct follow-up from cycle 0019 closes the test-isolation docs loop. Docs-only;
 
 ## Implementation
 1. `README.md` — quickstart: `bun run test` instead of `bun test`
-2. `README.md` — one-line note: see CONTRIBUTING.md Testing for isolation guidance
+2. `README.md` — inline comment points to CONTRIBUTING.md Testing section
 
 ## Repositories
 | Repo | Role |
@@ -34,19 +34,23 @@ Direct follow-up from cycle 0019 closes the test-isolation docs loop. Docs-only;
 
 ## Verification
 - No broken internal links in edited files
-- `bun run test` — pass (sanity check)
+- `bun run test` — 217 pass
 
 ## Deploy order
 1. `localloop-backend` only (docs-only changes)
 
 ## RSI learning
-(pending)
+- Test-isolation documentation is only complete when every contributor entry point (README quickstart, CONTRIBUTING, package.json script) agrees on `bun run test`; bare `bun test` in README was the last mismatch.
+- Conformance gate green at cycle 0020; cycle 0025 org-wide rescan is the next scheduled drift checkpoint — no action needed until then unless functional defects surface.
 
 ## Gaps for next cycle
-(pending)
+- Explore functional defects or higher-value items (ETag/Last-Modified on federation/nodes, federation signature verification lab notes).
+- Docs routes (`/openapi.json`, `/docs`) cache policy undecided — skip unless clear win.
+- Parent workspace docs (CLAUDE.md, AGENTS.md) still show bare `bun test` in backend dev commands — out of localloop-backend scope unless org-wide docs sync is requested.
+- Cycle 0025 triggers org-wide rescan; note conformance status is green pre-rescan.
 
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | — | implementation | — |
+| `localloop-backend` | `b419a61` | implementation | yes |
 | `localloop-backend` | — | plan close (HEAD) | — |
