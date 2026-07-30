@@ -26,24 +26,35 @@ This invokes `bun test --isolate` (see `package.json`). Per-file isolation
 is required because Bun's default runner shares module state across test
 files.
 
-### `mock.module` tests
+### Route deps injection (preferred)
 
-When stubbing a module with `mock.module`, register the mock at file scope
-and restore the real module in `afterAll`:
+For route-level tests that need to stub DB or side-effect calls, pass an
+optional deps object to the route registrar instead of using `mock.module`.
+Production defaults are unchanged when deps are omitted.
 
 ```typescript
-const realModule = await import('../src/db/evidence');
-
-mock.module('../src/db/evidence', () => ({ /* stubs */ }));
-
-afterAll(() => {
-  mock.module('../src/db/evidence', () => realModule);
-});
+const deps = {
+  getLoopEvidenceByEventId: async (eventId: string) =>
+    (eventId === sampleEntry.event_id ? sampleEntry : undefined),
+  listLoopEvidence: async () => listResult,
+};
+await registerEvidenceRoutes(app, deps);
 ```
 
-See `tests/evidence.cache.headers.test.ts` for the canonical pattern.
-`afterAll` restore alone is not enough without `--isolate`; another file
-that imports the same module would still see the mock.
+See `tests/evidence.cache.headers.test.ts` and
+`tests/transactions.cache.headers.test.ts` for the canonical pattern.
+All cache-header route tests use deps injection; the test suite has no
+`mock.module` registrations (audited cycle 0034).
+
+### `mock.module` (avoid)
+
+Do not add new `mock.module` stubs for route tests — they leak across test
+files even with `afterAll` restore when another file imports the same module
+before restore runs. Prefer route deps injection above.
+
+If you must mock a non-route module, register at file scope and restore in
+`afterAll`, and rely on `bun test --isolate` (see `package.json`). Document
+why deps injection is not viable.
 
 ### Metrics assertions
 
