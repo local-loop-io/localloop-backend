@@ -1,7 +1,7 @@
 # Micro-sprint plan 0015 — health 503 cache header tests
 
 ## Status
-IN PROGRESS
+COMPLETED
 
 ## Cycle
 15
@@ -46,13 +46,18 @@ Distinct error-path behavior not covered by the 200 test. Degraded health must n
 1. `localloop-backend` only (test + import refactor)
 
 ## RSI learning
-- (pending ship)
+- Health cache tests must cover both 200 and 503 paths; load balancers treat status codes independently and a cached 503 can mask recovery (or a cached 200 can mask degradation).
+- Inline `reply.header('Cache-Control', 'no-store')` on health/metrics/auth/privacy remains; health migrated to shared `setNoStore` as a template for future consolidation without behavior change.
+- Cache header theme is closed for lab route plugins; next cycles should pivot to functional defects, docs drift, or conformance gaps per LEDGER guidance.
 
 ## Gaps for next cycle
-- (pending ship)
+- Consider consolidating metrics/auth/privacy inline Cache-Control to `setNoStore` helper (maintainability, zero behavior change).
+- ETag or `Last-Modified` on federation/nodes if short public cache becomes desirable.
+- Docs routes (`/openapi.json`, `/docs`) cache policy undecided — functional item if spec UI caching is desired.
+- GET-by-id loop cache tests remain optional (same loop hook already covered 15 times).
 
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | (pending) | implementation | — |
+| `localloop-backend` | `81521af` | implementation | yes |
 | `localloop-backend` | (pending) | plan close | — |
