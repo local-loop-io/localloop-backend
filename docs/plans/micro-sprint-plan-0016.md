@@ -60,4 +60,4 @@ Zero behavior change; improves maintainability and completes the httpCache conso
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `0691dcc` | implementation | yes |
-| `localloop-backend` | (pending) | plan close (HEAD) | pending |
+| `localloop-backend` | `98f18fa` | plan close (HEAD) | yes (`origin/main`) |
