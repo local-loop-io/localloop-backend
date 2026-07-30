@@ -64,4 +64,4 @@ without touching aggregate-docs or CI; zero functional risk.
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | _(pending)_ | implementation + plan | pending |
+| `localloop-backend` | `aaeb85f` | implementation + plan | yes |
