@@ -68,4 +68,4 @@ zero functional risk; aligns published audit snapshots with canonical source.
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-site` | `9249ced` | mirror sync | yes |
-| `localloop-backend` | — | plan close | — |
+| `localloop-backend` | `f577709` | plan close | yes |
