@@ -57,4 +57,4 @@ Broken tests block CI signal. Four failures are deterministic cross-file polluti
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `8294d4e` | implementation | yes |
-| `localloop-backend` | `117b179` | plan close (HEAD) | pending |
+| `localloop-backend` | `31e7956` | plan close (HEAD) | yes (`origin/main`) |
