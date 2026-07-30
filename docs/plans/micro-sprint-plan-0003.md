@@ -51,4 +51,4 @@ Security-sensitive write responses must not be cached by intermediaries. Product
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `09cf681` | implementation | yes |
-| `localloop-backend` | (pending) | plan close (HEAD) | pending |
+| `localloop-backend` | `96f5816` | plan close (HEAD) | yes (`origin/main`) |
