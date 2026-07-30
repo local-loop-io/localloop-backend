@@ -1,7 +1,7 @@
 # Micro-sprint plan 0029 — Payments 503 §8.3 envelope regression guard
 
 ## Status
-IN PROGRESS
+COMPLETED
 
 ## Cycle
 29
@@ -37,19 +37,28 @@ only checked HTTP status. Prevents accidental regression to legacy error shapes.
 | `localloop-backend` | Tests + plan |
 
 ## Verification
-- `bun test tests/payments.routes.test.ts`
-- `bun run typecheck`
-- `bun run test`
+- `bun test tests/payments.routes.test.ts` — 5 pass, 0 fail (1 new test)
+- `bun run typecheck` — pass
+- `bun run test` — 236 pass, 0 fail
 
 ## Deploy order
 1. `localloop-backend` only (test-only changes)
 
+## RSI learning
+- P1 429/503 sweep: SSE 429 envelopes were already guarded; health 503 uses a
+  bespoke degraded schema and is not a §8.3 surface.
+- Payment disabled paths were the only lab routes emitting spec envelope on 503
+  without route-level envelope assertions.
+- Webhook disabled path had no test at all — added alongside intent envelope guard.
+
 ## Gaps for cycle 0030
 - **P3** — loop-protocol audit docs: historical `localloop.github.io` path refs
+  (12 hits across 5 audit files)
 - **P1 alt** — apiKey 503 unit test when enabled but no key configured
 - **Skip** — ETag on federation/nodes; docs cache policy; org root docs
+- **Cycle 0050** = next mandatory org rescan
 
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| (pending) | | | |
+| `localloop-backend` | `4227691` | implementation + plan | pending |
