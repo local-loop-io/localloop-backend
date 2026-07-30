@@ -56,4 +56,4 @@ Missing test coverage for an existing, correct behavior. Smallest independently 
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `6899f3c` | implementation | yes |
-| `localloop-backend` | (pending) | plan close (HEAD) | pending |
+| `localloop-backend` | `ef67482` | plan close (HEAD) | yes (`origin/main`) |
