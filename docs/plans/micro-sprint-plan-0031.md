@@ -57,4 +57,4 @@ to 401 or legacy error shapes on the misconfiguration path.
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | _(pending)_ | implementation + plan close | pending |
+| `localloop-backend` | `a4d26bf` | implementation + plan close (HEAD) | yes |
