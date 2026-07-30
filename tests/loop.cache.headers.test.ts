@@ -176,6 +176,10 @@ describe('loop read and search routes Cache-Control', () => {
   it.each([
     ['GET', '/api/v1/material', undefined, 200],
     ['GET', '/api/v1/events', undefined, 200],
+    ['GET', '/api/v1/product', undefined, 200],
+    ['GET', '/api/v1/offer', undefined, 200],
+    ['GET', '/api/v1/match', undefined, 200],
+    ['GET', '/api/v1/transfer', undefined, 200],
     ['POST', '/api/v1/material/search', { limit: 10 }, 200],
     ['POST', '/api/v1/product/search', { limit: 10 }, 200],
   ] as const)('returns no-store on %s %s', async (method, url, payload, expectedStatus) => {
