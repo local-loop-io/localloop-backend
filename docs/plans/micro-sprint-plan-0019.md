@@ -53,4 +53,5 @@ Direct follow-up from cycle 0018. Prevents future contributors from reintroducin
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | `2fd5e14` | implementation | pending |
+| `localloop-backend` | `2fd5e14` | implementation | yes |
+| `localloop-backend` | `c6fab85` | plan close (HEAD) | yes (`origin/main`) |
