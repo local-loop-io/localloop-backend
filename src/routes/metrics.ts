@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { setNoStore } from '../httpCache';
 import { getMetricsSnapshot } from '../metrics';
 
 export async function registerMetricsRoutes(app: FastifyInstance) {
@@ -17,7 +18,7 @@ export async function registerMetricsRoutes(app: FastifyInstance) {
       },
     },
   }, async (_request, reply) => {
-    reply.header('Cache-Control', 'no-store');
+    setNoStore(reply);
     return getMetricsSnapshot();
   });
 }

@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { setNoStore } from '../httpCache';
 
 const privacyPayload = {
   scope: 'Lab demo only',
@@ -27,7 +28,7 @@ export async function registerPrivacyRoutes(app: FastifyInstance) {
       },
     },
   }, async (_request, reply) => {
-    reply.header('Cache-Control', 'no-store');
+    setNoStore(reply);
     return privacyPayload;
   });
 }

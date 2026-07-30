@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import { config } from '../config';
 import { auth } from '../auth';
+import { config } from '../config';
+import { setNoStore } from '../httpCache';
 
 export async function registerAuthStatusRoutes(app: FastifyInstance) {
   app.get('/api/auth/status', {
@@ -19,7 +20,7 @@ export async function registerAuthStatusRoutes(app: FastifyInstance) {
       },
     },
   }, async (_request, reply) => {
-    reply.header('Cache-Control', 'no-store');
+    setNoStore(reply);
     const active = Boolean(auth);
     return {
       enabled: config.auth.enabled,
