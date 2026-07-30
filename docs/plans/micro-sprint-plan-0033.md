@@ -66,4 +66,4 @@ suite with minimal production surface (optional deps param, default unchanged).
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `07b75c1` | implementation | yes |
-| `localloop-backend` | (pending close) | plan close (HEAD) | |
+| `localloop-backend` | `f0f6d42` | plan close (HEAD) | yes |
