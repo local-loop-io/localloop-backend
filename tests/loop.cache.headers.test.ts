@@ -54,6 +54,20 @@ const transferPayload = {
   received_at: '2025-06-02T18:00:00Z',
 };
 
+const materialStatusPayload = {
+  '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
+  '@type': 'MaterialStatusUpdate',
+  schema_version: '0.1.1',
+  id: '3c9a6a0b-8c1a-4d3f-9c2c-3c1c2f9d5c2a',
+  material_id: materialPayload.id,
+  status: 'reserved',
+  updated_at: '2025-06-03T09:15:00Z',
+  reason: 'Reserved by city exchange',
+  notes: 'Holding until pickup is confirmed',
+  source_node: 'lab-hub.loop',
+  metadata: { ticket: 'LAB-42' },
+};
+
 const eventFor = (type: string, entity: string, entity_id: string, data: unknown) => ({
   type,
   entity,
@@ -121,6 +135,7 @@ describe('loop write routes Cache-Control', () => {
     ['/api/v1/offer', offerPayload],
     ['/api/v1/match', matchPayload],
     ['/api/v1/transfer', transferPayload],
+    ['/api/v1/material-status', materialStatusPayload],
   ])('returns no-store on POST %s', async (url, payload) => {
     const app = await buildApp();
     const response = await app.inject({ method: 'POST', url, payload });
