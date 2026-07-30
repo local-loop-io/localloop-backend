@@ -58,4 +58,4 @@ Zero behavior change; closes the last inline Cache-Control pattern and completes
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `ecff4cc` | implementation | yes |
-| `localloop-backend` | (pending) | plan close (HEAD) | — |
+| `localloop-backend` | `451b80a` | plan close (HEAD) | yes (`origin/main`) |
