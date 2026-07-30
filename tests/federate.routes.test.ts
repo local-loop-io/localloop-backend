@@ -100,6 +100,44 @@ describe('POST /api/v1/federate/announce', () => {
   });
 });
 
+describe('X-Node-Signature lab boundary (presence-only, SPEC-COMPLIANCE §9.2)', () => {
+  const garbageSignatureHeaders = () => ({
+    ...nodeHeaders(),
+    'x-node-signature': 'intentionally-invalid-not-cryptographically-verified',
+  });
+
+  it('accepts any non-empty X-Node-Signature on announce (no crypto verification)', async () => {
+    const { app, deps, events } = buildApp();
+    await registerFederateRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/federate/announce',
+      headers: garbageSignatureHeaders(),
+      payload: announcementPayload,
+    });
+    expect(response.statusCode).toBe(202);
+    expect(response.json().status).toBe('accepted');
+    expect(events.length).toBe(1);
+  });
+
+  it('accepts any non-empty X-Node-Signature on offer (no crypto verification)', async () => {
+    const { app, deps, events } = buildApp();
+    await registerFederateRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/federate/offer',
+      headers: garbageSignatureHeaders(),
+      payload: offerPayload,
+    });
+    expect(response.statusCode).toBe(202);
+    expect(response.json().status).toBe('accepted');
+    expect(events.length).toBe(1);
+    expect(events[0].event_type).toBe('federation.offer_received');
+  });
+});
+
 describe('POST /api/v1/federate/offer', () => {
   it('accepts an inbound MaterialOffer for a locally hosted material', async () => {
     const { app, deps, events } = buildApp();
