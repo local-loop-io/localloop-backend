@@ -62,4 +62,4 @@ or wrong status codes on the auth-disabled path.
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `87ef5d2` | implementation | yes |
-| `localloop-backend` | (pending) | plan close (HEAD) | pending |
+| `localloop-backend` | `0ab34d6` | plan close (HEAD) | yes |
