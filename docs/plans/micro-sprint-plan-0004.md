@@ -50,4 +50,4 @@ SSE streams require `no-cache` (not `no-store`) so intermediaries revalidate whi
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `714cd47` | implementation | yes |
-| `localloop-backend` | (pending) | plan close (HEAD) | — |
+| `localloop-backend` | `3514478` | plan close (HEAD) | yes (`origin/main`) |
