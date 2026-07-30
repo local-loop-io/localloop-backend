@@ -64,4 +64,4 @@ closes deferred P3 from cycles 0025–0029.
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `loop-protocol` | `2f524ed` | implementation | yes |
-| `localloop-backend` | (pending) | plan close (HEAD) | pending |
+| `localloop-backend` | `f73d296` | plan close (HEAD) | yes |
