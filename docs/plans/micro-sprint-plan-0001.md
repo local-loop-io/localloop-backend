@@ -50,6 +50,7 @@ Maintainability + spec alignment (public node metadata should be cacheable like 
 - LEDGER backlog: prefer highest-value explore→select over hygiene stamps; capture contemporaneous deploy artifacts.
 
 ## Commit SHAs
-| Repo | Local | Remote verified |
-|------|-------|-----------------|
-| `localloop-backend` | `3074ba0` (implementation) | pending push |
+| Repo | Commit | Role | Remote verified |
+|------|--------|------|-------------------|
+| `localloop-backend` | `3074ba0` | implementation | yes |
+| `localloop-backend` | `816d05d` | plan close (HEAD) | yes (`origin/main`) |
