@@ -23,6 +23,25 @@ const makeReply = () => {
 };
 
 describe('loop stream', () => {
+  it('sets Cache-Control: no-cache for SSE', async () => {
+    const { config } = await import('../src/config');
+    const { registerLoopStream } = await import('../src/realtime/loopStream');
+    const previousKeepAlive = config.sseKeepAliveMs;
+    config.sseKeepAliveMs = 0;
+
+    const reply = makeReply();
+    const request = {
+      headers: {},
+      raw: { on: () => undefined },
+    } as any;
+
+    registerLoopStream(request, reply as any);
+
+    expect(reply.getStatus()).toBe(200);
+    expect(reply.getHeaders()['Cache-Control']).toBe('no-cache');
+    config.sseKeepAliveMs = previousKeepAlive;
+  });
+
   it('adds CORS headers for allowed origins', async () => {
     const { config } = await import('../src/config');
     const { registerLoopStream } = await import('../src/realtime/loopStream');
