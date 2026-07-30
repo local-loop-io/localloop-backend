@@ -60,4 +60,4 @@ Distinct error-path behavior not covered by the 200 test. Degraded health must n
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `81521af` | implementation | yes |
-| `localloop-backend` | (pending) | plan close | — |
+| `localloop-backend` | `5f889fb` | plan close (HEAD) | yes (`origin/main`) |
