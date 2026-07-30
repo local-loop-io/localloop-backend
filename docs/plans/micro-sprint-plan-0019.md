@@ -1,7 +1,7 @@
 # Micro-sprint plan 0019 — document test isolation guidance
 
 ## Status
-IN_PROGRESS
+COMPLETED
 
 ## Cycle
 19
@@ -42,10 +42,15 @@ Direct follow-up from cycle 0018. Prevents future contributors from reintroducin
 1. `localloop-backend` only (docs-only changes)
 
 ## RSI learning
-(pending cycle close)
+- Test isolation fixes are incomplete without contributor docs; cycle 0018's `--isolate` change needs explicit guidance so new `mock.module` tests do not regress the suite.
+- CONTRIBUTING.md is the right home for Bun-specific test patterns; README quickstart can stay minimal (`bun run test` is enough there once package.json owns the flag).
 
 ## Gaps for next cycle
-(pending cycle close)
+- Explore functional defects or docs/conformance drift elsewhere (cache theme closed; test isolation theme closed).
+- Docs routes (`/openapi.json`, `/docs`) cache policy undecided — skip unless clear win.
+- README quickstart still shows bare `bun test`; optional one-line note pointing to CONTRIBUTING if contributors bypass `bun run test`.
 
 ## Commit SHAs
-(pending)
+| Repo | Commit | Role | Remote verified |
+|------|--------|------|-----------------|
+| `localloop-backend` | `2fd5e14` | implementation | pending |
