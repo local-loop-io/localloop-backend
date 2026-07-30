@@ -100,6 +100,72 @@ describe('POST /api/v1/federate/announce', () => {
   });
 });
 
+describe('§9.2 empty header rejection (SPEC-COMPLIANCE §9.2)', () => {
+  it('rejects empty X-Node-Signature on announce with §8.3 envelope', async () => {
+    const { app, deps } = buildApp();
+    await registerFederateRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/federate/announce',
+      headers: { ...nodeHeaders(), 'x-node-signature': '' },
+      payload: announcementPayload,
+    });
+    expect(response.statusCode).toBe(401);
+    const body = response.json();
+    expect(body.error.code).toBe('UNAUTHORIZED');
+    expect(typeof body.error.message).toBe('string');
+  });
+
+  it('rejects whitespace-only X-Node-Signature on announce with §8.3 envelope', async () => {
+    const { app, deps } = buildApp();
+    await registerFederateRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/federate/announce',
+      headers: { ...nodeHeaders(), 'x-node-signature': '   ' },
+      payload: announcementPayload,
+    });
+    expect(response.statusCode).toBe(401);
+    const body = response.json();
+    expect(body.error.code).toBe('UNAUTHORIZED');
+    expect(typeof body.error.message).toBe('string');
+  });
+
+  it('rejects empty X-Node-Signature on offer with §8.3 envelope', async () => {
+    const { app, deps } = buildApp();
+    await registerFederateRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/federate/offer',
+      headers: { ...nodeHeaders(), 'x-node-signature': '' },
+      payload: offerPayload,
+    });
+    expect(response.statusCode).toBe(401);
+    const body = response.json();
+    expect(body.error.code).toBe('UNAUTHORIZED');
+    expect(typeof body.error.message).toBe('string');
+  });
+
+  it('rejects whitespace-only X-Node-Signature on offer with §8.3 envelope', async () => {
+    const { app, deps } = buildApp();
+    await registerFederateRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/federate/offer',
+      headers: { ...nodeHeaders(), 'x-node-signature': '   ' },
+      payload: offerPayload,
+    });
+    expect(response.statusCode).toBe(401);
+    const body = response.json();
+    expect(body.error.code).toBe('UNAUTHORIZED');
+    expect(typeof body.error.message).toBe('string');
+  });
+});
+
 describe('X-Node-Signature lab boundary (presence-only, SPEC-COMPLIANCE §9.2)', () => {
   const garbageSignatureHeaders = () => ({
     ...nodeHeaders(),
