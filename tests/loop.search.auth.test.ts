@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'bun:test';
+import { afterEach, describe, expect, it } from 'bun:test';
 import Fastify from 'fastify';
+import { config } from '../src/config';
 import { registerLoopProtocolParsers } from '../src/protocol';
 import { registerLoopSchemas } from '../src/schemas/loopSchemas';
 import { registerLoopRoutes } from '../src/routes/loop';
@@ -45,6 +46,16 @@ async function buildApp() {
 }
 
 describe('Core-DP search auth guards', () => {
+  const original = {
+    enabled: config.auth.apiKeyEnabled,
+    key: config.auth.apiKey,
+  };
+
+  afterEach(() => {
+    config.auth.apiKeyEnabled = original.enabled;
+    config.auth.apiKey = original.key;
+  });
+
   it.each([
     ['POST', '/api/v1/material/search'],
     ['POST', '/api/v1/product/search'],
@@ -75,5 +86,23 @@ describe('Core-DP search auth guards', () => {
     const body = response.json();
     expect(body.code).toBe('invalid_request');
     expect(body.message).toMatch(/node-signature.*not implemented/i);
+  });
+
+  it.each([
+    ['POST', '/api/v1/material/search'],
+    ['POST', '/api/v1/product/search'],
+  ] as const)('%s %s rejects bearer auth without API key before search runs', async (_method, url) => {
+    config.auth.apiKeyEnabled = true;
+    config.auth.apiKey = 'secret';
+
+    const app = await buildApp();
+    const response = await app.inject({
+      method: 'POST',
+      url,
+      payload: { limit: 10, auth: { mode: 'bearer' } },
+    });
+    expect(response.statusCode).toBe(401);
+    const body = response.json();
+    expect(body.error.code).toBe('UNAUTHORIZED');
   });
 });
