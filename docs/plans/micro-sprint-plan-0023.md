@@ -60,4 +60,4 @@ Cycle 0021–0022 established test coverage for search auth guards; cycle 0022 g
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `f02cd86` | implementation | yes |
-| `localloop-backend` | (pending) | plan close (HEAD) | — |
+| `localloop-backend` | `b622837` | plan close (HEAD) | yes (`origin/main`) |
