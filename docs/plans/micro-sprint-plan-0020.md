@@ -53,4 +53,4 @@ Direct follow-up from cycle 0019 closes the test-isolation docs loop. Docs-only;
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `b419a61` | implementation | yes |
-| `localloop-backend` | — | plan close (HEAD) | — |
+| `localloop-backend` | `d5ce186` | plan close (HEAD) | yes (`origin/main`) |
