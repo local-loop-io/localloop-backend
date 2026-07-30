@@ -46,6 +46,27 @@ describe('payment routes', () => {
     });
 
     expect(response.statusCode).toBe(503);
+    const body = response.json();
+    expect(body.error.code).toBe('INTERNAL_ERROR');
+    expect(typeof body.error.message).toBe('string');
+    expect(body.error.message).toBe('Payments are disabled');
+  });
+
+  it('blocks webhook when payments are disabled', async () => {
+    const { app, deps, enabled } = buildApp(false);
+    await registerPaymentRoutes(app, deps, enabled);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/payments/webhook?provider=test',
+      payload: { event: 'payment.test' },
+    });
+
+    expect(response.statusCode).toBe(503);
+    const body = response.json();
+    expect(body.error.code).toBe('INTERNAL_ERROR');
+    expect(typeof body.error.message).toBe('string');
+    expect(body.error.message).toBe('Payments are disabled');
   });
 
   it('accepts valid payment intent when enabled', async () => {
