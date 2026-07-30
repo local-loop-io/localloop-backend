@@ -49,5 +49,5 @@ Material-status is a lab write route excluded from the original four-route batch
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | `3118be8` | implementation | pending |
-| `localloop-backend` | (plan close) | plan close | pending |
+| `localloop-backend` | `3118be8` | implementation | yes |
+| `localloop-backend` | `0834ecc` | plan close (HEAD) | yes (`origin/main`) |
