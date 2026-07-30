@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import IORedis from 'ioredis';
 import { config } from '../config';
+import { setNoStore } from '../httpCache';
 import { pool } from '../db/pool';
 
 export type RedisHealth = 'ok' | 'error' | 'skipped';
@@ -105,7 +106,7 @@ export async function registerHealthRoutes(
       version: PACKAGE_VERSION,
     };
 
-    reply.header('Cache-Control', 'no-store');
+    setNoStore(reply);
     if (!healthy) {
       reply.code(503);
     }

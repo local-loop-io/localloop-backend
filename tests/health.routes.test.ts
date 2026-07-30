@@ -47,6 +47,7 @@ describe('GET /health', () => {
     expect(body.status).toBe('degraded');
     expect(body.db).toBe('error');
     expect(body.redis).toBe('ok');
+    expect(response.headers['cache-control']).toBe('no-store');
   });
 
   it('returns 503 when redis probe fails', async () => {
@@ -59,5 +60,6 @@ describe('GET /health', () => {
     expect(body.status).toBe('degraded');
     expect(body.db).toBe('ok');
     expect(body.redis).toBe('error');
+    expect(response.headers['cache-control']).toBe('no-store');
   });
 });
