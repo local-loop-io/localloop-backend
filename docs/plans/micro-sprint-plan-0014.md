@@ -58,4 +58,4 @@ Evidence plugin has its own `onRequest` no-store hook; append-only audit log res
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `8251dca` | implementation | yes |
-| `localloop-backend` | (pending) | plan close (HEAD) | yes (`origin/main`) |
+| `localloop-backend` | `3423720` | plan close (HEAD) | yes (`origin/main`) |
