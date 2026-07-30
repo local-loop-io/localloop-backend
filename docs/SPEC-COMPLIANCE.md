@@ -31,8 +31,27 @@ end-to-end against the running lab node", not production readiness.
 | Header | Requirement | Status |
 | --- | --- | --- |
 | `X-Node-ID` | MUST | ✅ Required on `/api/v1/federate/*` |
-| `X-Node-Signature` | MUST | ⚠️ Presence required; cryptographic verification NOT implemented in the lab (Core-DP signed-envelope profile covers verification separately) |
+| `X-Node-Signature` | MUST | ⚠️ Presence required; cryptographic verification NOT implemented in the lab (see boundary table below) |
 | `X-Timestamp` | MUST (±5 min) | ✅ Required; stale/invalid timestamps rejected |
+
+### X-Node-Signature lab boundary
+
+SPEC §9.2 requires `X-Node-Signature` on node-to-node requests. This lab
+preview enforces header **presence** (non-empty string) and `X-Timestamp`
+freshness (±5 minutes) on `/api/v1/federate/*`, but does **not**
+cryptographically verify the signature value. Any non-empty string is
+accepted (tests use `lab-signature-placeholder`; see `requireNodeHeaders`
+in `src/routes/federate.ts`).
+
+| Surface | Verification | Status |
+| --- | --- | --- |
+| `POST /api/v1/federate/announce`, `POST /api/v1/federate/offer` | Presence + timestamp only; no Ed25519/HMAC check on header value | ⚠️ Intentional lab boundary |
+| Core-DP signed envelope (`src/envelope.ts`) | Full detached Ed25519 verification against trust store | ✅ Implemented (separate profile; not wired to §9.2 headers) |
+| Core-DP search `auth.mode: node-signature` | Rejected before search runs (`invalid_request`; no verification attempted) | ✅ Fail-closed |
+| `POST /api/v1/federation/handshake` | Lab-only registry route; §9.2 headers not required (API key only) | ✅ Lab-only extension |
+
+This is not a compliance gap for the lab demo: conformance checks route
+presence and timestamp behavior, not production-grade node authentication.
 
 ## §8.3 error envelope
 
@@ -71,4 +90,4 @@ end-to-end against the running lab node", not production readiness.
 - No cross-node search (Core-DP `scope: "cross-node"` rejected).
 - No LoopCoin wallet/settlement engine; transactions are recorded, not executed.
 - Signal governance (LoopVote) is out of scope; signals are seeded, not voted.
-- Federation signature verification (see §9.2 table above).
+- Federation `X-Node-Signature` verification (see §9.2 boundary table above).
