@@ -69,4 +69,4 @@ presence check.
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `55d67dd` | implementation | yes |
-| `localloop-backend` | TBD | plan close (HEAD) | TBD |
+| `localloop-backend` | `a92a477` | plan close (HEAD) | yes |
