@@ -1,4 +1,4 @@
-import { setNoStore } from '../httpCache';
+import { setNoStore, setPublicShortCache } from '../httpCache';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../config';
 import { incrementMetric } from '../metrics';
@@ -76,8 +76,6 @@ const defaultDeps: FederationDeps = {
 };
 
 export async function registerFederationRoutes(app: FastifyInstance, deps: FederationDeps = defaultDeps) {
-  app.addHook('onRequest', async (_req, reply) => { setNoStore(reply); });
-
   registerFederationSchemas(app);
 
   app.get('/api/v1/node/info', {
@@ -86,7 +84,8 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
         200: nodeInfoResponseSchema,
       },
     },
-  }, async () => {
+  }, async (_request, reply) => {
+    setPublicShortCache(reply, 30);
     const local = deps.getLocalNode();
     return {
       '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
@@ -108,7 +107,8 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
         200: listResponseSchema,
       },
     },
-  }, async () => {
+  }, async (_request, reply) => {
+    setNoStore(reply);
     return {
       lab_only: true,
       updated_at: new Date().toISOString(),
@@ -127,6 +127,7 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
       },
     },
   }, async (request, reply) => {
+    setNoStore(reply);
     if (!requireApiKey(request, reply)) {
       return;
     }
