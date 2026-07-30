@@ -64,4 +64,19 @@ describe('api key guard', () => {
     const request = { headers: { authorization: 'Bearer secret' } } as any;
     expect(requireApiKey(request, reply as any)).toBe(true);
   });
+
+  it('returns 503 §8.3 envelope when enabled but no key configured', () => {
+    config.auth.apiKeyEnabled = true;
+    config.auth.apiKey = undefined;
+
+    const reply = makeReply();
+    const request = { headers: { 'x-api-key': 'any' } } as any;
+    expect(requireApiKey(request, reply as any)).toBe(false);
+    expect(reply.statusCode).toBe(503);
+    const body = reply.payload as { error: { code: string; message: string } };
+    expect(body.error.code).toBe('INTERNAL_ERROR');
+    expect(body.error.message).toBe(
+      'API key protection is enabled but no API_KEY is configured',
+    );
+  });
 });
