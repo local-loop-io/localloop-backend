@@ -1,7 +1,7 @@
 # Micro-sprint plan 0032 — auth disabled 503 envelope guard
 
 ## Status
-IN_PROGRESS
+COMPLETED
 
 ## Cycle
 32
@@ -46,11 +46,20 @@ or wrong status codes on the auth-disabled path.
 1. `localloop-backend` only (test-only changes)
 
 ## RSI learning
-- (fill after close)
+- Auth-disabled 503 completes the cycle 0029 non-canonical-status envelope sweep
+  for feature guards (payments → apiKey → auth); health 503 remains bespoke schema.
+- Unit test on `handleAuth` is sufficient — mirrors cycle 0031 apiKey pattern;
+  route-level buildServer inject would duplicate the same guard.
+- Default lab config keeps `auth` null; no config mutation needed in the test.
 
 ## Gaps for cycle 0033
-- (fill after close)
+- **P2** — ETag on federation/nodes; docs cache policy
+- **P3** — apiKey 401 §8.3 envelope on route-level write guards (optional)
+- **Skip** — route-level apiKey 503 duplicate; org root docs (not git-tracked)
+- **Cycle 0050** = next mandatory org rescan
 
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
+| `localloop-backend` | `87ef5d2` | implementation | yes |
+| `localloop-backend` | (pending) | plan close (HEAD) | pending |
