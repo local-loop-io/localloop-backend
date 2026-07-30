@@ -61,4 +61,5 @@ only checked HTTP status. Prevents accidental regression to legacy error shapes.
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | `4227691` | implementation + plan | pending |
+| `localloop-backend` | `4227691` | implementation | yes |
+| `localloop-backend` | `b3308a6` | plan close (HEAD) | yes |
