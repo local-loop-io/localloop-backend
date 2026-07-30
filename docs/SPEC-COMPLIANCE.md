@@ -79,7 +79,7 @@ presence and timestamp behavior, not production-grade node authentication.
 
 1. Backend schema copies drifting from `loop-protocol/schemas` (byte-compare).
 2. Docs-hub mirror (`localloop-site/public/projects/loop-protocol/`) drifting
-   from canonical schemas, contexts, `docs/`, `openapi.json`, or
+   from canonical schemas, contexts, `docs/`, `examples/`, `openapi.json`, or
    `SPECIFICATION.md`.
 3. Any `openapi.json` path+method missing from the built Fastify route table.
 
