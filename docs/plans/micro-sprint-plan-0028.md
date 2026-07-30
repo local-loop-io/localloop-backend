@@ -66,5 +66,5 @@ of the presence check.
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | TBD | implementation | pending |
-| `localloop-backend` | TBD | plan close (HEAD) | pending |
+| `localloop-backend` | `f50c566` | implementation | yes |
+| `localloop-backend` | `5026f67` | plan close (HEAD) | pending |
