@@ -51,4 +51,4 @@ These four GET list routes complete the lab demo entity read surface for cache-p
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `aa4cc97` | implementation | yes |
-| `localloop-backend` | (pending) | plan close (HEAD) | pending |
+| `localloop-backend` | `6d59030` | plan close (HEAD) | yes (`origin/main`) |
