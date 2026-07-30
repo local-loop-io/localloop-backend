@@ -1,7 +1,7 @@
 # Micro-sprint plan 0001 — node/info short public cache
 
 ## Status
-IN_PROGRESS
+COMPLETED
 
 ## Cycle
 1
@@ -41,10 +41,15 @@ Maintainability + spec alignment (public node metadata should be cacheable like 
 1. `localloop-backend` only (no protocol/site dependency)
 
 ## RSI learning
-_(filled at cycle close)_
+- Federation routes had a blanket `onRequest` no-store hook that prevented the documented node-info cache policy in `httpCache.ts`; per-route headers match the signals pattern and are easier to test in isolation.
+- Micro-sprint plan files belong in the control repo (`localloop-backend/docs/plans/`); org root is not a git repo.
 
 ## Gaps for next cycle
-_(filled at cycle close)_
+- Add cache header assertion for POST `/api/v1/federation/handshake` (no-store) in tests.
+- Consider whether `/api/v1/federation/nodes` could also use short public cache (currently dynamic `updated_at`).
+- LEDGER backlog: prefer highest-value explore→select over hygiene stamps; capture contemporaneous deploy artifacts.
 
 ## Commit SHAs
-_(filled at cycle close)_
+| Repo | Local | Remote verified |
+|------|-------|-----------------|
+| `localloop-backend` | `3074ba0` (implementation) | pending push |
