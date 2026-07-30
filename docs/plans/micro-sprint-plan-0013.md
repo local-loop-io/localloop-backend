@@ -58,4 +58,4 @@ Payments plugin has its own `onRequest` hook; write responses must not be cached
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `a807c74` | implementation | yes |
-| `localloop-backend` | pending | plan close (HEAD) | pending |
+| `localloop-backend` | `ffc4c56` | plan close (HEAD) | yes (`origin/main`) |
