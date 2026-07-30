@@ -56,4 +56,4 @@ Transactions plugin has its own `onRequest` hook; write and read responses must 
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `28aa118` | implementation | yes |
-| `localloop-backend` | (pending) | plan close (HEAD) | pending |
+| `localloop-backend` | `815981a` | plan close (HEAD) | yes (`origin/main`) |
