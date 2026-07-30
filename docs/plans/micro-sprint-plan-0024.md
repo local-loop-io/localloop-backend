@@ -59,4 +59,4 @@ Cycle 0023 gap explicitly called for this regression guard. Prevents accidental 
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `4c0a062` | implementation | yes |
-| `localloop-backend` | (pending) | plan close (HEAD) | — |
+| `localloop-backend` | b4daced | plan close (HEAD) | yes (`origin/main`) |
