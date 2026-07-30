@@ -1,7 +1,7 @@
 # Micro-sprint plan 0016 — consolidate setNoStore on utility routes
 
 ## Status
-IN_PROGRESS
+COMPLETED
 
 ## Cycle
 16
@@ -46,12 +46,18 @@ Zero behavior change; improves maintainability and completes the httpCache conso
 1. `localloop-backend` only (import refactor)
 
 ## RSI learning
-(pending cycle close)
+- Batch consolidation of identical one-line cache headers is safe when dedicated cache tests already exist per route; no test changes needed.
+- `interest.ts` retains conditional inline Cache-Control (checks existing header before setting) — different pattern, not a simple swap; defer unless hook refactor is planned.
+- All lab route plugins now use `setNoStore` or `setPublicShortCache` from `httpCache.ts`; inline Cache-Control theme is fully closed except interest conditional.
 
 ## Gaps for next cycle
-(pending cycle close)
+- Consider refactoring `interest.ts` conditional cache header to use `setNoStore` with existing-header guard in helper or hook.
+- ETag or `Last-Modified` on federation/nodes if short public cache becomes desirable.
+- Docs routes (`/openapi.json`, `/docs`) cache policy undecided — functional item if spec UI caching is desired.
+- GET-by-id loop cache tests remain optional (same loop hook already covered 15 times).
 
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| (pending) | | | |
+| `localloop-backend` | `0691dcc` | implementation | yes |
+| `localloop-backend` | (pending) | plan close (HEAD) | pending |
