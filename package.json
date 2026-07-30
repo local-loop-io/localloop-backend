@@ -16,7 +16,7 @@
     "dev": "bun run src/index.ts",
     "start": "bun run src/index.ts",
     "migrate": "bun run src/db/migrate.ts",
-    "test": "bun test",
+    "test": "bun test --isolate",
     "typecheck": "tsc --noEmit",
     "import:sqlite": "bun run scripts/import-sqlite.ts",
     "seed:lab": "bun run scripts/seed-lab.ts",
