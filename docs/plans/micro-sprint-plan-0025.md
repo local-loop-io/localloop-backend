@@ -114,4 +114,4 @@ Rescan discovered org profile agent docs still name the retired `localloop.githu
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `org-github-profile` | `3fca8a4` | implementation | TBD |
-| `localloop-backend` | TBD | plan close (HEAD) | TBD |
+| `localloop-backend` | `fb309e8` | plan close (HEAD) | TBD |
