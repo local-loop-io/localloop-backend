@@ -67,4 +67,4 @@ of the presence check.
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `f50c566` | implementation | yes |
-| `localloop-backend` | `5026f67` | plan close (HEAD) | pending |
+| `localloop-backend` | `5026f67` | plan close (HEAD) | yes |
