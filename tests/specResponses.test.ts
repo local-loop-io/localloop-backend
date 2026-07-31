@@ -6,8 +6,10 @@ import loopSignalSchema from '../src/schemas/loopsignal.schema.json';
 import transactionSchema from '../src/schemas/transaction.schema.json';
 import materialDnaSchema from '../src/schemas/material-dna.schema.json';
 import productDnaSchema from '../src/schemas/product-dna.schema.json';
+import handshakeSchema from '../src/schemas/handshake.schema.json';
 import { registerLoopProtocolParsers } from '../src/protocol';
 import { registerLoopSchemas } from '../src/schemas/loopSchemas';
+import { registerFederationSchemas } from '../src/schemas/federationSchemas';
 import { registerFederationRoutes } from '../src/routes/federation';
 import { registerSignalsRoutes } from '../src/routes/signals';
 import { registerTransactionRoutes } from '../src/routes/transactions';
@@ -27,6 +29,30 @@ const validateLoopSignal = ajv.compile(loopSignalSchema);
 const validateTransaction = ajv.compile(transactionSchema);
 const validateMaterialDna = ajv.compile(materialDnaSchema);
 const validateProductDna = ajv.compile(productDnaSchema);
+const validateHandshakeResponse = ajv.compile(
+  (handshakeSchema as { definitions: { HandshakeResponse: Record<string, unknown> } })
+    .definitions.HandshakeResponse,
+);
+
+const handshakePayload = {
+  '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
+  '@type': 'NodeHandshake',
+  schema_version: '0.1.1',
+  node_id: 'munich.loop',
+  name: 'DEMO Munich Node',
+  endpoint: 'https://demo-munich.loop/api',
+  capabilities: ['material-registry', 'lab-relay'],
+  timestamp: '2025-12-20T10:00:00Z',
+};
+
+const stubLocalNode = {
+  node_id: 'lab-hub.loop',
+  name: 'localLOOP Lab Hub',
+  endpoint: 'https://loop-api.urbnia.com',
+  capabilities: ['lab-relay'],
+  last_seen: '2025-12-20T10:00:00Z',
+  lab_only: true as const,
+};
 
 const validMaterialDoc = {
   '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
@@ -191,6 +217,31 @@ describe('canonical schema conformance of protocol responses', () => {
     expect(response.headers['content-type']).toContain('application/ld+json');
     const valid = validateProductDna(response.json());
     expect(validateProductDna.errors ?? []).toEqual([]);
+    expect(valid).toBe(true);
+  });
+
+  it('POST /api/v1/federation/handshake responds with a valid HandshakeResponse', async () => {
+    const app = Fastify({ logger: false });
+    registerLoopProtocolParsers(app);
+    registerFederationSchemas(app);
+    await registerFederationRoutes(app, {
+      listNodes: async () => [],
+      upsertNode: async (node) => ({
+        ...node,
+        last_seen: new Date().toISOString(),
+        lab_only: true as const,
+      }),
+      getLocalNode: () => stubLocalNode,
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/federation/handshake',
+      payload: handshakePayload,
+    });
+    expect(response.statusCode).toBe(202);
+    const valid = validateHandshakeResponse(response.json());
+    expect(validateHandshakeResponse.errors ?? []).toEqual([]);
     expect(valid).toBe(true);
   });
 });
