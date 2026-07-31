@@ -72,4 +72,4 @@ production churn or closed-theme extension.
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `8f2f45b` | implementation | yes |
-| `localloop-backend` | — | plan close (HEAD) | — |
+| `localloop-backend` | `a13eca1` | plan close (HEAD) | yes |
