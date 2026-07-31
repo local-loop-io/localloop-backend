@@ -218,6 +218,89 @@ describe('POST /api/v1/transaction Idempotency-Key handling', () => {
   });
 });
 
+describe('LoopCoin settlement lab boundary (record-only, SPEC-COMPLIANCE)', () => {
+  it('MaterialTransaction POST only persists the payload (no wallet execution)', async () => {
+    const persisted: unknown[] = [];
+    const app = Fastify({ logger: false });
+    registerLoopProtocolParsers(app);
+    registerLoopSchemas(app);
+    await registerTransactionRoutes(app, {
+      createLoopTransaction: async (p) => {
+        persisted.push(p);
+        return {
+          id: p.id as string,
+          created_at: new Date().toISOString(),
+          event: { type: 'transaction.created' },
+        };
+      },
+      getLoopTransactionById: async () => undefined,
+      broadcastLoopEvent: () => undefined,
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/transaction',
+      payload: materialTransactionPayload,
+    });
+    expect(response.statusCode).toBe(201);
+    expect(persisted.length).toBe(1);
+    expect((persisted[0] as { '@type': string })['@type']).toBe('MaterialTransaction');
+
+    const body = response.json();
+    expect(body['@type']).toBe('TransactionStatus');
+    expect(body['@type']).not.toBe('LoopCoinTransfer');
+    expect(body.settlement_url).toBe(`/api/v1/transaction/${materialTransactionPayload.id}`);
+  });
+
+  it('Settlement POST records completed status without LoopCoin transfer execution', async () => {
+    const persisted: unknown[] = [];
+    const app = Fastify({ logger: false });
+    registerLoopProtocolParsers(app);
+    registerLoopSchemas(app);
+    await registerTransactionRoutes(app, {
+      createLoopTransaction: async (p) => {
+        persisted.push(p);
+        return {
+          id: p.transaction_id as string,
+          created_at: new Date().toISOString(),
+          event: { type: 'transaction.created' },
+        };
+      },
+      getLoopTransactionById: async () => undefined,
+      broadcastLoopEvent: () => undefined,
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/transaction',
+      payload: settlementPayload,
+    });
+    expect(response.statusCode).toBe(201);
+    expect(persisted.length).toBe(1);
+    expect((persisted[0] as { '@type': string })['@type']).toBe('Settlement');
+
+    const body = response.json();
+    expect(body['@type']).toBe('TransactionStatus');
+    expect(body.status).toBe('completed');
+    expect(body['@type']).not.toBe('LoopCoinTransfer');
+  });
+
+  it('returns NOT_FOUND for hypothetical LoopCoin wallet routes (no currency engine)', async () => {
+    const { buildServer } = await import('../src/server');
+    const app = await buildServer({ logger: false });
+
+    try {
+      for (const url of ['/api/v1/loopcoin/transfer', '/api/v1/loopcoin/config']) {
+        const response = await app.inject({ method: 'GET', url });
+        expect(response.statusCode).toBe(404);
+        expect(response.json().error.code).toBe('NOT_FOUND');
+      }
+    } finally {
+      await app.close();
+    }
+  });
+});
+
 describe('GET /api/v1/transaction/:id', () => {
   it('resolves the settlement_url of a stored transaction', async () => {
     const { app, deps } = buildApp();

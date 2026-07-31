@@ -53,6 +53,29 @@ in `src/routes/federate.ts`).
 This is not a compliance gap for the lab demo: conformance checks route
 presence and timestamp behavior, not production-grade node authentication.
 
+### LoopCoin settlement lab boundary
+
+SPEC §5 defines LoopCoin issuance, transfers, and inter-node clearing.
+This lab preview implements the §8.1 transaction surface
+(`POST /api/v1/transaction`, `GET /api/v1/transaction/{id}`) as
+**record-only persistence** — validated JSON-LD payloads stored in
+`loop_transactions` with derived status — but does **not** run a
+LoopCoin wallet, currency engine, or settlement execution.
+
+| Surface | Behavior | Status |
+| --- | --- | --- |
+| `POST /api/v1/transaction` | Persists MaterialTransaction / Settlement / TransactionStatus; returns TransactionStatus with resolvable `settlement_url` | ✅ Record-only |
+| `GET /api/v1/transaction/:id` | Returns stored TransactionStatus; no wallet lookup or clearing | ✅ Record-only |
+| LoopCoin transfer / config HTTP routes | Not implemented (spec §5 schema types exist; no wallet engine) | ⚠️ Intentional lab boundary |
+| `GET /api/v1/node/info` `capabilities` | May include `loopcoin`; advertises intent only — no currency engine behind it | ⚠️ Intentional lab boundary |
+| `/api/payments/*` | Separate lab-only Stripe intake (`PAYMENTS_ENABLED`); not LoopCoin settlement | ✅ Lab-only extension |
+
+Status transitions and LoopCoin debits/credits are not enforced at
+runtime; `createLoopTransaction` in `src/db/loop.ts` inserts the payload
+and derives id/status per `@type` only. This is not a compliance gap
+for the lab demo: conformance validates the §8.1 transaction schema
+surface, not production-grade LoopCoin settlement.
+
 ## §8.3 error envelope
 
 | Surface | Status |
@@ -89,6 +112,6 @@ presence and timestamp behavior, not production-grade node authentication.
 ## Intentional lab boundaries (not compliance gaps)
 
 - No cross-node search (Core-DP `scope: "cross-node"` rejected).
-- No LoopCoin wallet/settlement engine; transactions are recorded, not executed.
+- No LoopCoin wallet/settlement engine; transactions are recorded, not executed (see LoopCoin settlement lab boundary above).
 - Signal governance (LoopVote) is out of scope; signals are seeded, not voted.
 - Federation `X-Node-Signature` verification (see §9.2 boundary table above).
