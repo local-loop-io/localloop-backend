@@ -232,6 +232,72 @@ describe('§9.2 empty X-Node-ID rejection (SPEC-COMPLIANCE §9.2)', () => {
   });
 });
 
+describe('§9.2 empty X-Timestamp rejection (SPEC-COMPLIANCE §9.2)', () => {
+  it('rejects empty X-Timestamp on announce with §8.3 envelope', async () => {
+    const { app, deps } = buildApp();
+    await registerFederateRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/federate/announce',
+      headers: { ...nodeHeaders(), 'x-timestamp': '' },
+      payload: announcementPayload,
+    });
+    expect(response.statusCode).toBe(401);
+    const body = response.json();
+    expect(body.error.code).toBe('UNAUTHORIZED');
+    expect(body.error.message).toMatch(/X-Timestamp header/i);
+  });
+
+  it('rejects whitespace-only X-Timestamp on announce with §8.3 envelope', async () => {
+    const { app, deps } = buildApp();
+    await registerFederateRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/federate/announce',
+      headers: { ...nodeHeaders(), 'x-timestamp': '   ' },
+      payload: announcementPayload,
+    });
+    expect(response.statusCode).toBe(401);
+    const body = response.json();
+    expect(body.error.code).toBe('UNAUTHORIZED');
+    expect(body.error.message).toMatch(/X-Timestamp header/i);
+  });
+
+  it('rejects empty X-Timestamp on offer with §8.3 envelope', async () => {
+    const { app, deps } = buildApp();
+    await registerFederateRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/federate/offer',
+      headers: { ...nodeHeaders(), 'x-timestamp': '' },
+      payload: offerPayload,
+    });
+    expect(response.statusCode).toBe(401);
+    const body = response.json();
+    expect(body.error.code).toBe('UNAUTHORIZED');
+    expect(body.error.message).toMatch(/X-Timestamp header/i);
+  });
+
+  it('rejects whitespace-only X-Timestamp on offer with §8.3 envelope', async () => {
+    const { app, deps } = buildApp();
+    await registerFederateRoutes(app, deps);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/federate/offer',
+      headers: { ...nodeHeaders(), 'x-timestamp': '   ' },
+      payload: offerPayload,
+    });
+    expect(response.statusCode).toBe(401);
+    const body = response.json();
+    expect(body.error.code).toBe('UNAUTHORIZED');
+    expect(body.error.message).toMatch(/X-Timestamp header/i);
+  });
+});
+
 describe('X-Node-Signature lab boundary (presence-only, SPEC-COMPLIANCE §9.2)', () => {
   const garbageSignatureHeaders = () => ({
     ...nodeHeaders(),
