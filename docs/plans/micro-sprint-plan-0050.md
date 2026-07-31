@@ -108,4 +108,4 @@ Backend only — plan close; no cross-repo deploy.
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | (this commit) | plan close (0050 rescan) | pending push |
+| `localloop-backend` | `2365ee0` | plan close (0050 rescan) | yes |
