@@ -169,6 +169,9 @@ describe('api key guard on write routes', () => {
     });
 
     expect(response.statusCode).toBe(401);
+    const body = response.json();
+    expect(body.error.code).toBe('UNAUTHORIZED');
+    expect(body.error.message).toBe('Unauthorized');
     await app.close();
   });
 
