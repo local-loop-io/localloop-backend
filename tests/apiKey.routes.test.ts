@@ -3,6 +3,7 @@ import Fastify from 'fastify';
 import { config } from '../src/config';
 import type { EvidenceEntry } from '../src/db/evidence';
 import { registerEvidenceRoutes } from '../src/routes/evidence';
+import { registerFederateRoutes } from '../src/routes/federate';
 import { registerFederationRoutes } from '../src/routes/federation';
 import { registerLoopRoutes } from '../src/routes/loop';
 import { registerLoopSchemas } from '../src/schemas/loopSchemas';
@@ -91,6 +92,42 @@ const materialTransactionPayload = {
   },
   timestamp: '2026-07-19T16:00:00Z',
 };
+
+const federateAnnouncementPayload = {
+  '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+  '@type': 'MaterialAnnouncement',
+  material: 'MAT-DE-MUC-2025-FOOD-B847F3',
+  origin: 'munich.loop',
+  available: true,
+};
+
+const federateOfferPayload = {
+  '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+  '@type': 'MaterialOffer',
+  material: 'MAT-DE-MUC-2025-FOOD-B847F3',
+  from: 'vienna.loop',
+  base_price: 60,
+  loop_cost: 104,
+  valid_until: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+};
+
+const federateNodeHeaders = () => ({
+  'x-node-id': 'munich.loop',
+  'x-node-signature': 'lab-signature-placeholder',
+  'x-timestamp': new Date().toISOString(),
+});
+
+const federateThrowingDeps = () => ({
+  insertLoopEvent: async () => {
+    throw new Error('insertLoopEvent must not be called when auth guards reject');
+  },
+  getLoopMaterial: async () => {
+    throw new Error('getLoopMaterial must not be called when auth guards reject');
+  },
+  broadcastLoopEvent: () => {
+    throw new Error('broadcastLoopEvent must not be called when auth guards reject');
+  },
+});
 
 describe('api key guard on write routes', () => {
   it('blocks loop writes without api key', async () => {
@@ -197,6 +234,25 @@ describe('api key guard on write routes', () => {
     });
 
     expect(response.statusCode).toBe(201);
+    await app.close();
+  });
+
+  it.each([
+    ['announce', '/api/v1/federate/announce', federateAnnouncementPayload],
+    ['offer', '/api/v1/federate/offer', federateOfferPayload],
+  ] as const)('blocks federate %s without api key', async (_label, url, payload) => {
+    const app = Fastify({ logger: false });
+    registerLoopProtocolParsers(app);
+    await registerFederateRoutes(app, federateThrowingDeps());
+
+    const response = await app.inject({
+      method: 'POST',
+      url,
+      headers: federateNodeHeaders(),
+      payload,
+    });
+
+    expect(response.statusCode).toBe(401);
     await app.close();
   });
 
