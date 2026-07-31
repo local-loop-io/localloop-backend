@@ -61,5 +61,5 @@ apiKey 401 responses carry the spec envelope without churning every guard case.
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | (pending) | implementation | yes |
-| `localloop-backend` | (pending) | plan close (HEAD) | yes |
+| `localloop-backend` | `1f605dc` | implementation | yes |
+| `localloop-backend` | `ce61f67` | plan close (HEAD) | yes |
