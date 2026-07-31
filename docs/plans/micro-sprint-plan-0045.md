@@ -82,4 +82,4 @@ confusion from stale "not implemented" rows.
 |------|--------|------|-----------------|
 | `loop-protocol` | `0ffe4e2` | implementation | yes |
 | `localloop-site` | `40caede` | mirror sync | yes |
-| `localloop-backend` | TBD | plan close (HEAD) | — |
+| `localloop-backend` | `ec217df` | plan close (HEAD) | yes |
