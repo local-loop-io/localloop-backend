@@ -68,4 +68,7 @@ Backend only — no cross-repo provider order.
 - **Cycle 0050** = next mandatory org rescan (3 cycles away)
 
 ## Commit SHAs
-(TBD after commit)
+| Repo | Commit | Role | Remote verified |
+|------|--------|------|-----------------|
+| `localloop-backend` | `12594a1` | implementation | yes |
+| `localloop-backend` | `1560207` | plan close (HEAD) | yes |
