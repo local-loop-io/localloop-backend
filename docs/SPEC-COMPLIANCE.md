@@ -68,7 +68,6 @@ LoopCoin wallet, currency engine, or settlement execution.
 | `GET /api/v1/transaction/:id` | Returns stored TransactionStatus; no wallet lookup or clearing | ✅ Record-only |
 | LoopCoin transfer / config HTTP routes | Not implemented (spec §5 schema types exist; no wallet engine) | ⚠️ Intentional lab boundary |
 | `GET /api/v1/node/info` `capabilities` | May include `loopcoin`; advertises intent only — no currency engine behind it | ⚠️ Intentional lab boundary |
-| `/api/payments/*` | Separate lab-only Stripe intake (`PAYMENTS_ENABLED`); not LoopCoin settlement | ✅ Lab-only extension |
 
 Status transitions and LoopCoin debits/credits are not enforced at
 runtime; `createLoopTransaction` in `src/db/loop.ts` inserts the payload
@@ -99,6 +98,30 @@ Signal values are not adjusted at runtime; `registerSignalsRoutes` in
 This is not a compliance gap for the lab demo: conformance validates
 the §8.1 LoopSignalConfig schema surface, not production-grade
 democratic governance.
+
+### Payments lab boundary
+
+Payments intake is a **lab-only extension** outside the LOOP protocol
+spec and `openapi.json`. This preview implements
+`POST /api/payments/intent` and `POST /api/payments/webhook` as
+**intake-only persistence** — validated payloads stored in
+`payment_intents` and `payment_webhooks` — but does **not** call
+Stripe (or any PSP), execute charges, verify webhook signatures, or
+settle LoopCoin.
+
+| Surface | Behavior | Status |
+| --- | --- | --- |
+| `POST /api/payments/intent` | Persists intake row via `insertPaymentIntent`; returns `{id, status, created_at}` | ✅ Intake-only |
+| `POST /api/payments/webhook` | Persists provider payload via `insertPaymentWebhook`; returns `{status: "received"}` | ✅ Intake-only |
+| `PAYMENTS_ENABLED` | When `false`, both routes answer `503` before DB write | ✅ Feature gate |
+| Stripe charge / refund HTTP routes | Not implemented (no Stripe SDK; no charge execution) | ⚠️ Intentional lab boundary |
+| Webhook signature verification | Not implemented (any payload accepted when enabled + API key valid) | ⚠️ Intentional lab boundary |
+| LoopCoin settlement linkage | Separate from `/api/v1/transaction` record-only surface (see LoopCoin settlement lab boundary above) | ✅ Distinct lab extension |
+
+Payment rows are not reconciled with transactions at runtime;
+`registerPaymentRoutes` in `src/routes/payments.ts` inserts the payload
+only. This is not a compliance gap for the lab demo: payments are an
+optional lab intake path, not a protocol §8 requirement.
 
 ## §8.3 error envelope
 
@@ -138,4 +161,5 @@ democratic governance.
 - No cross-node search (Core-DP `scope: "cross-node"` rejected).
 - No LoopCoin wallet/settlement engine; transactions are recorded, not executed (see LoopCoin settlement lab boundary above).
 - Signal governance (LoopVote) is out of scope; signals are seeded, not voted (see Signal governance lab boundary above).
+- Payments intake is record-only; no Stripe charges or webhook verification (see Payments lab boundary above).
 - Federation `X-Node-Signature` verification (see §9.2 boundary table above).

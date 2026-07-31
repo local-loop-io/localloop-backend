@@ -111,3 +111,74 @@ describe('payment routes', () => {
     expect(calls.webhook?.provider).toBe('test');
   });
 });
+
+describe('Payments lab boundary (intake-only, SPEC-COMPLIANCE)', () => {
+  it('intent POST persists intake row only (no charge execution)', async () => {
+    let insertCount = 0;
+    const app = Fastify({ logger: false });
+    await registerPaymentRoutes(app, {
+      insertPaymentIntent: async (input) => {
+        insertCount += 1;
+        return { id: 1, status: 'received', created_at: new Date().toISOString() };
+      },
+      insertPaymentWebhook: async () => ({ id: 0, created_at: new Date().toISOString() }),
+    }, true);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/payments/intent',
+      payload: { name: 'Ada', amount: 10, currency: 'USD' },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(insertCount).toBe(1);
+
+    const body = response.json();
+    expect(body.status).toBe('received');
+    expect(body.charge_id).toBeUndefined();
+    expect(body.stripe_client_secret).toBeUndefined();
+  });
+
+  it('webhook POST persists payload only (no signature verification)', async () => {
+    const stored: { provider?: string | null; payload: Record<string, unknown> }[] = [];
+    const app = Fastify({ logger: false });
+    await registerPaymentRoutes(app, {
+      insertPaymentIntent: async () => ({ id: 0, status: 'received', created_at: new Date().toISOString() }),
+      insertPaymentWebhook: async (input) => {
+        stored.push(input);
+        return { id: 1, created_at: new Date().toISOString() };
+      },
+    }, true);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/payments/webhook?provider=stripe',
+      payload: { unsigned: true, event: 'payment_intent.succeeded' },
+    });
+
+    expect(response.statusCode).toBe(202);
+    expect(stored.length).toBe(1);
+    expect(stored[0].provider).toBe('stripe');
+    expect(stored[0].payload).toEqual({ unsigned: true, event: 'payment_intent.succeeded' });
+    expect(response.json().status).toBe('received');
+  });
+
+  it('returns NOT_FOUND for hypothetical Stripe charge routes (no PSP engine)', async () => {
+    const { buildServer } = await import('../src/server');
+    const app = await buildServer({ logger: false });
+
+    try {
+      for (const url of [
+        '/api/payments/charge',
+        '/api/payments/refund',
+        '/api/stripe/webhook',
+      ]) {
+        const response = await app.inject({ method: 'POST', url });
+        expect(response.statusCode).toBe(404);
+        expect(response.json().error.code).toBe('NOT_FOUND');
+      }
+    } finally {
+      await app.close();
+    }
+  });
+});
