@@ -64,5 +64,5 @@ established for LoopCoin settlement and §9.2 lab boundaries.
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | `e7c1d26` | implementation | pending |
-| `localloop-backend` | pending | plan close (HEAD) | pending |
+| `localloop-backend` | `e7c1d26` | implementation | yes |
+| `localloop-backend` | `9520778` | plan close (HEAD) | yes |
