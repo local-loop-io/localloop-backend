@@ -7,6 +7,8 @@ import { registerFederationRoutes } from '../src/routes/federation';
 import { registerLoopRoutes } from '../src/routes/loop';
 import { registerLoopSchemas } from '../src/schemas/loopSchemas';
 import { registerPaymentRoutes } from '../src/routes/payments';
+import { registerLoopProtocolParsers } from '../src/protocol';
+import { registerTransactionRoutes } from '../src/routes/transactions';
 
 const evidenceEntry: EvidenceEntry = {
   event_id: 'evt_apikey_test_0000000000000001',
@@ -72,6 +74,22 @@ const paymentPayload = {
   name: 'Example Partner',
   amount: 25,
   currency: 'EUR',
+};
+
+const materialTransactionPayload = {
+  '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+  '@type': 'MaterialTransaction',
+  schema_version: '0.2.0',
+  id: 'TXN-2026-07-19-001',
+  material: 'MAT-DE-MUC-2025-PLASTIC-B847F3',
+  seller: 'munich.loop',
+  buyer: 'berlin.loop',
+  offer: {
+    base_price: 120,
+    loop_cost: 156,
+    breakdown: { export_penalty: 24, import_penalty: 0, distance_cost: 12 },
+  },
+  timestamp: '2026-07-19T16:00:00Z',
 };
 
 describe('api key guard on write routes', () => {
@@ -179,6 +197,28 @@ describe('api key guard on write routes', () => {
     });
 
     expect(response.statusCode).toBe(201);
+    await app.close();
+  });
+
+  it('blocks transaction POST without api key', async () => {
+    const app = Fastify({ logger: false });
+    registerLoopProtocolParsers(app);
+    registerLoopSchemas(app);
+    await registerTransactionRoutes(app, {
+      createLoopTransaction: async () => {
+        throw new Error('createLoopTransaction must not be called when auth guards reject');
+      },
+      getLoopTransactionById: async () => undefined,
+      broadcastLoopEvent: () => undefined,
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/transaction',
+      payload: materialTransactionPayload,
+    });
+
+    expect(response.statusCode).toBe(401);
     await app.close();
   });
 
