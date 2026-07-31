@@ -7,10 +7,12 @@ import transactionSchema from '../src/schemas/transaction.schema.json';
 import materialDnaSchema from '../src/schemas/material-dna.schema.json';
 import productDnaSchema from '../src/schemas/product-dna.schema.json';
 import handshakeSchema from '../src/schemas/handshake.schema.json';
+import federateAcceptedSchema from '../src/schemas/federate-accepted.schema.json';
 import { registerLoopProtocolParsers } from '../src/protocol';
 import { registerLoopSchemas } from '../src/schemas/loopSchemas';
 import { registerFederationSchemas } from '../src/schemas/federationSchemas';
 import { registerFederationRoutes } from '../src/routes/federation';
+import { registerFederateRoutes } from '../src/routes/federate';
 import { registerSignalsRoutes } from '../src/routes/signals';
 import { registerTransactionRoutes } from '../src/routes/transactions';
 import { registerLoopRoutes } from '../src/routes/loop';
@@ -33,6 +35,7 @@ const validateHandshakeResponse = ajv.compile(
   (handshakeSchema as { definitions: { HandshakeResponse: Record<string, unknown> } })
     .definitions.HandshakeResponse,
 );
+const validateFederateAccepted = ajv.compile(federateAcceptedSchema);
 
 const handshakePayload = {
   '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
@@ -79,6 +82,30 @@ const validProductDoc = {
   current_city: 'Munich',
   available_from: '2026-03-15T08:00:00Z',
 };
+
+const federateAnnouncementPayload = {
+  '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+  '@type': 'MaterialAnnouncement',
+  material: 'MAT-DE-MUC-2025-FOOD-B847F3',
+  origin: 'munich.loop',
+  available: true,
+};
+
+const federateOfferPayload = {
+  '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+  '@type': 'MaterialOffer',
+  material: 'MAT-DE-MUC-2025-FOOD-B847F3',
+  from: 'vienna.loop',
+  base_price: 60,
+  loop_cost: 104,
+  valid_until: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+};
+
+const federateNodeHeaders = () => ({
+  'x-node-id': 'munich.loop',
+  'x-node-signature': 'lab-signature-placeholder',
+  'x-timestamp': new Date().toISOString(),
+});
 
 /** Full LoopDeps stub; only the get-by-id reads are exercised by these tests. */
 const buildLoopAppWithDocs = async () => {
@@ -242,6 +269,49 @@ describe('canonical schema conformance of protocol responses', () => {
     expect(response.statusCode).toBe(202);
     const valid = validateHandshakeResponse(response.json());
     expect(validateHandshakeResponse.errors ?? []).toEqual([]);
+    expect(valid).toBe(true);
+  });
+
+  it('POST /api/v1/federate/announce responds with a valid FederateAcceptedResponse', async () => {
+    const app = Fastify({ logger: false });
+    registerLoopProtocolParsers(app);
+    await registerFederateRoutes(app, {
+      insertLoopEvent: async () => ({ id: 1, created_at: new Date().toISOString() }),
+      getLoopMaterial: async () => undefined,
+      broadcastLoopEvent: () => undefined,
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/federate/announce',
+      headers: federateNodeHeaders(),
+      payload: federateAnnouncementPayload,
+    });
+    expect(response.statusCode).toBe(202);
+    const valid = validateFederateAccepted(response.json());
+    expect(validateFederateAccepted.errors ?? []).toEqual([]);
+    expect(valid).toBe(true);
+  });
+
+  it('POST /api/v1/federate/offer responds with a valid FederateAcceptedResponse', async () => {
+    const app = Fastify({ logger: false });
+    registerLoopProtocolParsers(app);
+    await registerFederateRoutes(app, {
+      insertLoopEvent: async () => ({ id: 2, created_at: new Date().toISOString() }),
+      getLoopMaterial: async (id: string) =>
+        id === federateOfferPayload.material ? { id } : undefined,
+      broadcastLoopEvent: () => undefined,
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/federate/offer',
+      headers: federateNodeHeaders(),
+      payload: federateOfferPayload,
+    });
+    expect(response.statusCode).toBe(202);
+    const valid = validateFederateAccepted(response.json());
+    expect(validateFederateAccepted.errors ?? []).toEqual([]);
     expect(valid).toBe(true);
   });
 });

@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://localloop.urbnia.com/projects/loop-protocol/schemas/v0.2.0/federate-accepted.schema.json",
+  "title": "FederateAcceptedResponse",
+  "description": "202 Accepted response for POST /api/v1/federate/announce and POST /api/v1/federate/offer — LOOP v0.2.0",
+  "type": "object",
+  "required": ["status", "id"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "const": "accepted",
+      "description": "Acceptance indicator for the federated message"
+    },
+    "id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Lab event log identifier for the received federation message"
+    }
+  },
+  "additionalProperties": false
+}
