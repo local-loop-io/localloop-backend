@@ -6,6 +6,7 @@ import { broadcastLoopEvent } from '../realtime/loopStream';
 import { incrementMetric } from '../metrics';
 import { requireApiKey } from '../security/apiKey';
 import { loopContentType } from '../protocol';
+import { federationSchemaIds, registerFederationSchemas } from '../schemas/federationSchemas';
 import { sendSpecError, specErrorResponseSchema } from '../specErrors';
 
 /**
@@ -48,14 +49,6 @@ const materialOfferBodySchema = {
     base_price: { type: 'number', minimum: 0 },
     loop_cost: { type: 'number', minimum: 0 },
     valid_until: { type: 'string', format: 'date-time' },
-  },
-};
-
-const acceptedResponseSchema = {
-  type: 'object',
-  properties: {
-    status: { type: 'string' },
-    id: { type: 'number' },
   },
 };
 
@@ -108,6 +101,7 @@ function requireNodeHeaders(request: FastifyRequest, reply: FastifyReply): boole
 }
 
 export async function registerFederateRoutes(app: FastifyInstance, deps: FederateDeps = defaultDeps) {
+  registerFederationSchemas(app);
   app.addHook('onRequest', async (_req, reply) => { setNoStore(reply); });
 
   app.post('/api/v1/federate/announce', {
@@ -117,7 +111,7 @@ export async function registerFederateRoutes(app: FastifyInstance, deps: Federat
       security: apiKeySecurity,
       body: announcementBodySchema,
       response: {
-        202: acceptedResponseSchema,
+        202: { $ref: federationSchemaIds.federateAccepted },
         400: specErrorResponseSchema,
         401: specErrorResponseSchema,
       },
@@ -167,7 +161,7 @@ export async function registerFederateRoutes(app: FastifyInstance, deps: Federat
       security: apiKeySecurity,
       body: materialOfferBodySchema,
       response: {
-        202: acceptedResponseSchema,
+        202: { $ref: federationSchemaIds.federateAccepted },
         400: specErrorResponseSchema,
         401: specErrorResponseSchema,
         404: specErrorResponseSchema,

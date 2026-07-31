@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import federateAcceptedSchema from './federate-accepted.schema.json';
 import handshakeRaw from './handshake.schema.json';
 
 const BASE = 'https://localloop.urbnia.com/projects/loop-protocol/schemas/v0.2.0';
@@ -24,6 +25,7 @@ export const federationSchemaIds = {
   handshake: handshakeRaw.$id as string,
   handshakeRequest: handshakeRequestSchema.$id as string,
   handshakeResponse: handshakeResponseSchema.$id as string,
+  federateAccepted: federateAcceptedSchema.$id as string,
 };
 
 export function registerFederationSchemas(app: FastifyInstance) {
@@ -35,5 +37,8 @@ export function registerFederationSchemas(app: FastifyInstance) {
   }
   if (!app.getSchema(federationSchemaIds.handshakeResponse)) {
     app.addSchema(handshakeResponseSchema);
+  }
+  if (!app.getSchema(federationSchemaIds.federateAccepted)) {
+    app.addSchema(federateAcceptedSchema);
   }
 }
