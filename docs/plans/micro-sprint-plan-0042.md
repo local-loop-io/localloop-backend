@@ -62,5 +62,5 @@ route-level guard coverage in that file.
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | (impl) | implementation | pending |
-| `localloop-backend` | (close) | plan close (HEAD) | pending |
+| `localloop-backend` | `cf6a264` | implementation | yes |
+| `localloop-backend` | `147059b` | plan close (HEAD) | yes |
