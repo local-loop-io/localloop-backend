@@ -67,4 +67,4 @@ regression suite without production churn.
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
 | `localloop-backend` | `8e2293d` | implementation | pending |
-| `localloop-backend` | `0daf3c3` | plan close (HEAD) | pending |
+| `localloop-backend` | `54a6358` | plan close (HEAD) | pending |
