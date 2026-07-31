@@ -1,10 +1,34 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import Fastify from 'fastify';
 import { config } from '../src/config';
+import type { EvidenceEntry } from '../src/db/evidence';
+import { registerEvidenceRoutes } from '../src/routes/evidence';
 import { registerFederationRoutes } from '../src/routes/federation';
 import { registerLoopRoutes } from '../src/routes/loop';
 import { registerLoopSchemas } from '../src/schemas/loopSchemas';
 import { registerPaymentRoutes } from '../src/routes/payments';
+
+const evidenceEntry: EvidenceEntry = {
+  event_id: 'evt_apikey_test_0000000000000001',
+  sequence: 1,
+  recorded_at: '2026-07-19T16:00:00.000Z',
+  node_id: 'lab-hub.loop',
+  subject: { type: 'material', id: 'MAT-DE-MUC-2025-APIKEY-TEST' },
+  event_type: 'registered',
+  immutable: {
+    event_id: 'evt_apikey_test_0000000000000001',
+    sequence: 1,
+    subject: { type: 'material', id: 'MAT-DE-MUC-2025-APIKEY-TEST' },
+    event_type: 'registered',
+    payload_hash_sha256: 'b'.repeat(64),
+  },
+  payload_hash_sha256: 'b'.repeat(64),
+  retention: {
+    retain_until: '2028-07-19T16:00:00.000Z',
+    exportable: true,
+    redaction_status: 'none',
+  },
+};
 
 const original = {
   enabled: config.auth.apiKeyEnabled,
@@ -155,6 +179,27 @@ describe('api key guard on write routes', () => {
     });
 
     expect(response.statusCode).toBe(201);
+    await app.close();
+  });
+
+  it.each([
+    ['GET', `/api/v1/evidence/${evidenceEntry.event_id}`, undefined],
+    ['GET', '/api/v1/evidence', undefined],
+    [
+      'POST',
+      '/api/v1/evidence/search',
+      { subject_type: 'material', limit: 10 },
+    ],
+  ] as const)('blocks evidence %s %s without api key', async (method, url, payload) => {
+    const app = Fastify({ logger: false });
+    await registerEvidenceRoutes(app, {
+      getLoopEvidenceByEventId: async (eventId: string) =>
+        (eventId === evidenceEntry.event_id ? evidenceEntry : undefined),
+      listLoopEvidence: async () => ({ results: [evidenceEntry], next_cursor: undefined }),
+    });
+
+    const response = await app.inject({ method, url, payload });
+    expect(response.statusCode).toBe(401);
     await app.close();
   });
 });
