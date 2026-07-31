@@ -78,6 +78,6 @@ of historical snapshots.
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `loop-protocol` | `f23d17b` | audit partial refresh | pending push |
-| `localloop-site` | `c05827b` | docs-hub mirror sync | pending push |
-| `localloop-backend` | `d991056` | plan close (HEAD) | pending push |
+| `loop-protocol` | `f23d17b` | audit partial refresh | `HEAD == origin/main` (2026-07-31) |
+| `localloop-site` | `c05827b` | docs-hub mirror sync | `HEAD == origin/main` (2026-07-31) |
+| `localloop-backend` | `324b06f` | plan close (HEAD) | `HEAD == origin/main` (2026-07-31) |
