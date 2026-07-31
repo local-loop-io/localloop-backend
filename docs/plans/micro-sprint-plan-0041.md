@@ -66,4 +66,5 @@ Smallest shippable post-evidence item — test-only, follows established
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | TBD | implementation + plan | pending |
+| `localloop-backend` | `747b167` | implementation | yes |
+| `localloop-backend` | `c9a94fc` | plan close (HEAD) | yes |
