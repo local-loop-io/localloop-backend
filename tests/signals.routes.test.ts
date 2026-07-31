@@ -43,3 +43,57 @@ describe('GET /api/v1/signals', () => {
     expect(typeof payload.error.message).toBe('string');
   });
 });
+
+describe('Signal governance lab boundary (seeded read-only, SPEC-COMPLIANCE)', () => {
+  it('GET only reads seeded config (no governance mutation)', async () => {
+    let readCount = 0;
+    const app = Fastify({ logger: false });
+    await registerSignalsRoutes(app, {
+      getLoopSignalConfig: async () => {
+        readCount += 1;
+        return signalRow;
+      },
+    });
+
+    const response = await app.inject({ method: 'GET', url: '/api/v1/signals' });
+    expect(response.statusCode).toBe(200);
+    expect(readCount).toBe(1);
+
+    const payload = response.json();
+    expect(payload['@type']).toBe('LoopSignalConfig');
+    expect(payload.signals).toEqual(signalRow.signals);
+    expect(payload['@type']).not.toBe('LoopVote');
+    expect(payload['@type']).not.toBe('SignalProposal');
+  });
+
+  it('LoopSignalConfig response omits governance metadata (no approved_by)', async () => {
+    const app = Fastify({ logger: false });
+    await registerSignalsRoutes(app, { getLoopSignalConfig: async () => signalRow });
+
+    const response = await app.inject({ method: 'GET', url: '/api/v1/signals' });
+    const payload = response.json();
+    expect(payload['@type']).toBe('LoopSignalConfig');
+    expect(payload.approved_by).toBeUndefined();
+    expect(payload.vote_id).toBeUndefined();
+    expect(payload.proposals).toBeUndefined();
+  });
+
+  it('returns NOT_FOUND for hypothetical signal governance routes (no Signal Governor)', async () => {
+    const { buildServer } = await import('../src/server');
+    const app = await buildServer({ logger: false });
+
+    try {
+      for (const url of [
+        '/api/v1/signals/vote',
+        '/api/v1/signal-proposals',
+        '/api/v1/signals/proposals',
+      ]) {
+        const response = await app.inject({ method: 'POST', url });
+        expect(response.statusCode).toBe(404);
+        expect(response.json().error.code).toBe('NOT_FOUND');
+      }
+    } finally {
+      await app.close();
+    }
+  });
+});

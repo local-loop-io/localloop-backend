@@ -76,6 +76,30 @@ and derives id/status per `@type` only. This is not a compliance gap
 for the lab demo: conformance validates the §8.1 transaction schema
 surface, not production-grade LoopCoin settlement.
 
+### Signal governance lab boundary
+
+SPEC §6 defines democratic LoopSignal governance: SignalProposal drafts,
+LoopVote tallies, and published LoopSignalConfig with optional
+`approved_by` metadata. This lab preview implements the §8.1 read surface
+(`GET /api/v1/signals`) as **seeded, read-only publication** — values
+from the single-row `loop_signal_config` table (migration 015, mirroring
+§6.1 example categories) — but does **not** run voting, proposal intake,
+or signal mutation.
+
+| Surface | Behavior | Status |
+| --- | --- | --- |
+| `GET /api/v1/signals` | Returns LoopSignalConfig from `getLoopSignalConfig`; no write path | ✅ Read-only |
+| `loop_signal_config` table | Seeded at migrate time; no HTTP update route | ✅ Seeded lab data |
+| LoopVote / SignalProposal HTTP routes | Not implemented (schema types exist; no Signal Governor) | ⚠️ Intentional lab boundary |
+| LoopSignalConfig `approved_by` | Omitted from lab responses; no vote record linked | ⚠️ Intentional lab boundary |
+| `GET /api/v1/node/info` `capabilities` | May include `loopsignal`; advertises publish intent only — no voting engine | ⚠️ Intentional lab boundary |
+
+Signal values are not adjusted at runtime; `registerSignalsRoutes` in
+`src/routes/signals.ts` reads the stored row and emits JSON-LD only.
+This is not a compliance gap for the lab demo: conformance validates
+the §8.1 LoopSignalConfig schema surface, not production-grade
+democratic governance.
+
 ## §8.3 error envelope
 
 | Surface | Status |
@@ -113,5 +137,5 @@ surface, not production-grade LoopCoin settlement.
 
 - No cross-node search (Core-DP `scope: "cross-node"` rejected).
 - No LoopCoin wallet/settlement engine; transactions are recorded, not executed (see LoopCoin settlement lab boundary above).
-- Signal governance (LoopVote) is out of scope; signals are seeded, not voted.
+- Signal governance (LoopVote) is out of scope; signals are seeded, not voted (see Signal governance lab boundary above).
 - Federation `X-Node-Signature` verification (see §9.2 boundary table above).
