@@ -62,4 +62,4 @@ Backend only — no cross-repo provider order.
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | `b84b5ed` | federate schema alignment + plan close | pending push |
+| `localloop-backend` | `b84b5ed` | federate schema alignment + plan close | `HEAD == origin/main` (2026-07-31) |
