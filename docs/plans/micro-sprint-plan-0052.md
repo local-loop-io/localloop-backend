@@ -64,5 +64,5 @@ established for §9.2 lab boundaries.
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | `c992c33` | implementation | pending |
-| `localloop-backend` | pending | plan close (HEAD) | pending |
+| `localloop-backend` | `c992c33` | implementation | yes |
+| `localloop-backend` | `9c4fc7d` | plan close (HEAD) | pending |
