@@ -21,6 +21,8 @@ const BASE_SCHEMAS = [
   'transaction.schema.json',
   'loopsignal.schema.json',
   'node-info.schema.json',
+  'handshake.schema.json',
+  'federate-accepted.schema.json',
 ];
 
 const CORE_DP_SCHEMAS = [
