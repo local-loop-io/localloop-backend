@@ -83,6 +83,7 @@ the existing wire format without changing handler behavior or inventing JSON-LD.
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `loop-protocol` | _(pending push)_ | implementation | |
-| `localloop-site` | _(pending push)_ | mirror sync | |
-| `localloop-backend` | _(pending push)_ | tests + plan close | |
+| `loop-protocol` | `cc0c01e` | implementation | yes |
+| `localloop-site` | `07ed264` | mirror sync | yes |
+| `localloop-backend` | `d1c37ae` | implementation | yes |
+| `localloop-backend` | `53782c0` | plan close (HEAD) | yes |
