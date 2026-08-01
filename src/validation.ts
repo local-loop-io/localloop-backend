@@ -1,13 +1,12 @@
 import { z } from 'zod';
 
 const optionalTrimmed = (schema: z.ZodString) =>
-  schema
-    .optional()
-    .transform((value) => (typeof value === 'string' ? value.trim() : value))
-    .refine((value) => value === undefined || value === '' || value.length > 0, {
-      message: 'Cannot be empty string',
-    })
-    .transform((value) => (value === '' ? undefined : value));
+  z.preprocess((value) => {
+    if (value === undefined || value === null) return undefined;
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    return trimmed === '' ? undefined : trimmed;
+  }, schema.optional());
 
 export const interestSchema = z.object({
   name: z.string().trim().min(2).max(80),

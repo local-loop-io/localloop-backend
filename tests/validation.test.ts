@@ -29,4 +29,26 @@ describe('validateInterest', () => {
     const result = validateInterest({ name: 'Jane Doe', consentPublic: true, honey: 'bot' });
     expect(result.ok).toBe(false);
   });
+
+  it('treats empty optional strings as omitted', () => {
+    const result = validateInterest({
+      name: 'Jane Doe',
+      consentPublic: true,
+      organization: '',
+      role: '  ',
+      country: '',
+      city: '',
+      website: '',
+      email: '',
+      message: '',
+      honey: '',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.organization).toBeUndefined();
+      expect(result.data.website).toBeUndefined();
+      expect(result.data.email).toBeUndefined();
+      expect(result.data.honey).toBeUndefined();
+    }
+  });
 });
