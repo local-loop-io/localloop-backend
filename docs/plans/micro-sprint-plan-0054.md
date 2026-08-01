@@ -67,8 +67,9 @@ for LoopCoin settlement and signal governance lab boundaries.
 ## Commit SHAs
 | Repo | Commit | Role | Remote verified |
 |------|--------|------|-----------------|
-| `localloop-backend` | `154f8ea` | implementation | pending |
-| `localloop-backend` | (pending) | plan close (HEAD) | pending |
+| `localloop-backend` | `154f8ea` | implementation | yes |
+| `localloop-backend` | `6dc7e34` | plan close | yes |
+| `localloop-backend` | (pending) | SHA record (HEAD) | pending |
 
 ## Tag
 `micro-sprint-0054` on plan-close commit (HEAD).
