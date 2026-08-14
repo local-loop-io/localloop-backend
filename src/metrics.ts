@@ -26,7 +26,8 @@ export type MetricKey =
   | 'loop_event_relayed'
   | 'federation_handshake'
   | 'federation_announcement_received'
-  | 'federation_offer_received';
+  | 'federation_offer_received'
+  | 'queue_job_failed';
 
 export function incrementMetric(key: MetricKey, amount = 1) {
   const current = counters.get(key) ?? 0;
@@ -46,6 +47,7 @@ const ALL_METRIC_KEYS: MetricKey[] = [
   'federation_handshake',
   'federation_announcement_received',
   'federation_offer_received',
+  'queue_job_failed',
 ];
 
 export function getMetricsSnapshot() {

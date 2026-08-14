@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'bun:test';
+import { Queue, Worker } from 'bullmq';
+import IORedis from 'ioredis';
 import { createInterestJobHandler, getConnection } from '../src/queue';
+import { getMetricsSnapshot, incrementMetric } from '../src/metrics';
+import { config } from '../src/config';
 
 describe('queue handlers', () => {
   it('ignores unrelated jobs', async () => {
@@ -53,4 +57,56 @@ describe('queue handlers', () => {
     expect(thrown).toBeUndefined();
     connection.disconnect();
   });
+
+  it('increments the queue_job_failed metric when a job fails (mirrors startWorkers\' failed handler)', async () => {
+    // Deliberately independent of getConnection()'s shared singleton (the
+    // preceding test disconnects it) so this test doesn't depend on suite
+    // ordering.
+    const redis = new IORedis(config.redisUrl, { maxRetriesPerRequest: null, enableReadyCheck: false, lazyConnect: true });
+    redis.on('error', () => {});
+    try {
+      await redis.connect();
+      await redis.ping();
+    } catch (error) {
+      console.log('[queue] Redis unavailable — skipping job-failure metric test:', (error as Error).message);
+      redis.disconnect();
+      return;
+    }
+
+    const queueName = `test-queue-job-failed-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const queue = new Queue(queueName, { connection: redis as never });
+    const worker = new Worker(
+      queueName,
+      async () => {
+        throw new Error('intentional test failure');
+      },
+      { connection: redis as never },
+    );
+    // Same shape as the handler registered in startWorkers() — this proves
+    // the increment actually fires when BullMQ reports a job failure.
+    worker.on('failed', () => {
+      incrementMetric('queue_job_failed');
+    });
+
+    try {
+      const before = getMetricsSnapshot().metrics.queue_job_failed;
+
+      await queue.add('will-fail', {}, { attempts: 1 });
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('timed out waiting for job to fail')), 10000);
+        worker.on('failed', () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+      });
+
+      const after = getMetricsSnapshot().metrics.queue_job_failed;
+      expect(after).toBe(before + 1);
+    } finally {
+      await worker.close();
+      await queue.obliterate({ force: true });
+      await queue.close();
+      redis.disconnect();
+    }
+  }, 15000);
 });

@@ -2,6 +2,7 @@ import { Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import { config } from '../config';
 import { insertInterestEvent } from '../db/interestEvents';
+import { incrementMetric } from '../metrics';
 
 let connection: IORedis | null = null;
 let queue: Queue | null = null;
@@ -92,6 +93,7 @@ export function startWorkers() {
 
   worker.on('failed', (job, error) => {
     console.error('Queue job failed', job?.id, error);
+    incrementMetric('queue_job_failed');
   });
 
   return worker;

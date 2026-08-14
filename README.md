@@ -136,6 +136,7 @@ See `.env.example` for the full list with descriptions. Key variables:
 | `AUTH_ENABLED` | `false` | Enable BetterAuth |
 | `API_KEY_ENABLED` | `false` | Require `X-API-Key` on write routes |
 | `RUN_MIGRATIONS` | `true` | Auto-run DB migrations on startup |
+| `WORKER_ENABLED` | `false` | Consume queued interest jobs. When left at the default `false`, `POST /api/interest` still enqueues a BullMQ job, but nothing ever picks it up. |
 
 In `NODE_ENV=production` the server refuses to start with missing or weak secrets.
 
