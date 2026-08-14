@@ -17,13 +17,11 @@ jobs:
         with:
           repository: local-loop-io/loop-protocol
           path: loop-protocol
-          token: ${{ secrets.DOCS_SYNC_TOKEN }}
       - name: Check out localloop-site (docs-hub mirror)
         uses: actions/checkout@v4
         with:
           repository: local-loop-io/localloop-site
           path: localloop-site
-          token: ${{ secrets.DOCS_SYNC_TOKEN }}
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
