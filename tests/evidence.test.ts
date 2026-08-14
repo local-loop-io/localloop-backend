@@ -124,3 +124,27 @@ describe('Core-DP append-only evidence log', () => {
     expect((deleteError as Error).message).toMatch(/append-only/);
   });
 });
+
+describe('Evidence lab boundary (append-only, SPEC-COMPLIANCE)', () => {
+  it('has no HTTP route to create, update, delete, redact, or export evidence', async () => {
+    const { buildServer } = await import('../src/server');
+    const app = await buildServer({ logger: false });
+
+    try {
+      for (const { method, url } of [
+        { method: 'POST' as const, url: '/api/v1/evidence' },
+        { method: 'PUT' as const, url: '/api/v1/evidence/evt_0000000000000000000000000001' },
+        { method: 'DELETE' as const, url: '/api/v1/evidence/evt_0000000000000000000000000001' },
+        { method: 'POST' as const, url: '/api/v1/evidence/evt_0000000000000000000000000001/redact' },
+        { method: 'POST' as const, url: '/api/v1/evidence/redact' },
+        { method: 'POST' as const, url: '/api/v1/evidence/export' },
+      ]) {
+        const response = await app.inject({ method, url });
+        expect(response.statusCode).toBe(404);
+        expect(response.json().error.code).toBe('NOT_FOUND');
+      }
+    } finally {
+      await app.close();
+    }
+  });
+});

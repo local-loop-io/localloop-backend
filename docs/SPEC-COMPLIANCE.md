@@ -123,6 +123,30 @@ Payment rows are not reconciled with transactions at runtime;
 only. This is not a compliance gap for the lab demo: payments are an
 optional lab intake path, not a protocol §8 requirement.
 
+### Evidence lab boundary
+
+The Core-DP evidence log (`loop_evidence`, migration 013) is an
+**append-only audit trail**, not a general-purpose records API. Entries
+are written internally by other write routes (e.g. `createLoopMaterial`
+calling `insertLoopEvidence`) — there is no public HTTP endpoint to
+create, update, delete, redact, or export evidence directly.
+
+| Surface | Behavior | Status |
+| --- | --- | --- |
+| `GET /api/v1/evidence/:event_id` | Read a single entry by `event_id` | ✅ Read-only |
+| `GET /api/v1/evidence` | Query/list entries (filters + cursor pagination) | ✅ Read-only |
+| `POST /api/v1/evidence/search` | Same query as above via a request body (for larger filter sets) | ✅ Read-only |
+| `insertLoopEvidence` (`src/db/evidence.ts`) | Called only from other routes' write paths, never from a public "create evidence" endpoint | ✅ Internal-only |
+| `UPDATE` / `DELETE` on `loop_evidence` | Blocked at the database level by `trg_loop_evidence_no_update` / `trg_loop_evidence_no_truncate` (migration 013) | ✅ DB-enforced |
+| Redaction endpoint (e.g. mark an entry `redacted`) | Not implemented — `retention.redaction_status` is always `none` | ⚠️ Intentional lab boundary |
+| Export endpoint (bulk download/archive) | Not implemented | ⚠️ Intentional lab boundary |
+| Create/update/delete HTTP routes | Not implemented — no `POST /api/v1/evidence`, `PUT`, or `DELETE` route exists | ⚠️ Intentional lab boundary |
+
+This is not a compliance gap for the lab demo: the evidence log exists
+to demonstrate an append-only audit trail behind the existing write
+routes, not to be a standalone records-management product with
+redaction/export tooling.
+
 ## §8.3 error envelope
 
 | Surface | Status |
@@ -162,4 +186,5 @@ optional lab intake path, not a protocol §8 requirement.
 - No LoopCoin wallet/settlement engine; transactions are recorded, not executed (see LoopCoin settlement lab boundary above).
 - Signal governance (LoopVote) is out of scope; signals are seeded, not voted (see Signal governance lab boundary above).
 - Payments intake is record-only; no Stripe charges or webhook verification (see Payments lab boundary above).
+- Evidence is an append-only audit trail with no redaction/export tooling; entries are written internally, not via a public create endpoint (see Evidence lab boundary above).
 - Federation `X-Node-Signature` verification (see §9.2 boundary table above).
