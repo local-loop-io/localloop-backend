@@ -8,6 +8,37 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        # Same image as docker-compose.yml's postgres service — migrations
+        # require the bundled PostGIS extension, plain postgres won't do.
+        image: postgis/postgis:18-3.6
+        env:
+          POSTGRES_DB: localloop
+          POSTGRES_USER: localloop
+          POSTGRES_PASSWORD: localloop_ci_password
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U localloop -d localloop"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        # Same pinned image as docker-compose.yml's redis service, started
+        # with --requirepass to match its authenticated-Redis credential scheme.
+        image: redis@sha256:3aaec283e6e593bde528077d60280ac1589887067a39273348860837c9346d7e
+        command: --requirepass localloop_ci_redis_password
+        ports:
+          - 6381:6379
+        options: >-
+          --health-cmd "redis-cli --no-auth-warning -a localloop_ci_redis_password ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://localloop:localloop_ci_password@localhost:55432/localloop
+      REDIS_URL: redis://:localloop_ci_redis_password@localhost:6381
     steps:
       - uses: actions/checkout@v4
       - name: Domain consistency check
