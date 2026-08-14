@@ -53,6 +53,18 @@ in `src/routes/federate.ts`).
 This is not a compliance gap for the lab demo: conformance checks route
 presence and timestamp behavior, not production-grade node authentication.
 
+**Pilot-scope note (2026-08-14):** the locked pilot use case
+(`loop-protocol/docs/governance/pilot-readiness/PILOT-USE-CASE.md`, municipal
+reuse-depot flow) runs against a single lab node and does not use
+`/api/v1/federate/*` at all — confirmed by direct read of
+`scripts/simulate-lab.ts`'s municipal-reuse block, which posts every leg to
+one `baseUrl`. Wiring `X-Node-Signature` cryptographic verification into the
+federation HTTP layer is therefore explicitly out of scope for this pilot,
+not silently deferred. The underlying Ed25519 machinery already exists and is
+tested (`src/envelope.ts`, `tests/envelope.test.ts`, Core-DP conformance
+vectors) and remains available to wire in if a second real federated node
+enters scope later.
+
 ### LoopCoin settlement lab boundary
 
 SPEC §5 defines LoopCoin issuance, transfers, and inter-node clearing.

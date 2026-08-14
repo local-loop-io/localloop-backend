@@ -18,6 +18,7 @@ const authPool = new Pool({
 export const auth = authEnabled
   ? betterAuth({
       database: authPool,
+      baseURL: config.publicBaseUrl,
       emailAndPassword: { enabled: true },
       trustedOrigins: config.auth.trustedOrigins,
       secret: config.auth.secret,
