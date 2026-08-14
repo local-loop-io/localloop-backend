@@ -4,12 +4,23 @@ After=docker.service network.target
 
 [Service]
 Type=oneshot
-WorkingDirectory=/opt/localloop-backend
-EnvironmentFile=-/opt/localloop-backend/.env
-ExecStart=/opt/localloop-backend/deploy/healthcheck-alert.sh
+# Path reflects this project's actual (only) deployment host -- verified
+# 2026-08-14 that /opt/localloop-backend, used by the sibling backup
+# service and the main-app service template, was never actually the real
+# install path here (the live app runs via docker-compose from this exact
+# directory; a separate, stale, crash-looping systemd unit was found
+# pointed at /root/code/... instead). Edit both this path and the
+# ReadOnlyPaths= line below together if this ever moves.
+WorkingDirectory=/home/alphin/code/local-loop-io/localloop-backend
+EnvironmentFile=-/home/alphin/code/local-loop-io/localloop-backend/.env
+ExecStart=/home/alphin/code/local-loop-io/localloop-backend/deploy/healthcheck-alert.sh
 User=root
 Group=root
 NoNewPrivileges=yes
 ProtectSystem=strict
+# ProtectHome=yes masks /home entirely, so the real deploy path (under
+# /home/alphin) needs an explicit read-only exception -- without this the
+# service fails to find its own ExecStart target under systemd's sandbox.
 ProtectHome=yes
+ReadOnlyPaths=/home/alphin/code/local-loop-io/localloop-backend
 PrivateTmp=yes
