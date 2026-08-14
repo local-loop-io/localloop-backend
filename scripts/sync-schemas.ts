@@ -3,7 +3,7 @@
 // src/schemas/, so localloop-backend never hand-maintains a drifted duplicate.
 // `bun run sync:schemas` refreshes the copies; `bun run check:schemas` (used in
 // tests/CI) fails closed if the copies and the canonical source disagree.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 const REPO_ROOT = join(import.meta.dirname, '..', '..');
@@ -34,6 +34,7 @@ const CORE_DP_SCHEMAS = [
   'trust-store.schema.json',
   'choreography-message.schema.json',
   'dna-operation.schema.json',
+  'epcis-mapping.schema.json',
 ];
 
 type Mode = 'sync' | 'check';
@@ -49,6 +50,27 @@ function run(mode: Mode): boolean {
   }
 
   let drift = false;
+
+  // Self-check: catch a future new file landing in loop-protocol's core-dp
+  // schemas directory that CORE_DP_SCHEMAS hasn't been told about yet — the
+  // per-file loop below can only ever compare files already in this list, so
+  // an omission here would otherwise never be flagged (see epcis-mapping.schema.json,
+  // which drifted undetected for this exact reason).
+  if (existsSync(SOURCE_CORE_DP)) {
+    const actualCoreDpFiles = readdirSync(SOURCE_CORE_DP).filter((name) => name.endsWith('.schema.json'));
+    const missingFromManifest = actualCoreDpFiles.filter((name) => !CORE_DP_SCHEMAS.includes(name));
+    const missingFromDisk = CORE_DP_SCHEMAS.filter((name) => !actualCoreDpFiles.includes(name));
+    if (missingFromManifest.length > 0 || missingFromDisk.length > 0) {
+      for (const name of missingFromManifest) {
+        console.error(`[sync-schemas] MANIFEST DRIFT: ${name} exists in loop-protocol/profiles/core-dp/schemas/ but is missing from CORE_DP_SCHEMAS in scripts/sync-schemas.ts`);
+      }
+      for (const name of missingFromDisk) {
+        console.error(`[sync-schemas] MANIFEST DRIFT: ${name} is listed in CORE_DP_SCHEMAS but no longer exists in loop-protocol/profiles/core-dp/schemas/`);
+      }
+      drift = true;
+    }
+  }
+
   const jobs = [
     ...BASE_SCHEMAS.map((name) => ({ src: join(SOURCE_BASE, name), dest: join(DEST_BASE, name) })),
     ...CORE_DP_SCHEMAS.map((name) => ({ src: join(SOURCE_CORE_DP, name), dest: join(DEST_CORE_DP, name) })),
