@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `status-updated` evidence event type: `POST /api/v1/material-status` now also writes
+  to the append-only `loop_evidence` log (migration `016_loop_evidence_status_updated.sql`),
+  closing a gap where status changes reached only the mutable `loop_events` SSE feed. See
+  `loop-protocol/docs/retention-and-evidence-guidance.md`.
+
 ### Fixed
 - Replaced source-string "theater" cache/metrics tests with handler inject tests
   that assert real `Cache-Control` response headers and live metrics counters

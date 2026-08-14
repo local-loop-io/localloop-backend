@@ -125,10 +125,12 @@ optional lab intake path, not a protocol §8 requirement.
 
 ### Evidence lab boundary
 
-The Core-DP evidence log (`loop_evidence`, migration 013) is an
+The Core-DP evidence log (`loop_evidence`, migration 013; `event_type` widened by
+migration 016 to add `status-updated`) is an
 **append-only audit trail**, not a general-purpose records API. Entries
 are written internally by other write routes (e.g. `createLoopMaterial`
-calling `insertLoopEvidence`) — there is no public HTTP endpoint to
+calling `insertLoopEvidence`, and — since migration 016 — the
+`POST /api/v1/material-status` handler) — there is no public HTTP endpoint to
 create, update, delete, redact, or export evidence directly.
 
 | Surface | Behavior | Status |

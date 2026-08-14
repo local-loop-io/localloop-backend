@@ -16,6 +16,7 @@ import { registerFederateRoutes } from '../src/routes/federate';
 import { registerSignalsRoutes } from '../src/routes/signals';
 import { registerTransactionRoutes } from '../src/routes/transactions';
 import { registerLoopRoutes } from '../src/routes/loop';
+import { fakeInsertLoopEvidence } from './testEvidence';
 import { getLocalNode } from '../src/federation/registry';
 
 /**
@@ -121,6 +122,7 @@ const buildLoopAppWithDocs = async () => {
     createLoopMatch: async () => ({ ...record, event: {} }),
     createLoopTransfer: async () => ({ ...record, event: {} }),
     insertLoopEvent: async () => ({ id: 1, created_at: record.created_at }),
+    insertLoopEvidence: fakeInsertLoopEvidence,
     listLoopEvents: async () => [],
     getLoopMaterial: async () => undefined,
     getLoopMaterialById: async (id: string) =>

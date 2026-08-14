@@ -266,6 +266,15 @@
             "restricted"
           ]
         },
+        "visible_to": {
+          "description": "Minimum audience tier this passport data is intended for, on a cumulative public < operator < regulator scale (each wider tier sees at least what the narrower one sees). Refines access_scope's role-based/restricted values without replacing them; modeling guidance only, not an enforced access-control mechanism. See docs/access-scope-model.md.",
+          "type": "string",
+          "enum": [
+            "public",
+            "operator",
+            "regulator"
+          ]
+        },
         "supported_regimes": {
           "type": "array",
           "items": {

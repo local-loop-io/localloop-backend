@@ -11,6 +11,7 @@ export type EvidenceEventType =
   | 'offer-published' | 'offer-acked' | 'offer-rejected'
   | 'match-proposed' | 'match-accepted' | 'match-rejected'
   | 'transfer-dispatched' | 'transfer-received' | 'transfer-acked'
+  | 'status-updated'
   | 'error-recorded' | 'key-rotated';
 
 /**

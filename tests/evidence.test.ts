@@ -60,6 +60,21 @@ describe('Core-DP append-only evidence log', () => {
     expect(entry.retention.redaction_status).toBe('none');
   });
 
+  it('records a status-updated evidence entry for material status changes (migration 016)', async () => {
+    if (!dbReady) return;
+    const material = buildMaterial();
+    await createLoopMaterial(material);
+
+    await insertLoopEvidence({
+      subject: { type: 'material', id: material.id },
+      eventType: 'status-updated',
+      data: { status: 'reserved' },
+    });
+
+    const result = await listLoopEvidence({ subjectType: 'material', subjectId: material.id, limit: 10 });
+    expect(result.results.map((r) => r.event_type)).toEqual(['registered', 'status-updated']);
+  });
+
   it('fetches a single entry by event_id', async () => {
     if (!dbReady) return;
     const entry = await insertLoopEvidence({

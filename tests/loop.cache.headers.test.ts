@@ -3,6 +3,7 @@ import Fastify from 'fastify';
 import { registerLoopProtocolParsers } from '../src/protocol';
 import { registerLoopRoutes } from '../src/routes/loop';
 import { registerLoopSchemas } from '../src/schemas/loopSchemas';
+import { fakeInsertLoopEvidence } from './testEvidence';
 
 const materialPayload = {
   '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
@@ -130,6 +131,7 @@ const buildApp = async () => {
       event: eventFor('transfer.created', 'transfer', payload.id, payload),
     }),
     insertLoopEvent: async () => ({ id: 1, created_at: new Date().toISOString() }),
+    insertLoopEvidence: fakeInsertLoopEvidence,
     listLoopEvents: async () => [],
     getLoopMaterial: async (id: string) => (id === materialPayload.id ? { id } : undefined),
     getLoopMaterialById: async () => undefined,

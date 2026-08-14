@@ -169,7 +169,12 @@
       "properties": {
         "passport_id": { "type": "string", "maxLength": 160 },
         "passport_url": { "type": "string", "format": "uri" },
-        "access_scope": { "type": "string", "enum": ["public", "role-based", "restricted"] }
+        "access_scope": { "type": "string", "enum": ["public", "role-based", "restricted"] },
+        "visible_to": {
+          "description": "Minimum audience tier for this transfer's passport subset, on a cumulative public < operator < regulator scale. See docs/access-scope-model.md.",
+          "type": "string",
+          "enum": ["public", "operator", "regulator"]
+        }
       },
       "additionalProperties": true
     },

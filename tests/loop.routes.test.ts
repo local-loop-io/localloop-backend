@@ -4,6 +4,7 @@ import { registerLoopProtocolParsers } from '../src/protocol';
 import { registerLoopRoutes } from '../src/routes/loop';
 import { registerLoopSchemas } from '../src/schemas/loopSchemas';
 import { LoopStateError } from '../src/db/loop';
+import { fakeInsertLoopEvidence } from './testEvidence';
 
 const conflictError = () => {
   const error = new Error('duplicate key value violates unique constraint');
@@ -153,6 +154,7 @@ const buildApp = () => {
     createLoopMatch: async (_p: { id: string }) => ({ id: _p.id, created_at: new Date().toISOString(), event: eventFor('match.created', 'match', _p.id, _p) }),
     createLoopTransfer: async (_p: { id: string }) => ({ id: _p.id, created_at: new Date().toISOString(), event: eventFor('transfer.created', 'transfer', _p.id, _p) }),
     insertLoopEvent: async () => ({ id: 1, created_at: new Date().toISOString() }),
+    insertLoopEvidence: fakeInsertLoopEvidence,
     listLoopEvents: async () => ([{ id: 1, event_type: 'material.created', entity_type: 'material', entity_id: materialPayload.id, payload: {}, created_at: new Date().toISOString() }]),
     getLoopMaterial: async (id: string) => (id === materialPayload.id ? { id } : undefined),
     getLoopMaterialById: async (id: string) => (id === materialPayload.id ? { ...fakeMaterialRecord, payload: materialPayload } : undefined),
@@ -205,12 +207,19 @@ describe('loop routes', () => {
 
   it('records material status updates', async () => {
     const { app, deps } = buildApp();
-    const calls: { event?: { event_type: string; entity_type: string; entity_id: string } } = {};
+    const calls: {
+      event?: { event_type: string; entity_type: string; entity_id: string };
+      evidence?: { subject: { type: string; id: string }; eventType: string };
+    } = {};
     await registerLoopRoutes(app, {
       ...deps,
       insertLoopEvent: async (input) => {
         calls.event = input;
         return { id: 3, created_at: new Date().toISOString() };
+      },
+      insertLoopEvidence: async (input) => {
+        calls.evidence = { subject: input.subject, eventType: input.eventType };
+        return deps.insertLoopEvidence(input);
       },
     });
 
@@ -224,6 +233,11 @@ describe('loop routes', () => {
     expect(calls.event?.event_type).toBe('material.status_updated');
     expect(calls.event?.entity_type).toBe('material');
     expect(calls.event?.entity_id).toBe(materialPayload.id);
+
+    // Status changes must reach the append-only evidence log, not just the
+    // mutable loop_events/SSE feed — see docs/retention-and-evidence-guidance.md.
+    expect(calls.evidence?.eventType).toBe('status-updated');
+    expect(calls.evidence?.subject).toEqual({ type: 'material', id: materialPayload.id });
   });
 
   it('rejects offers for unknown materials', async () => {

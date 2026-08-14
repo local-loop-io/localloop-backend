@@ -50,6 +50,7 @@
         "transfer-dispatched",
         "transfer-received",
         "transfer-acked",
+        "status-updated",
         "error-recorded",
         "key-rotated"
       ]

@@ -8,6 +8,7 @@ import { registerFederationRoutes } from '../src/routes/federation';
 import { registerLoopRoutes } from '../src/routes/loop';
 import { registerLoopSchemas } from '../src/schemas/loopSchemas';
 import { registerPaymentRoutes } from '../src/routes/payments';
+import { fakeInsertLoopEvidence } from './testEvidence';
 import { registerLoopProtocolParsers } from '../src/protocol';
 import { registerTransactionRoutes } from '../src/routes/transactions';
 
@@ -214,6 +215,7 @@ const buildLoopApp = async () => {
     createLoopMatch: async () => ({ id: 'match', created_at: now, event: {} }),
     createLoopTransfer: async () => ({ id: 'transfer', created_at: now, event: {} }),
     insertLoopEvent: async () => ({ id: 1, created_at: now }),
+    insertLoopEvidence: fakeInsertLoopEvidence,
     listLoopEvents: async () => ([]),
     getLoopMaterial: async () => ({ id: materialPayload.id }),
     getLoopMaterialById: async () => undefined,

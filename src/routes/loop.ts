@@ -37,6 +37,7 @@ import {
   type LoopSearchResult,
   type ProtocolMaterialSearchFilters,
 } from '../db/loop';
+import { insertLoopEvidence } from '../db/evidence';
 import { broadcastLoopEvent, registerLoopStream } from '../realtime/loopStream';
 import { incrementMetric } from '../metrics';
 import { loopSchemaIds } from '../schemas/loopSchemas';
@@ -142,6 +143,7 @@ type LoopDeps = {
   createLoopMatch: typeof createLoopMatch;
   createLoopTransfer: typeof createLoopTransfer;
   insertLoopEvent: typeof insertLoopEvent;
+  insertLoopEvidence: typeof insertLoopEvidence;
   listLoopEvents: typeof listLoopEvents;
   getLoopMaterial: typeof getLoopMaterial;
   getLoopMaterialById: typeof getLoopMaterialById;
@@ -170,6 +172,7 @@ const defaultDeps: LoopDeps = {
   createLoopMatch,
   createLoopTransfer,
   insertLoopEvent,
+  insertLoopEvidence,
   listLoopEvents,
   getLoopMaterial,
   getLoopMaterialById,
@@ -532,6 +535,12 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       entity_type: eventPayload.entity,
       entity_id: eventPayload.entity_id,
       payload: eventPayload,
+    });
+
+    await deps.insertLoopEvidence({
+      subject: { type: 'material', id: payload.material_id },
+      eventType: 'status-updated',
+      data: payload,
     });
 
     deps.broadcastLoopEvent({

@@ -4,6 +4,7 @@ import { config } from '../src/config';
 import { registerLoopProtocolParsers } from '../src/protocol';
 import { registerLoopSchemas } from '../src/schemas/loopSchemas';
 import { registerLoopRoutes } from '../src/routes/loop';
+import { fakeInsertLoopEvidence } from './testEvidence';
 
 const searchDeps = () => ({
   createLoopMaterial: async (p: { id: string }) => ({ id: p.id, created_at: new Date().toISOString(), event: {} }),
@@ -12,6 +13,7 @@ const searchDeps = () => ({
   createLoopMatch: async (p: { id: string }) => ({ id: p.id, created_at: new Date().toISOString(), event: {} }),
   createLoopTransfer: async (p: { id: string }) => ({ id: p.id, created_at: new Date().toISOString(), event: {} }),
   insertLoopEvent: async () => ({ id: 1, created_at: new Date().toISOString() }),
+  insertLoopEvidence: fakeInsertLoopEvidence,
   listLoopEvents: async () => [],
   getLoopMaterial: async () => ({ id: 'material' }),
   getLoopMaterialById: async () => undefined,
