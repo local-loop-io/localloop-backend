@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { createInterestJobHandler } from '../src/queue';
+import { createInterestJobHandler, getConnection } from '../src/queue';
 
 describe('queue handlers', () => {
   it('ignores unrelated jobs', async () => {
@@ -37,5 +37,20 @@ describe('queue handlers', () => {
     expect(result.status).toBe('logged');
     expect(calls[0].interestId).toBe(42);
     expect(calls[0].eventType).toBe('created');
+  });
+
+  it('does not crash the process when the Redis connection emits an error', () => {
+    // Node throws an unhandled 'error' event synchronously when an
+    // EventEmitter has zero listeners for it. getConnection() must register
+    // one so a transient Redis blip can't take the whole API process down.
+    const connection = getConnection();
+    let thrown: unknown;
+    try {
+      connection.emit('error', new Error('synthetic redis error'));
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeUndefined();
+    connection.disconnect();
   });
 });
