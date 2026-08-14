@@ -1,3 +1,31 @@
+// ============================================================================
+// Prisma model coverage — read this before assuming Prisma is the source of
+// truth for a table. (See also README.md's "Database layer" section.)
+//
+// Only Interest is queried via Prisma's typed model API
+// (prisma.interest.create/findMany/count in src/db/interest.ts). City is
+// touched only via prisma.$queryRaw for geo/PostGIS queries
+// (src/db/cities.ts) — never via prisma.city.*. Prisma's connection is also
+// used for the startup readiness probe (prisma.$queryRaw`SELECT 1` in
+// src/db/wait.ts) and the interests_search materialized view refresh
+// (prisma.$executeRaw in src/db/interest.ts).
+//
+// Every other model below — InterestEvent, PaymentIntent, PaymentWebhook,
+// LoopMaterial, LoopProduct, LoopOffer, LoopMatch, LoopTransfer, LoopEvent,
+// FederationNode — exists here for type-reference/documentation only. Those
+// tables are read and written exclusively via hand-written parameterized SQL
+// through `pool` (src/db/pool.ts), from query modules such as src/db/loop.ts,
+// src/db/interestEvents.ts, src/db/payments.ts, and src/db/federationNodes.ts.
+// `bun run prisma:generate` still runs against the full schema below, but do
+// not assume e.g. `prisma.loopMaterial.*` is wired to anything — it isn't
+// called anywhere in src/ today.
+//
+// Conversely, 4 real tables added by src/db/migrations/013-015 have no
+// Prisma model at all and are managed purely via SQL migrations + `pool`:
+// loop_evidence, loop_idempotency_keys, loop_signal_config,
+// loop_transactions. That split is intentional, not an oversight.
+// ============================================================================
+
 generator client {
   provider = "prisma-client-js"
 }

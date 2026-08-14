@@ -123,6 +123,59 @@ Payment rows are not reconciled with transactions at runtime;
 only. This is not a compliance gap for the lab demo: payments are an
 optional lab intake path, not a protocol §8 requirement.
 
+### Evidence lab boundary
+
+The Core-DP evidence log (`loop_evidence`, migration 013) is an
+**append-only audit trail**, not a general-purpose records API. Entries
+are written internally by other write routes (e.g. `createLoopMaterial`
+calling `insertLoopEvidence`) — there is no public HTTP endpoint to
+create, update, delete, redact, or export evidence directly.
+
+| Surface | Behavior | Status |
+| --- | --- | --- |
+| `GET /api/v1/evidence/:event_id` | Read a single entry by `event_id` | ✅ Read-only |
+| `GET /api/v1/evidence` | Query/list entries (filters + cursor pagination) | ✅ Read-only |
+| `POST /api/v1/evidence/search` | Same query as above via a request body (for larger filter sets) | ✅ Read-only |
+| `insertLoopEvidence` (`src/db/evidence.ts`) | Called only from other routes' write paths, never from a public "create evidence" endpoint | ✅ Internal-only |
+| `UPDATE` / `DELETE` on `loop_evidence` | Blocked at the database level by `trg_loop_evidence_no_update` / `trg_loop_evidence_no_truncate` (migration 013) | ✅ DB-enforced |
+| Redaction endpoint (e.g. mark an entry `redacted`) | Not implemented — `retention.redaction_status` is always `none` | ⚠️ Intentional lab boundary |
+| Export endpoint (bulk download/archive) | Not implemented | ⚠️ Intentional lab boundary |
+| Create/update/delete HTTP routes | Not implemented — no `POST /api/v1/evidence`, `PUT`, or `DELETE` route exists | ⚠️ Intentional lab boundary |
+
+This is not a compliance gap for the lab demo: the evidence log exists
+to demonstrate an append-only audit trail behind the existing write
+routes, not to be a standalone records-management product with
+redaction/export tooling.
+
+The MinIO/S3 client (`src/storage/s3.ts`, `s3Client`) is fully
+provisioned — `docker-compose.yml`'s `minio`/`minio-proxy` services,
+the `@aws-sdk/client-s3` dependency, and `MINIO_*` config are all
+live — but `s3Client` has zero importers anywhere in `src/`, `scripts/`,
+or `tests/`. It is not wired to any route today. The most likely
+future use is attachments or an evidence export/archive feature, but
+whether to build that (or decommission the MinIO service instead) is
+a product decision, not something this note resolves.
+
+### Federation registry lab boundary
+
+The federation node registry (`federation_nodes`, migration 008) exists
+to demonstrate a minimal multi-node handshake, not a production
+peer-discovery or trust system.
+
+| Surface | Behavior | Status |
+| --- | --- | --- |
+| `POST /api/v1/federation/handshake` | The **only** write path into the registry; upserts via `upsertFederationNode` (`INSERT ... ON CONFLICT (node_id) DO UPDATE`) | ✅ Single write path |
+| `GET /api/v1/federation/nodes` | Read-only; returns the local node (computed per-request, never persisted) plus all `federation_nodes` rows | ✅ Read-only |
+| Remove/deregister a node | Not implemented — no delete function in `src/db/federationNodes.ts`, no `DELETE` route | ⚠️ Intentional lab boundary |
+| Node trust / allowlist | Not implemented — any caller with a valid API key may register any `node_id` | ⚠️ Intentional lab boundary |
+| `X-Node-Signature` on handshake | Not required (see §9.2 X-Node-Signature lab boundary above) | ⚠️ Intentional lab boundary |
+
+Registry entries are never expired or pruned automatically —
+`last_seen` refreshes on every handshake, but nothing removes stale
+nodes. This is not a compliance gap for the lab demo: the registry
+demonstrates the handshake write path, not production node lifecycle
+management or trust.
+
 ## §8.3 error envelope
 
 | Surface | Status |
@@ -162,4 +215,6 @@ optional lab intake path, not a protocol §8 requirement.
 - No LoopCoin wallet/settlement engine; transactions are recorded, not executed (see LoopCoin settlement lab boundary above).
 - Signal governance (LoopVote) is out of scope; signals are seeded, not voted (see Signal governance lab boundary above).
 - Payments intake is record-only; no Stripe charges or webhook verification (see Payments lab boundary above).
+- Evidence is an append-only audit trail with no redaction/export tooling; entries are written internally, not via a public create endpoint (see Evidence lab boundary above).
 - Federation `X-Node-Signature` verification (see §9.2 boundary table above).
+- Federation registry has no node removal or trust/allowlist; the handshake is the only write path (see Federation registry lab boundary above).

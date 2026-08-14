@@ -60,6 +60,80 @@ const materialPayload = {
   available_from: '2025-06-01T10:00:00Z',
 };
 
+const productPayload = {
+  '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+  '@type': 'ProductDNA',
+  schema_version: '0.2.0',
+  id: 'PRD-DE-MUC-2025-DESK-F4A7B2',
+  product_category: 'furniture-office',
+  name: 'Standing Desk — Ergotron WorkFit',
+  condition: 'good',
+  quantity: { value: 12, unit: 'piece' },
+  origin_city: 'Munich',
+  current_city: 'Munich',
+  available_from: '2026-03-15T08:00:00Z',
+};
+
+const offerPayload = {
+  '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
+  '@type': 'Offer',
+  schema_version: '0.1.1',
+  id: 'OFR-2F7A6B9C',
+  material_id: materialPayload.id,
+  from_city: 'Munich',
+  to_city: 'Berlin',
+  quantity: { value: 80, unit: 'kg' },
+  status: 'open',
+  available_until: '2025-06-05T10:00:00Z',
+};
+
+const matchPayload = {
+  '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
+  '@type': 'Match',
+  schema_version: '0.1.1',
+  id: 'MCH-9B3C8A12',
+  material_id: materialPayload.id,
+  offer_id: offerPayload.id,
+  from_city: 'Munich',
+  to_city: 'Berlin',
+  status: 'accepted',
+  matched_at: '2025-06-02T12:15:00Z',
+};
+
+const transferPayload = {
+  '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
+  '@type': 'Transfer',
+  schema_version: '0.1.1',
+  id: 'TRF-5D8A23F1',
+  material_id: materialPayload.id,
+  match_id: matchPayload.id,
+  status: 'completed',
+  handoff_at: '2025-06-02T14:00:00Z',
+  received_at: '2025-06-02T18:00:00Z',
+};
+
+const materialStatusPayload = {
+  '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
+  '@type': 'MaterialStatusUpdate',
+  schema_version: '0.1.1',
+  id: '3c9a6a0b-8c1a-4d3f-9c2c-3c1c2f9d5c2a',
+  material_id: materialPayload.id,
+  status: 'reserved',
+  updated_at: '2025-06-03T09:15:00Z',
+  reason: 'Reserved by city exchange',
+  notes: 'Holding until pickup is confirmed',
+  source_node: 'lab-hub.loop',
+  metadata: { ticket: 'LAB-42' },
+};
+
+const relayPayload = {
+  event_type: 'material.created',
+  entity_type: 'material',
+  entity_id: materialPayload.id,
+  payload: { hello: 'world' },
+  source_node: 'node-a',
+};
+
 const handshakePayload = {
   '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.1.1.jsonld',
   '@type': 'NodeHandshake',
@@ -129,50 +203,69 @@ const federateThrowingDeps = () => ({
   },
 });
 
+const buildLoopApp = async () => {
+  const app = Fastify({ logger: false });
+  registerLoopSchemas(app);
+  const now = new Date().toISOString();
+  await registerLoopRoutes(app, {
+    createLoopMaterial: async () => ({ id: materialPayload.id, created_at: now, event: {} }),
+    createLoopProduct: async () => ({ id: 'product', created_at: now, event: {} }),
+    createLoopOffer: async () => ({ id: 'offer', created_at: now, event: {} }),
+    createLoopMatch: async () => ({ id: 'match', created_at: now, event: {} }),
+    createLoopTransfer: async () => ({ id: 'transfer', created_at: now, event: {} }),
+    insertLoopEvent: async () => ({ id: 1, created_at: now }),
+    listLoopEvents: async () => ([]),
+    getLoopMaterial: async () => ({ id: materialPayload.id }),
+    getLoopMaterialById: async () => undefined,
+    listLoopMaterials: async () => ([]),
+    getLoopProduct: async () => ({ id: 'product' }),
+    getLoopProductById: async () => undefined,
+    listLoopProducts: async () => ([]),
+    getLoopOffer: async () => ({ id: 'offer', material_id: materialPayload.id, product_id: null, status: 'open' }),
+    getLoopOfferById: async () => undefined,
+    listLoopOffers: async () => ([]),
+    getLoopMatch: async () => ({ id: 'match', material_id: materialPayload.id, product_id: null, offer_id: 'offer', status: 'accepted' }),
+    getLoopMatchById: async () => undefined,
+    listLoopMatches: async () => ([]),
+    getLoopTransferById: async () => undefined,
+    listLoopTransfers: async () => ([]),
+    searchLoopMaterials: async () => ({ results: [] }),
+    searchLoopProducts: async () => ({ results: [] }),
+    searchLoopMaterialsProtocol: async () => ({ results: [], total: 0 }),
+    broadcastLoopEvent: () => undefined,
+  });
+  return app;
+};
+
 describe('api key guard on write routes', () => {
-  it('blocks loop writes without api key', async () => {
-    const app = Fastify({ logger: false });
-    registerLoopSchemas(app);
-    const now = new Date().toISOString();
-    await registerLoopRoutes(app, {
-      createLoopMaterial: async () => ({ id: materialPayload.id, created_at: now, event: {} }),
-      createLoopProduct: async () => ({ id: 'product', created_at: now, event: {} }),
-      createLoopOffer: async () => ({ id: 'offer', created_at: now, event: {} }),
-      createLoopMatch: async () => ({ id: 'match', created_at: now, event: {} }),
-      createLoopTransfer: async () => ({ id: 'transfer', created_at: now, event: {} }),
-      insertLoopEvent: async () => ({ id: 1, created_at: now }),
-      listLoopEvents: async () => ([]),
-      getLoopMaterial: async () => ({ id: materialPayload.id }),
-      getLoopMaterialById: async () => undefined,
-      listLoopMaterials: async () => ([]),
-      getLoopProduct: async () => ({ id: 'product' }),
-      getLoopProductById: async () => undefined,
-      listLoopProducts: async () => ([]),
-      getLoopOffer: async () => ({ id: 'offer', material_id: materialPayload.id, product_id: null, status: 'open' }),
-      getLoopOfferById: async () => undefined,
-      listLoopOffers: async () => ([]),
-      getLoopMatch: async () => ({ id: 'match', material_id: materialPayload.id, product_id: null, offer_id: 'offer', status: 'accepted' }),
-      getLoopMatchById: async () => undefined,
-      listLoopMatches: async () => ([]),
-      getLoopTransferById: async () => undefined,
-      listLoopTransfers: async () => ([]),
-      searchLoopMaterials: async () => ({ results: [] }),
-      searchLoopProducts: async () => ({ results: [] }),
-      searchLoopMaterialsProtocol: async () => ({ results: [], total: 0 }),
-      broadcastLoopEvent: () => undefined,
-    });
+  // Covers all 7 requireApiKey-protected routes in src/routes/loop.ts (material,
+  // product, offer, match, transfer, material-status, relay) so a future refactor
+  // that silently drops one of the requireApiKey calls fails a test instead of
+  // going unnoticed.
+  it.each([
+    ['material', '/api/v1/material', materialPayload],
+    ['product', '/api/v1/product', productPayload],
+    ['offer', '/api/v1/offer', offerPayload],
+    ['match', '/api/v1/match', matchPayload],
+    ['transfer', '/api/v1/transfer', transferPayload],
+    ['material-status', '/api/v1/material-status', materialStatusPayload],
+    ['relay', '/api/v1/relay', relayPayload],
+  ] as const)('blocks loop %s write without api key', async (_label, url, payload) => {
+    const app = await buildLoopApp();
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url,
+        payload,
+      });
 
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/v1/material',
-      payload: materialPayload,
-    });
-
-    expect(response.statusCode).toBe(401);
-    const body = response.json();
-    expect(body.error.code).toBe('UNAUTHORIZED');
-    expect(body.error.message).toBe('Unauthorized');
-    await app.close();
+      expect(response.statusCode).toBe(401);
+      const body = response.json();
+      expect(body.error.code).toBe('UNAUTHORIZED');
+      expect(body.error.message).toBe('Unauthorized');
+    } finally {
+      await app.close();
+    }
   });
 
   it('blocks federation handshake without api key', async () => {

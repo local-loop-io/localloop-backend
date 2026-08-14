@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://localloop.urbnia.com/projects/loop-protocol/profiles/core-dp/0.1.0-lab/schemas/epcis-mapping.schema.json",
+  "title": "Core-DP EPCIS/CBV Mapping Metadata",
+  "description": "Profile-local metadata for conservative EPCIS 2.0.1 and CBV 2.0 fixture mapping. This is not full EPCIS conformance.",
+  "oneOf": [
+    { "$ref": "#/$defs/supportedFixtureMapping" },
+    { "$ref": "#/$defs/unsupportedFeatureMapping" }
+  ],
+  "$defs": {
+    "pinnedVersions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["epcis", "cbv"],
+      "properties": {
+        "epcis": { "const": "2.0.1" },
+        "cbv": { "const": "2.0" }
+      }
+    },
+    "supportedFixtureMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fixture_id", "pinned_versions", "core_dp_mapping", "epcis_subset_event"],
+      "properties": {
+        "fixture_id": { "type": "string", "minLength": 1 },
+        "pinned_versions": { "$ref": "#/$defs/pinnedVersions" },
+        "core_dp_mapping": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["evidence_event_type", "subject_type", "subject_id"],
+          "properties": {
+            "evidence_event_type": {
+              "type": "string",
+              "enum": ["registered", "offer-published", "match-accepted", "transfer-dispatched", "transfer-received", "transfer-acked"]
+            },
+            "subject_type": {
+              "type": "string",
+              "enum": ["material", "product", "offer", "match", "transfer"]
+            },
+            "subject_id": { "type": "string", "minLength": 1 }
+          }
+        },
+        "epcis_subset_event": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["type", "eventID", "eventTime", "action", "bizStep", "epcList"],
+          "properties": {
+            "type": { "const": "ObjectEvent" },
+            "eventID": { "type": "string", "pattern": "^ni:///sha-256;[a-f0-9]{64}$" },
+            "eventTime": { "type": "string", "format": "date-time" },
+            "action": { "type": "string", "enum": ["ADD", "OBSERVE"] },
+            "bizStep": { "type": "string", "enum": ["commissioning", "shipping", "receiving", "accepting"] },
+            "epcList": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "pattern": "^urn:loop:(material|product|offer|match|transfer):" }
+            }
+          }
+        }
+      }
+    },
+    "unsupportedFeatureMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pinned_versions", "full_epcis_conformance_claimed", "unsupported_features"],
+      "properties": {
+        "pinned_versions": { "$ref": "#/$defs/pinnedVersions" },
+        "full_epcis_conformance_claimed": { "const": false },
+        "unsupported_features": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["feature", "rationale"],
+            "properties": {
+              "feature": { "type": "string", "minLength": 1 },
+              "rationale": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

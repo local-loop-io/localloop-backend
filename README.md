@@ -136,6 +136,7 @@ See `.env.example` for the full list with descriptions. Key variables:
 | `AUTH_ENABLED` | `false` | Enable BetterAuth |
 | `API_KEY_ENABLED` | `false` | Require `X-API-Key` on write routes |
 | `RUN_MIGRATIONS` | `true` | Auto-run DB migrations on startup |
+| `WORKER_ENABLED` | `false` | Consume queued interest jobs. When left at the default `false`, `POST /api/interest` still enqueues a BullMQ job, but nothing ever picks it up. |
 
 In `NODE_ENV=production` the server refuses to start with missing or weak secrets.
 
@@ -155,6 +156,25 @@ scripts/           lab demo + federation scripts
 deploy/            systemd service + nginx example
 tests/             Bun test suite
 ```
+
+## Database layer
+Two different access patterns cover the schema, and they're not
+interchangeable:
+- **Prisma** (`prisma/schema.prisma`, `src/db/prisma.ts`) — only `Interest`
+  is queried via Prisma's typed model API; `City` goes through
+  `prisma.$queryRaw` for PostGIS geo queries. Prisma's connection also backs
+  the startup readiness probe and the `interests_search` materialized view
+  refresh.
+- **Hand-written SQL via `pool`** (`src/db/pool.ts`, `src/db/migrations/`) —
+  everything else, including all `Loop*` entities, payments, evidence,
+  idempotency keys, and signal config. Several of these have a Prisma model
+  in `schema.prisma` for type reference even though nothing queries them
+  through Prisma; 4 tables (`loop_evidence`, `loop_idempotency_keys`,
+  `loop_signal_config`, `loop_transactions`) have no Prisma model at all.
+
+See the comment block at the top of `prisma/schema.prisma` for the full
+per-table breakdown before assuming Prisma is the source of truth for a
+given table.
 
 ## Notes
 - Lab demo only. No public pilots or deployments.

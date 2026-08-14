@@ -2,15 +2,24 @@ import { Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import { config } from '../config';
 import { insertInterestEvent } from '../db/interestEvents';
+import { incrementMetric } from '../metrics';
 
 let connection: IORedis | null = null;
 let queue: Queue | null = null;
 
-const getConnection = () => {
+export const getConnection = () => {
   if (!connection) {
     connection = new IORedis(config.redisUrl, {
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
+    });
+    // Without a listener, an unhandled 'error' event on this EventEmitter
+    // crashes the whole process (mirrors src/db/pool.ts's pool.on('error', ...)).
+    // This connection backs enqueueInterest, which runs on every POST
+    // /api/interest regardless of WORKER_ENABLED, so a transient Redis blip
+    // must not be able to take down the API.
+    connection.on('error', (err: Error) => {
+      console.error('Redis connection error', err);
     });
   }
   return connection;
@@ -84,6 +93,7 @@ export function startWorkers() {
 
   worker.on('failed', (job, error) => {
     console.error('Queue job failed', job?.id, error);
+    incrementMetric('queue_job_failed');
   });
 
   return worker;

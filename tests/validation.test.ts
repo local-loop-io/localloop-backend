@@ -48,7 +48,7 @@ describe('validateInterest', () => {
       expect(result.data.organization).toBeUndefined();
       expect(result.data.website).toBeUndefined();
       expect(result.data.email).toBeUndefined();
-      expect(result.data.honey).toBeUndefined();
+      expect(result.data).not.toHaveProperty('honey');
     }
   });
 });

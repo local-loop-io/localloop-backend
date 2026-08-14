@@ -83,43 +83,53 @@ const weakSecrets = new Set([
   'default',
 ]);
 
+// A blocklist alone only catches secrets that happen to match a known
+// default string — "a" or "12345678" would sail through unchallenged.
+// Require a minimum length in production on top of the blocklist.
+const MIN_SECRET_LENGTH = 16;
+
+const isWeakSecret = (value: string | undefined) => {
+  if (!value) return true;
+  if (weakSecrets.has(value.toLowerCase())) return true;
+  return value.length < MIN_SECRET_LENGTH;
+};
+
 const hasWeakDatabasePassword = (databaseUrl: string) => {
   try {
     const password = new URL(databaseUrl).password;
-    if (!password) return true;
-    return weakSecrets.has(password.toLowerCase());
+    return isWeakSecret(password);
   } catch {
     return true;
   }
 };
 
-const hasUrlPassword = (url: string) => {
+const hasWeakUrlPassword = (url: string) => {
   try {
-    return new URL(url).password.length > 0;
+    return isWeakSecret(new URL(url).password);
   } catch {
-    return false;
+    return true;
   }
 };
 
 const ensureSecureProductionConfig = () => {
   if (parsed.NODE_ENV.toLowerCase() !== 'production') return;
 
-  if (weakSecrets.has(parsed.MINIO_SECRET_KEY.toLowerCase())) {
+  if (isWeakSecret(parsed.MINIO_SECRET_KEY)) {
     throw new Error('Insecure MINIO_SECRET_KEY for production');
   }
   if (hasWeakDatabasePassword(parsed.DATABASE_URL)) {
     throw new Error('Insecure database password in DATABASE_URL for production');
   }
-  if (!hasUrlPassword(parsed.REDIS_URL)) {
+  if (hasWeakUrlPassword(parsed.REDIS_URL)) {
     throw new Error('Insecure REDIS_URL for production: Redis must require a password');
   }
   if (booleanFromEnv(parsed.AUTH_ENABLED, false)) {
-    if (!parsed.BETTER_AUTH_SECRET || weakSecrets.has(parsed.BETTER_AUTH_SECRET.toLowerCase())) {
+    if (isWeakSecret(parsed.BETTER_AUTH_SECRET)) {
       throw new Error('Insecure BETTER_AUTH_SECRET for production when auth is enabled');
     }
   }
   if (booleanFromEnv(parsed.API_KEY_ENABLED, false)) {
-    if (!parsed.API_KEY || weakSecrets.has(parsed.API_KEY.toLowerCase())) {
+    if (isWeakSecret(parsed.API_KEY)) {
       throw new Error('Insecure API_KEY for production when API key protection is enabled');
     }
   }
