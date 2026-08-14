@@ -23,6 +23,7 @@ const productCategories = [
   'building-fixture',
   'textile-garment',
   'equipment-industrial',
+  'packaging-reusable',
 ];
 
 const productConditions = ['new', 'like-new', 'good', 'fair', 'poor'] as const;

@@ -219,6 +219,233 @@ export async function runLabSimulation(baseUrl = `http://localhost:${config.port
   const productTransferCreated = await productTransferResponse.json();
   timeline.push({ label: 'Product transfer completed', id: productTransferCreated.id, createdAt: productTransferCreated.created_at });
 
+  // --- Reusable-packaging flow (PPWR extension guidance — see profiles/packaging) ---
+
+  const packagingCycleId = `POOL-CRATE-${now.getUTCFullYear()}-CYCLE-${crypto.randomUUID().replace(/-/g, '').slice(0, 3).toUpperCase()}`;
+  const packagingProductId = `PRD-DE-MUC-${now.getUTCFullYear()}-CRATE-${crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+
+  const packagingProduct = {
+    '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+    '@type': 'ProductDNA',
+    schema_version: '0.2.0',
+    id: packagingProductId,
+    product_category: 'packaging-reusable',
+    name: 'Reusable Transport Crate — Pooled PPWR Asset',
+    condition: 'good',
+    quantity: { value: 40, unit: 'piece' },
+    origin_city: 'DEMO Munich',
+    current_city: 'DEMO Munich',
+    available_from: now.toISOString(),
+    passport: {
+      passport_id: `PPWR-DE-MUC-${now.getUTCFullYear()}-${packagingCycleId.slice(-3)}`,
+      passport_url: `https://example.com/dpp/packaging/DE-MUC-${now.getUTCFullYear()}-${packagingCycleId.slice(-3)}`,
+      access_scope: 'role-based',
+      visible_to: 'operator',
+      supported_regimes: ['ppwr'],
+    },
+    traceability: {
+      batch_id: packagingCycleId,
+    },
+  };
+
+  const packagingProductResponse = await fetch(`${baseUrl}/api/v1/product`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(packagingProduct),
+  });
+  if (!packagingProductResponse.ok) {
+    throw new Error(`Reusable-packaging product creation failed: ${await packagingProductResponse.text()}`);
+  }
+  const packagingProductCreated = await packagingProductResponse.json();
+  timeline.push({ label: 'Reusable-packaging product registered', id: packagingProductCreated.id, createdAt: packagingProductCreated.created_at });
+
+  const packagingOffer = {
+    '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+    '@type': 'Offer',
+    schema_version: '0.2.0',
+    id: buildId('OFR-PKG'),
+    product_id: packagingProduct.id,
+    from_city: 'DEMO Munich',
+    to_city: 'DEMO Berlin',
+    quantity: { value: 40, unit: 'piece' },
+    status: 'open',
+    available_until: new Date(now.getTime() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+    terms: 'Lab demo pooled-packaging return leg',
+  };
+
+  const packagingOfferResponse = await fetch(`${baseUrl}/api/v1/offer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(packagingOffer),
+  });
+  if (!packagingOfferResponse.ok) {
+    throw new Error(`Reusable-packaging offer creation failed: ${await packagingOfferResponse.text()}`);
+  }
+  const packagingOfferCreated = await packagingOfferResponse.json();
+  timeline.push({ label: 'Reusable-packaging offer published', id: packagingOfferCreated.id, createdAt: packagingOfferCreated.created_at });
+
+  const packagingMatch = {
+    '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+    '@type': 'Match',
+    schema_version: '0.2.0',
+    id: buildId('MCH-PKG'),
+    product_id: packagingProduct.id,
+    offer_id: packagingOffer.id,
+    from_city: 'DEMO Munich',
+    to_city: 'DEMO Berlin',
+    status: 'accepted',
+    matched_at: new Date(now.getTime() + 1000 * 60 * 60 * 9).toISOString(),
+  };
+
+  const packagingMatchResponse = await fetch(`${baseUrl}/api/v1/match`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(packagingMatch),
+  });
+  if (!packagingMatchResponse.ok) {
+    throw new Error(`Reusable-packaging match creation failed: ${await packagingMatchResponse.text()}`);
+  }
+  const packagingMatchCreated = await packagingMatchResponse.json();
+  timeline.push({ label: 'Reusable-packaging match accepted', id: packagingMatchCreated.id, createdAt: packagingMatchCreated.created_at });
+
+  const packagingTransfer = {
+    '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+    '@type': 'Transfer',
+    schema_version: '0.2.0',
+    id: buildId('TRF-PKG'),
+    product_id: packagingProduct.id,
+    match_id: packagingMatch.id,
+    status: 'completed',
+    handoff_at: new Date(now.getTime() + 1000 * 60 * 60 * 10).toISOString(),
+    received_at: new Date(now.getTime() + 1000 * 60 * 60 * 16).toISOString(),
+    route: { from_city: 'DEMO Munich', to_city: 'DEMO Berlin', mode: 'road' },
+    traceability: {
+      batch_id: packagingCycleId,
+    },
+    passport: {
+      passport_id: packagingProduct.passport.passport_id,
+      access_scope: 'role-based',
+      visible_to: 'operator',
+    },
+  };
+
+  const packagingTransferResponse = await fetch(`${baseUrl}/api/v1/transfer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(packagingTransfer),
+  });
+  if (!packagingTransferResponse.ok) {
+    throw new Error(`Reusable-packaging transfer creation failed: ${await packagingTransferResponse.text()}`);
+  }
+  const packagingTransferCreated = await packagingTransferResponse.json();
+  timeline.push({ label: 'Reusable-packaging transfer completed', id: packagingTransferCreated.id, createdAt: packagingTransferCreated.created_at });
+
+  // --- Municipal-reuse flow (Germany National Circular Economy Strategy signal —
+  // municipal-node interoperability and reusable material identity, not a specific EU
+  // passport regime, so this flow carries no passport/traceability regulatory fields) ---
+
+  const municipalProductId = `PRD-DE-MUC-${now.getUTCFullYear()}-DEPOT-${crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+
+  const municipalProduct = {
+    '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+    '@type': 'ProductDNA',
+    schema_version: '0.2.0',
+    id: municipalProductId,
+    product_category: 'furniture-office',
+    name: 'Refurbished Office Chairs — Municipal Reuse Depot Batch',
+    condition: 'fair',
+    lifecycle_stage: 'refurbished',
+    quantity: { value: 18, unit: 'piece' },
+    origin_city: 'DEMO Munich',
+    current_city: 'DEMO Munich',
+    available_from: now.toISOString(),
+    reuse_potential: 'Refurbished by the DEMO Munich municipal reuse depot ahead of redistribution to a partner city hub.',
+  };
+
+  const municipalProductResponse = await fetch(`${baseUrl}/api/v1/product`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(municipalProduct),
+  });
+  if (!municipalProductResponse.ok) {
+    throw new Error(`Municipal-reuse product creation failed: ${await municipalProductResponse.text()}`);
+  }
+  const municipalProductCreated = await municipalProductResponse.json();
+  timeline.push({ label: 'Municipal-reuse product registered', id: municipalProductCreated.id, createdAt: municipalProductCreated.created_at });
+
+  const municipalOffer = {
+    '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+    '@type': 'Offer',
+    schema_version: '0.2.0',
+    id: buildId('OFR-MUN'),
+    product_id: municipalProduct.id,
+    from_city: 'DEMO Munich',
+    to_city: 'DEMO Berlin',
+    quantity: { value: 18, unit: 'piece' },
+    status: 'open',
+    available_until: new Date(now.getTime() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+    terms: 'Municipal reuse depot redistribution to partner city hub',
+  };
+
+  const municipalOfferResponse = await fetch(`${baseUrl}/api/v1/offer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(municipalOffer),
+  });
+  if (!municipalOfferResponse.ok) {
+    throw new Error(`Municipal-reuse offer creation failed: ${await municipalOfferResponse.text()}`);
+  }
+  const municipalOfferCreated = await municipalOfferResponse.json();
+  timeline.push({ label: 'Municipal-reuse offer published', id: municipalOfferCreated.id, createdAt: municipalOfferCreated.created_at });
+
+  const municipalMatch = {
+    '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+    '@type': 'Match',
+    schema_version: '0.2.0',
+    id: buildId('MCH-MUN'),
+    product_id: municipalProduct.id,
+    offer_id: municipalOffer.id,
+    from_city: 'DEMO Munich',
+    to_city: 'DEMO Berlin',
+    status: 'accepted',
+    matched_at: new Date(now.getTime() + 1000 * 60 * 60 * 11).toISOString(),
+  };
+
+  const municipalMatchResponse = await fetch(`${baseUrl}/api/v1/match`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(municipalMatch),
+  });
+  if (!municipalMatchResponse.ok) {
+    throw new Error(`Municipal-reuse match creation failed: ${await municipalMatchResponse.text()}`);
+  }
+  const municipalMatchCreated = await municipalMatchResponse.json();
+  timeline.push({ label: 'Municipal-reuse match accepted', id: municipalMatchCreated.id, createdAt: municipalMatchCreated.created_at });
+
+  const municipalTransfer = {
+    '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+    '@type': 'Transfer',
+    schema_version: '0.2.0',
+    id: buildId('TRF-MUN'),
+    product_id: municipalProduct.id,
+    match_id: municipalMatch.id,
+    status: 'completed',
+    handoff_at: new Date(now.getTime() + 1000 * 60 * 60 * 12).toISOString(),
+    received_at: new Date(now.getTime() + 1000 * 60 * 60 * 20).toISOString(),
+    route: { from_city: 'DEMO Munich', to_city: 'DEMO Berlin', mode: 'road' },
+  };
+
+  const municipalTransferResponse = await fetch(`${baseUrl}/api/v1/transfer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(municipalTransfer),
+  });
+  if (!municipalTransferResponse.ok) {
+    throw new Error(`Municipal-reuse transfer creation failed: ${await municipalTransferResponse.text()}`);
+  }
+  const municipalTransferCreated = await municipalTransferResponse.json();
+  timeline.push({ label: 'Municipal-reuse transfer completed', id: municipalTransferCreated.id, createdAt: municipalTransferCreated.created_at });
+
   console.log('\nLab demo timeline');
   console.log('-----------------');
   for (const event of timeline) {
