@@ -9,16 +9,16 @@ jobs:
   conformance:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: localloop-backend
       - name: Check out loop-protocol (canonical schemas + openapi.json)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: local-loop-io/loop-protocol
           path: loop-protocol
       - name: Check out localloop-site (docs-hub mirror)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: local-loop-io/localloop-site
           path: localloop-site

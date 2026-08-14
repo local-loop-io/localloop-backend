@@ -40,7 +40,7 @@ jobs:
       DATABASE_URL: postgresql://localloop:localloop_ci_password@localhost:55432/localloop
       REDIS_URL: redis://:localloop_ci_redis_password@localhost:6381
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Domain consistency check
         run: ./scripts/check-domains.sh
       - name: Setup Bun
