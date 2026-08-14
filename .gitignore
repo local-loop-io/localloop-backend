@@ -4,4 +4,5 @@ node_modules/
 .env.docker
 .DS_Store
 /data
+/backups
 bun.lockb

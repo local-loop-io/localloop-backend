@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Docker Compose log rotation (`json-file`, 10m/5 files) on all 5 services —
+  previously unbounded, so container logs could grow without limit on a
+  long-lived VPS host.
+- Basic health-check alerting: `deploy/healthcheck-alert.sh` polls `/health`
+  on a 5-minute systemd timer (`deploy/localloop-backend-healthcheck.timer`),
+  fails loudly (non-zero exit, visible in `systemctl --failed` /
+  `journalctl`) on a down or degraded node, and optionally POSTs to a
+  webhook if `ALERT_WEBHOOK_URL` is set.
+
+### Fixed
+- `deploy/backup.sh` referenced the retired `minio` service/`data/minio`
+  path (renamed to `seaweedfs` in `docker-compose.yml` at some prior point)
+  — under `set -euo pipefail` this aborted the entire nightly backup run
+  after the Postgres/Redis dumps but before the manifest write, `latest`
+  symlink update, or retention cleanup. Caught by an actual backup/restore
+  drill against the local dev stack, not a documentation read — see
+  `localloop-agent` `evidence/pilot-readiness-2026-08-14/backup-restore-drill.md`.
+  Fixed and re-verified end to end (real run, scratch `BACKUP_ROOT`, exited 0
+  with correctly sized dumps for all three stores).
+
+### Added
 - `status-updated` evidence event type: `POST /api/v1/material-status` now also writes
   to the append-only `loop_evidence` log (migration `016_loop_evidence_status_updated.sql`),
   closing a gap where status changes reached only the mutable `loop_events` SSE feed. See

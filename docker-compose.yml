@@ -1,3 +1,11 @@
+# Docker's default json-file driver has no size/rotation limit, so container
+# logs grow unbounded on the host over time unless capped here explicitly.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   api:
     build: .
@@ -7,6 +15,7 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -55,6 +64,7 @@ services:
     volumes:
       - ./data/postgres:/var/lib/postgresql
     restart: unless-stopped
+    logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-localloop} -d ${POSTGRES_DB:-localloop}"]
       interval: 10s
@@ -80,6 +90,7 @@ services:
     volumes:
       - ./data/redis:/data
     restart: unless-stopped
+    logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
       interval: 10s
@@ -104,6 +115,7 @@ services:
     volumes:
       - ./data/seaweedfs:/data
     restart: unless-stopped
+    logging: *default-logging
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9333/cluster/status"]
       interval: 10s
@@ -129,6 +141,7 @@ services:
     volumes:
       - ./storage-proxy/nginx.conf:/etc/nginx/nginx.conf:ro
     restart: unless-stopped
+    logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9000/ >/dev/null 2>&1 || exit 1"]
       interval: 10s
