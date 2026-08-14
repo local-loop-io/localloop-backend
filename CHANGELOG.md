@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `AUTH_ENABLED` (better-auth) end-to-end coverage: provisioned the missing
+  core schema (`user`/`session`/`account`/`verification`,
+  `src/db/migrations/017_better_auth_schema.sql` — previously AUTH_ENABLED
+  was wired in code with no schema ever applied, so the first sign-up would
+  have failed on a missing relation), set an explicit `baseURL` on the
+  `betterAuth()` config (removes the "Base URL is not set" warning and
+  hardens redirect/callback correctness), and added real sign-up/sign-in
+  (including wrong-password rejection)/session-issuance/`get-session`
+  coverage in `tests/auth.enabled.test.ts`.
+
+### Added
 - `status-updated` evidence event type: `POST /api/v1/material-status` now also writes
   to the append-only `loop_evidence` log (migration `016_loop_evidence_status_updated.sql`),
   closing a gap where status changes reached only the mutable `loop_events` SSE feed. See
