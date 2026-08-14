@@ -147,6 +147,15 @@ to demonstrate an append-only audit trail behind the existing write
 routes, not to be a standalone records-management product with
 redaction/export tooling.
 
+The MinIO/S3 client (`src/storage/s3.ts`, `s3Client`) is fully
+provisioned — `docker-compose.yml`'s `minio`/`minio-proxy` services,
+the `@aws-sdk/client-s3` dependency, and `MINIO_*` config are all
+live — but `s3Client` has zero importers anywhere in `src/`, `scripts/`,
+or `tests/`. It is not wired to any route today. The most likely
+future use is attachments or an evidence export/archive feature, but
+whether to build that (or decommission the MinIO service instead) is
+a product decision, not something this note resolves.
+
 ### Federation registry lab boundary
 
 The federation node registry (`federation_nodes`, migration 008) exists
