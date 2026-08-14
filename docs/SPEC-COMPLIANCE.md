@@ -148,10 +148,12 @@ routes, not to be a standalone records-management product with
 redaction/export tooling.
 
 The MinIO/S3 client (`src/storage/s3.ts`, `s3Client`) is fully
-provisioned — `docker-compose.yml`'s `minio`/`minio-proxy` services,
-the `@aws-sdk/client-s3` dependency, and `MINIO_*` config are all
-live — but `s3Client` has zero importers anywhere in `src/`, `scripts/`,
-or `tests/`. It is not wired to any route today. The most likely
+provisioned — `docker-compose.yml`'s `seaweedfs`/`storage-proxy`
+services (an S3-compatible SeaweedFS gateway, formerly MinIO) expose
+the same proxied S3 endpoint, the `@aws-sdk/client-s3` dependency,
+and `MINIO_*` config are all live — but `s3Client` has zero importers
+anywhere in `src/`, `scripts/`, or `tests/`. It is not wired to any
+route today. The most likely
 future use is attachments or an evidence export/archive feature, but
 whether to build that (or decommission the MinIO service instead) is
 a product decision, not something this note resolves.
