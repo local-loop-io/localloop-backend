@@ -157,6 +157,25 @@ deploy/            systemd service + nginx example
 tests/             Bun test suite
 ```
 
+## Database layer
+Two different access patterns cover the schema, and they're not
+interchangeable:
+- **Prisma** (`prisma/schema.prisma`, `src/db/prisma.ts`) — only `Interest`
+  is queried via Prisma's typed model API; `City` goes through
+  `prisma.$queryRaw` for PostGIS geo queries. Prisma's connection also backs
+  the startup readiness probe and the `interests_search` materialized view
+  refresh.
+- **Hand-written SQL via `pool`** (`src/db/pool.ts`, `src/db/migrations/`) —
+  everything else, including all `Loop*` entities, payments, evidence,
+  idempotency keys, and signal config. Several of these have a Prisma model
+  in `schema.prisma` for type reference even though nothing queries them
+  through Prisma; 4 tables (`loop_evidence`, `loop_idempotency_keys`,
+  `loop_signal_config`, `loop_transactions`) have no Prisma model at all.
+
+See the comment block at the top of `prisma/schema.prisma` for the full
+per-table breakdown before assuming Prisma is the source of truth for a
+given table.
+
 ## Notes
 - Lab demo only. No public pilots or deployments.
 - The normative protocol reference is [loop-protocol](https://github.com/local-loop-io/loop-protocol).
