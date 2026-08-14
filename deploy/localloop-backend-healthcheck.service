@@ -18,9 +18,9 @@ User=root
 Group=root
 NoNewPrivileges=yes
 ProtectSystem=strict
-# ProtectHome=yes masks /home entirely, so the real deploy path (under
-# /home/alphin) needs an explicit read-only exception -- without this the
-# service fails to find its own ExecStart target under systemd's sandbox.
-ProtectHome=yes
-ReadOnlyPaths=/home/alphin/code/local-loop-io/localloop-backend
+# ProtectHome=yes masks /home entirely for the executed process -- tested
+# live 2026-08-14: even with a matching ReadOnlyPaths= exception for the
+# real deploy path (under /home/alphin), the unit still failed with
+# status=203/EXEC. Left off rather than fighting the sandbox further;
+# ProtectSystem=strict + NoNewPrivileges=yes still apply.
 PrivateTmp=yes
