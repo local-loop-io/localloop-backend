@@ -26,7 +26,7 @@ require_file() {
 require_command docker
 require_file "$COMPOSE_FILE"
 
-mkdir -p "$RUN_DIR/postgres" "$RUN_DIR/redis" "$RUN_DIR/minio" "$RUN_DIR/manifests"
+mkdir -p "$RUN_DIR/postgres" "$RUN_DIR/redis" "$RUN_DIR/seaweedfs" "$RUN_DIR/manifests"
 
 echo "Creating backup at $RUN_DIR"
 
@@ -39,7 +39,7 @@ docker compose -f "$COMPOSE_FILE" exec -T postgres sh -lc \
 docker compose -f "$COMPOSE_FILE" exec -T redis redis-cli SAVE >/dev/null
 cp "$PROJECT_DIR/data/redis/dump.rdb" "$RUN_DIR/redis/dump.rdb"
 
-tar -czf "$RUN_DIR/minio/minio-data.tar.gz" -C "$PROJECT_DIR" data/minio
+tar -czf "$RUN_DIR/seaweedfs/seaweedfs-data.tar.gz" -C "$PROJECT_DIR" data/seaweedfs
 
 printf '%s\n' \
   "timestamp=$STAMP" \

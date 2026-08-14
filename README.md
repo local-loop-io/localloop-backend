@@ -137,6 +137,7 @@ See `.env.example` for the full list with descriptions. Key variables:
 | `API_KEY_ENABLED` | `false` | Require `X-API-Key` on write routes |
 | `RUN_MIGRATIONS` | `true` | Auto-run DB migrations on startup |
 | `WORKER_ENABLED` | `false` | Consume queued interest jobs. When left at the default `false`, `POST /api/interest` still enqueues a BullMQ job, but nothing ever picks it up. |
+| `ALERT_WEBHOOK_URL` | — | Optional. Read by `deploy/healthcheck-alert.sh` (not the app process / not in `src/config.ts`) — if set, a failed `/health` check POSTs a JSON `{text: ...}` payload here (Slack/Discord/generic-webhook compatible) in addition to the always-on journal/exit-code failure signal. See `deploy/localloop-backend-healthcheck.timer`. |
 
 In `NODE_ENV=production` the server refuses to start with missing or weak secrets.
 

@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodic localLOOP backend health check
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Unit=localloop-backend-healthcheck.service
+
+[Install]
+WantedBy=timers.target

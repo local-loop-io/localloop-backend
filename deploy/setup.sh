@@ -65,10 +65,15 @@ if [[ -f "deploy/localloop-backend.service" ]]; then
     cp deploy/localloop-backend.service /etc/systemd/system/localloop-backend.service
     cp deploy/localloop-backend-backup.service /etc/systemd/system/localloop-backend-backup.service
     cp deploy/localloop-backend-backup.timer /etc/systemd/system/localloop-backend-backup.timer
+    cp deploy/localloop-backend-healthcheck.service /etc/systemd/system/localloop-backend-healthcheck.service
+    cp deploy/localloop-backend-healthcheck.timer /etc/systemd/system/localloop-backend-healthcheck.timer
+    chmod +x deploy/healthcheck-alert.sh
     systemctl daemon-reload
     echo "Service installed. Enable with: systemctl enable localloop-backend"
     echo "Start with: systemctl start localloop-backend"
     echo "Enable backups with: systemctl enable --now localloop-backend-backup.timer"
+    echo "Enable health-check alerting with: systemctl enable --now localloop-backend-healthcheck.timer"
+    echo "  (optional: set ALERT_WEBHOOK_URL in $INSTALL_DIR/.env for push notifications; journal logging works without it)"
 fi
 
 # Verify bun is installed
@@ -87,3 +92,4 @@ echo "2. Run 'cd $INSTALL_DIR && bun install' as $SERVICE_USER"
 echo "3. Run 'systemctl enable --now localloop-backend'"
 echo "4. Check status with 'systemctl status localloop-backend'"
 echo "5. Enable nightly backups with 'systemctl enable --now localloop-backend-backup.timer'"
+echo "6. Enable health-check alerting with 'systemctl enable --now localloop-backend-healthcheck.timer'"
