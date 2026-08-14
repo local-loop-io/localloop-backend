@@ -7,10 +7,10 @@
   "license": "MIT",
   "type": "module",
   "engines": {
-    "node": ">=25.1.0"
+    "node": ">=24.19.0"
   },
   "volta": {
-    "node": "25.1.0"
+    "node": "24.19.0"
   },
   "scripts": {
     "dev": "bun run src/index.ts",

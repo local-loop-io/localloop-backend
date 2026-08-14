@@ -51,7 +51,7 @@ if [[ -f "src/index.ts" ]]; then
         cp .env.docker.example "$INSTALL_DIR/.env.docker"
         echo ""
         echo "IMPORTANT: Edit $INSTALL_DIR/.env.docker before enabling Docker-based operations!"
-        echo "Required: POSTGRES_PASSWORD, MINIO_ROOT_PASSWORD, MINIO_SECRET_KEY, DATABASE_URL"
+        echo "Required: POSTGRES_PASSWORD, MINIO_SECRET_KEY, DATABASE_URL"
     fi
 fi
 
