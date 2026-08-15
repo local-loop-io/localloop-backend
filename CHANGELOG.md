@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `deploy/localloop-backend-backup.service` and `deploy/localloop-backend.service`
+  hardcoded `/opt/localloop-backend`, which was never actually this project's real
+  deployment path — same bug already fixed in the health-check timer service.
+  Also found and stopped a hand-customized copy of `localloop-backend.service`
+  running live against a stale, 8-month-old checkout with an outdated DB
+  password, crash-looping every ~15s for 35+ hours (harmless in practice —
+  Docker exclusively held the app's port the entire time — but wasteful).
+  `localloop-backend.service` is now documented as the legacy bare-metal
+  alternative to the actual, current Docker Compose deployment.
+
 ### Added
 - `AUTH_ENABLED` (better-auth) end-to-end coverage: provisioned the missing
   core schema (`user`/`session`/`account`/`verification`,
