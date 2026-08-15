@@ -5,13 +5,22 @@ Requires=docker.service
 
 [Service]
 Type=oneshot
-WorkingDirectory=/opt/localloop-backend
-EnvironmentFile=-/opt/localloop-backend/.env
-ExecStart=/opt/localloop-backend/deploy/backup.sh
+# Path reflects this project's actual (only) deployment host, matching
+# localloop-backend-healthcheck.service -- /opt/localloop-backend was never
+# actually used here (verified 2026-08-14/15: the live app runs via
+# docker-compose from this exact directory). Update both this path and the
+# ReadWritePaths= line below together if this ever moves.
+WorkingDirectory=/home/alphin/code/local-loop-io/localloop-backend
+EnvironmentFile=-/home/alphin/code/local-loop-io/localloop-backend/.env
+ExecStart=/home/alphin/code/local-loop-io/localloop-backend/deploy/backup.sh
 User=root
 Group=root
 NoNewPrivileges=yes
 ProtectSystem=strict
-ProtectHome=yes
+# ProtectHome=yes masks /home entirely for the executed process -- this
+# broke localloop-backend-healthcheck.service even with a matching
+# ReadWritePaths=/ReadOnlyPaths= exception (status=203/EXEC), tested live
+# 2026-08-14. Left off here for the same reason rather than repeat that
+# failure; ProtectSystem=strict + NoNewPrivileges=yes still apply.
 PrivateTmp=yes
-ReadWritePaths=/opt/localloop-backend/backups /opt/localloop-backend/data
+ReadWritePaths=/home/alphin/code/local-loop-io/localloop-backend/backups /home/alphin/code/local-loop-io/localloop-backend/data
