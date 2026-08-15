@@ -1,7 +1,18 @@
 [Unit]
-Description=localLOOP Backend API
+Description=localLOOP Backend API (legacy bare-metal alternative -- see note below)
 After=network.target postgresql.service redis.service
 Wants=postgresql.service redis.service
+
+# NOTE (2026-08-15): the actual, current deployment method for this project
+# is Docker Compose (docker-compose.yml, `docker compose up -d --build api`)
+# -- this bare-metal systemd unit is a legacy alternative, kept for
+# reference/rollback scenarios, not the live method. Confirmed live: a
+# hand-customized copy of this exact template was found installed and
+# crash-looping every ~15s for 35+ hours (stale checkout, outdated DB
+# password) while Docker exclusively held the app's port the entire time --
+# it was never actually serving traffic. That instance has been stopped and
+# disabled. If you deploy via this file instead of Docker, keep only one of
+# the two running at a time.
 
 [Service]
 Type=simple
@@ -21,6 +32,11 @@ Group=localloop
 # Security hardening
 NoNewPrivileges=yes
 ProtectSystem=strict
+# ProtectHome=yes masks /home entirely for the executed process. If you
+# customize WorkingDirectory/ExecStart above to a /home path, this WILL
+# break the service with status=203/EXEC even with a matching
+# ReadWritePaths= exception -- confirmed live 2026-08-14 on the sibling
+# healthcheck/backup services. Drop this line (or move off /home) if so.
 ProtectHome=yes
 PrivateTmp=yes
 ReadWritePaths=/opt/localloop-backend/data
