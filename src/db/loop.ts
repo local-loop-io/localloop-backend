@@ -380,6 +380,21 @@ export async function createLoopTransfer(payload: LoopTransferPayload): Promise<
       throw new LoopStateError('invalid_state', `Match is not accepted (status=${match.status})`);
     }
 
+    // Creating a transfer doesn't change loop_matches.status, so without this
+    // check a second request for the same match_id would also pass the check
+    // above and fall through to the uq_loop_transfers_active_match unique index
+    // as a raw 23505 instead of a clean state error. The FOR UPDATE lock above
+    // already serializes concurrent attempts for this match_id, so this check
+    // is race-free for the same reason the offer/match checks elsewhere in this
+    // file are.
+    const { rows: activeTransferRows } = await client.query(
+      "SELECT 1 FROM loop_transfers WHERE match_id = $1 AND status <> 'cancelled'",
+      [payload.match_id],
+    );
+    if (activeTransferRows.length > 0) {
+      throw new LoopStateError('invalid_state', 'Match already has an active transfer');
+    }
+
     const created = await insertLoopTransfer(payload, client);
     const event = buildLoopEvent('transfer.created', 'transfer', created.id, payload, created.created_at);
     await insertLoopEvent(

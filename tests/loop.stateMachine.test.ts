@@ -170,9 +170,34 @@ describe('loop state machine (db-backed)', () => {
     } catch (e) {
       error = e;
     }
-    expect(error).toBeDefined();
-    // Partial unique index on (match_id WHERE status <> 'cancelled') -> 23505.
-    expect((error as { code?: string }).code).toBe('23505');
+    // An explicit pre-insert check (guarded by the same FOR UPDATE lock used
+    // for the match/offer state checks above) now catches this before it can
+    // reach the uq_loop_transfers_active_match unique index, so callers get a
+    // clean invalid_state error instead of a raw 23505.
+    expect(error).toBeInstanceOf(LoopStateError);
+    expect((error as LoopStateError).kind).toBe('invalid_state');
+  });
+
+  it('lets exactly one of two concurrent transfers win for the same match', async () => {
+    if (!dbReady) return;
+    const material = buildMaterial();
+    await createLoopMaterial(material);
+    const offer = buildOffer(material.id);
+    await createLoopOffer(offer);
+    const match = buildMatch(material.id, offer.id);
+    await createLoopMatch(match);
+
+    const results = await Promise.allSettled([
+      createLoopTransfer(buildTransfer(material.id, match.id)),
+      createLoopTransfer(buildTransfer(material.id, match.id)),
+    ]);
+
+    const fulfilled = results.filter((r) => r.status === 'fulfilled');
+    const rejected = results.filter((r) => r.status === 'rejected') as PromiseRejectedResult[];
+    expect(fulfilled.length).toBe(1);
+    expect(rejected.length).toBe(1);
+    expect(rejected[0]!.reason).toBeInstanceOf(LoopStateError);
+    expect((rejected[0]!.reason as LoopStateError).kind).toBe('invalid_state');
   });
 
   it('rejects an offer whose quantity exceeds the material', async () => {
