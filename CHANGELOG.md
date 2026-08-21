@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-08-21
+
+### Fixed
+- Duplicate active LOOP transfers now return a clean state error instead of
+  creating conflicting transfer state.
+
 ### Fixed
 - `deploy/localloop-backend-backup.service` and `deploy/localloop-backend.service`
   hardcoded `/opt/localloop-backend`, which was never actually this project's real
