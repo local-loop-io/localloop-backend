@@ -4,6 +4,9 @@ import IORedis from 'ioredis';
 import { createInterestJobHandler, getConnection } from '../src/queue';
 import { getMetricsSnapshot, incrementMetric } from '../src/metrics';
 import { config } from '../src/config';
+import { probeRedis } from './dbReady';
+
+const redisReady = await probeRedis('queue');
 
 describe('queue handlers', () => {
   it('ignores unrelated jobs', async () => {
@@ -58,20 +61,13 @@ describe('queue handlers', () => {
     connection.disconnect();
   });
 
-  it('increments the queue_job_failed metric when a job fails (mirrors startWorkers\' failed handler)', async () => {
+  it.skipIf(!redisReady)('increments the queue_job_failed metric when a job fails (mirrors startWorkers\' failed handler)', async () => {
     // Deliberately independent of getConnection()'s shared singleton (the
     // preceding test disconnects it) so this test doesn't depend on suite
     // ordering.
     const redis = new IORedis(config.redisUrl, { maxRetriesPerRequest: null, enableReadyCheck: false, lazyConnect: true });
     redis.on('error', () => {});
-    try {
-      await redis.connect();
-      await redis.ping();
-    } catch (error) {
-      console.log('[queue] Redis unavailable — skipping job-failure metric test:', (error as Error).message);
-      redis.disconnect();
-      return;
-    }
+    await redis.connect();
 
     const queueName = `test-queue-job-failed-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const queue = new Queue(queueName, { connection: redis as never });

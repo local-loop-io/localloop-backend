@@ -1,9 +1,9 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { afterAll, describe, expect, it } from 'bun:test';
+import { probeDatabase } from './dbReady';
 import Fastify from 'fastify';
 import { resolveNodeApiEndpoint } from '../src/federation/registry';
 import { registerFederationRoutes } from '../src/routes/federation';
 import { pool } from '../src/db/pool';
-import { runMigrations } from '../src/db/migrate';
 
 describe('federation registry helpers', () => {
   it('appends the API prefix when PUBLIC_BASE_URL is a site origin', () => {
@@ -16,6 +16,8 @@ describe('federation registry helpers', () => {
     expect(resolveNodeApiEndpoint('https://loop-api.urbnia.com/api/v1/')).toBe('https://loop-api.urbnia.com/api/v1');
   });
 });
+
+const dbReady = await probeDatabase('federation.registry');
 
 describe('Federation registry lab boundary (SPEC-COMPLIANCE)', () => {
   it('has no route to remove or directly write a node outside the handshake', async () => {
@@ -38,18 +40,8 @@ describe('Federation registry lab boundary (SPEC-COMPLIANCE)', () => {
   });
 
   describe('handshake upsert semantics (real registry)', () => {
-    let dbReady = false;
     const testNodeId = `test-registry-${Date.now()}.loop`;
 
-    beforeAll(async () => {
-      try {
-        await runMigrations();
-        dbReady = true;
-      } catch (error) {
-        console.warn('[federation.registry] Postgres unavailable — skipping upsert tests:', (error as Error).message);
-        dbReady = false;
-      }
-    });
 
     afterAll(async () => {
       if (dbReady) {
@@ -68,8 +60,7 @@ describe('Federation registry lab boundary (SPEC-COMPLIANCE)', () => {
       timestamp: new Date().toISOString(),
     });
 
-    it('repeated handshakes for the same node_id upsert in place, not duplicate', async () => {
-      if (!dbReady) return;
+    it.skipIf(!dbReady)('repeated handshakes for the same node_id upsert in place, not duplicate', async () => {
 
       const app = Fastify({ logger: false });
       await registerFederationRoutes(app);

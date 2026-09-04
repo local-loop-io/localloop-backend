@@ -1,21 +1,10 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
-import { pool } from '../src/db/pool';
-import { runMigrations } from '../src/db/migrate';
+import { afterAll, describe, expect, it } from 'bun:test';
+import { probeDatabase } from './dbReady';
 import { insertInterest, listInterests, refreshInterestSearch } from '../src/db/interest';
 import { prisma } from '../src/db/prisma';
 
-let dbReady = false;
+const dbReady = await probeDatabase('interest.privacy');
 const createdIds: number[] = [];
-
-beforeAll(async () => {
-  try {
-    await pool.query('SELECT 1');
-    await runMigrations();
-    dbReady = true;
-  } catch (error) {
-    console.warn('[interest.privacy] Postgres unavailable — skipping:', (error as Error).message);
-  }
-});
 
 afterAll(async () => {
   if (!dbReady) return;
@@ -26,8 +15,7 @@ afterAll(async () => {
 });
 
 describe('interest list email privacy', () => {
-  it('redacts email on search when shareEmail was revoked after MV refresh', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('redacts email on search when shareEmail was revoked after MV refresh', async () => {
 
     const marker = `privacy-${Date.now()}`;
     const created = await insertInterest({

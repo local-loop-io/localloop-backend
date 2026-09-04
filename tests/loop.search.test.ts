@@ -1,6 +1,6 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { afterAll, describe, expect, it } from 'bun:test';
+import { probeDatabase } from './dbReady';
 import { pool } from '../src/db/pool';
-import { runMigrations } from '../src/db/migrate';
 import {
   createLoopMaterial,
   createLoopProduct,
@@ -12,7 +12,7 @@ import {
 
 // DB-backed: auto-skips when Postgres is unreachable, same convention as
 // loop.stateMachine.test.ts.
-let dbReady = false;
+const dbReady = await probeDatabase('loop.search');
 const createdMaterials: string[] = [];
 const createdProducts: string[] = [];
 
@@ -51,15 +51,6 @@ function buildProduct(overrides: Partial<LoopProductPayload> = {}): LoopProductP
   };
 }
 
-beforeAll(async () => {
-  try {
-    await runMigrations();
-    dbReady = true;
-  } catch (error) {
-    console.warn('[loop.search] Postgres unavailable — skipping search tests:', (error as Error).message);
-    dbReady = false;
-  }
-});
 
 afterAll(async () => {
   if (dbReady) {
@@ -73,8 +64,7 @@ afterAll(async () => {
 });
 
 describe('Core-DP local search', () => {
-  it('filters by category_prefix and returns deterministic record hashes/provenance', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('filters by category_prefix and returns deterministic record hashes/provenance', async () => {
     const cat = `cat-${suffix()}`;
     const a = buildMaterial({ category: cat });
     const b = buildMaterial({ category: cat });
@@ -92,8 +82,7 @@ describe('Core-DP local search', () => {
     }
   });
 
-  it('paginates with an opaque cursor in updated_at_asc,id_asc order with no gaps or dupes', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('paginates with an opaque cursor in updated_at_asc,id_asc order with no gaps or dupes', async () => {
     const cat = `page-${suffix()}`;
     const created: string[] = [];
     for (let i = 0; i < 3; i += 1) {
@@ -117,8 +106,7 @@ describe('Core-DP local search', () => {
     }
   });
 
-  it('applies the quantity_min filter', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('applies the quantity_min filter', async () => {
     const cat = `qty-${suffix()}`;
     const small = buildMaterial({ category: cat, quantity: { value: 5, unit: 'kg' } });
     const large = buildMaterial({ category: cat, quantity: { value: 500, unit: 'kg' } });
@@ -131,8 +119,7 @@ describe('Core-DP local search', () => {
     expect(ids).not.toContain(small.id);
   });
 
-  it('treats id_prefix and category_prefix LIKE metacharacters as literal text', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('treats id_prefix and category_prefix LIKE metacharacters as literal text', async () => {
     const cat = `lit_${suffix()}%`; // literal % must not become a wildcard
     const decoy = buildMaterial({ category: `lit_${suffix()}xyz` });
     const target = buildMaterial({ category: cat });
@@ -145,15 +132,13 @@ describe('Core-DP local search', () => {
     expect(ids).not.toContain(decoy.id);
   });
 
-  it('rejects the condition filter on materials under strict_filtering', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('rejects the condition filter on materials under strict_filtering', async () => {
     await expect(
       searchLoopMaterials({ filters: { condition: 'good' }, limit: 10, strictFiltering: true }),
     ).rejects.toThrow(/condition/);
   });
 
-  it('supports the condition filter on products', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('supports the condition filter on products', async () => {
     const cat = `prodcond-${suffix()}`;
     const good = buildProduct({ product_category: cat, condition: 'good' });
     const fair = buildProduct({ product_category: cat, condition: 'fair' });

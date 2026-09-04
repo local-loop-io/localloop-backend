@@ -1,10 +1,10 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { afterAll, describe, expect, it } from 'bun:test';
+import { probeDatabase } from './dbReady';
 import { pool } from '../src/db/pool';
-import { runMigrations } from '../src/db/migrate';
 import { createLoopMaterial, type LoopMaterialPayload } from '../src/db/loop';
 import { insertLoopEvidence, getLoopEvidenceByEventId, listLoopEvidence } from '../src/db/evidence';
 
-let dbReady = false;
+const dbReady = await probeDatabase('evidence');
 const createdMaterials: string[] = [];
 
 const hex = '0123456789ABCDEF';
@@ -24,15 +24,6 @@ function buildMaterial(): LoopMaterialPayload {
   };
 }
 
-beforeAll(async () => {
-  try {
-    await runMigrations();
-    dbReady = true;
-  } catch (error) {
-    console.warn('[evidence] Postgres unavailable — skipping evidence tests:', (error as Error).message);
-    dbReady = false;
-  }
-});
 
 afterAll(async () => {
   if (dbReady) {
@@ -43,8 +34,7 @@ afterAll(async () => {
 });
 
 describe('Core-DP append-only evidence log', () => {
-  it('records a registered evidence entry when a material is created', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('records a registered evidence entry when a material is created', async () => {
     const material = buildMaterial();
     await createLoopMaterial(material);
 
@@ -60,8 +50,7 @@ describe('Core-DP append-only evidence log', () => {
     expect(entry.retention.redaction_status).toBe('none');
   });
 
-  it('records a status-updated evidence entry for material status changes (migration 016)', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('records a status-updated evidence entry for material status changes (migration 016)', async () => {
     const material = buildMaterial();
     await createLoopMaterial(material);
 
@@ -75,8 +64,7 @@ describe('Core-DP append-only evidence log', () => {
     expect(result.results.map((r) => r.event_type)).toEqual(['registered', 'status-updated']);
   });
 
-  it('fetches a single entry by event_id', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('fetches a single entry by event_id', async () => {
     const entry = await insertLoopEvidence({
       subject: { type: 'offer', id: `OFR-${suffix()}` },
       eventType: 'offer-published',
@@ -88,14 +76,12 @@ describe('Core-DP append-only evidence log', () => {
     expect(fetched?.sequence).toBe(entry.sequence);
   });
 
-  it('returns undefined for an unknown event_id', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('returns undefined for an unknown event_id', async () => {
     const fetched = await getLoopEvidenceByEventId('evt_does_not_exist_0000000000000000');
     expect(fetched).toBeUndefined();
   });
 
-  it('paginates by sequence with a cursor, oldest first', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('paginates by sequence with a cursor, oldest first', async () => {
     const subjectId = `TRF-${suffix()}`;
     for (let i = 0; i < 3; i += 1) {
       await insertLoopEvidence({ subject: { type: 'transfer', id: subjectId }, eventType: 'transfer-dispatched', data: { i } });
@@ -112,8 +98,7 @@ describe('Core-DP append-only evidence log', () => {
     expect(sequences).toEqual([...sequences].sort((a, b) => a - b));
   });
 
-  it('enforces append-only at the database level (blocks UPDATE and DELETE)', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('enforces append-only at the database level (blocks UPDATE and DELETE)', async () => {
     const entry = await insertLoopEvidence({
       subject: { type: 'match', id: `MCH-${suffix()}` },
       eventType: 'match-proposed',

@@ -1,11 +1,11 @@
-import { describe, expect, it, afterAll, beforeAll } from 'bun:test';
+import { describe, expect, it, afterAll, } from 'bun:test';
+import { probeDatabase } from './dbReady';
 import Fastify from 'fastify';
 import { registerLoopProtocolParsers } from '../src/protocol';
 import { registerLoopSchemas } from '../src/schemas/loopSchemas';
 import { registerTransactionRoutes } from '../src/routes/transactions';
 import { transactionIdentity } from '../src/db/loop';
 import { pool } from '../src/db/pool';
-import { runMigrations } from '../src/db/migrate';
 
 const materialTransactionPayload = {
   '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
@@ -138,20 +138,12 @@ describe('POST /api/v1/transaction', () => {
   });
 });
 
+const dbReady = await probeDatabase('transactions.routes');
+
 describe('POST /api/v1/transaction Idempotency-Key handling', () => {
-  let dbReady = false;
   const createdKeys: string[] = [];
   const suffix = () => Math.random().toString(16).slice(2, 10);
 
-  beforeAll(async () => {
-    try {
-      await runMigrations();
-      dbReady = true;
-    } catch (error) {
-      console.warn('[transactions] Postgres unavailable — skipping idempotency tests:', (error as Error).message);
-      dbReady = false;
-    }
-  });
 
   afterAll(async () => {
     if (dbReady) {
@@ -161,8 +153,7 @@ describe('POST /api/v1/transaction Idempotency-Key handling', () => {
     }
   });
 
-  it('answers a key reused with a different body with the Core-DP conflict body (not a 500)', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('answers a key reused with a different body with the Core-DP conflict body (not a 500)', async () => {
     const { app, deps } = buildApp();
     await registerTransactionRoutes(app, deps);
 
@@ -191,8 +182,7 @@ describe('POST /api/v1/transaction Idempotency-Key handling', () => {
     expect(body.details.idempotency_key).toBe(key);
   });
 
-  it('replays the cached TransactionStatus for a repeated key with the same body', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('replays the cached TransactionStatus for a repeated key with the same body', async () => {
     const { app, deps } = buildApp();
     await registerTransactionRoutes(app, deps);
 

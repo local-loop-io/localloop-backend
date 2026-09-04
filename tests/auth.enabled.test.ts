@@ -16,25 +16,34 @@ process.env.AUTH_ENABLED = 'true';
 process.env.BETTER_AUTH_SECRET = 'test-only-fixture-secret-do-not-use-in-prod-32c';
 
 let app: FastifyInstance;
-let dbReady = false;
 let cleanupPool: Pool | undefined;
 const createdUserIds: string[] = [];
 const email = `auth-enabled-test-${Date.now()}@example.com`;
 const password = 'CorrectHorseBatteryStaple1!';
 
-beforeAll(async () => {
-  cleanupPool = new Pool({ connectionString: process.env.DATABASE_URL });
+// Probed at module load so the cases below can be declared with
+// it.skipIf(!dbReady) and show as skipped (not passed) without a database.
+// Confirms the better-auth core schema (migration 017) is actually applied —
+// AUTH_ENABLED was once wired in code with no schema ever provisioned, so
+// sign-up would have failed on a missing relation.
+const dbReady = await (async () => {
+  const probe = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 3000 });
   try {
-    await cleanupPool.query('SELECT 1');
-    // Confirms the better-auth core schema (migration 017) is actually applied —
-    // this is the exact gap the goal flagged: AUTH_ENABLED was wired in code with
-    // no schema ever provisioned, so sign-up would fail on a missing relation.
-    await cleanupPool.query('SELECT 1 FROM "user" LIMIT 1');
-    dbReady = true;
-  } catch {
-    dbReady = false;
+    await probe.query('SELECT 1 FROM "user" LIMIT 1');
+    return true;
+  } catch (error) {
+    console.warn('[auth.enabled] Postgres/better-auth schema unavailable — tests are skipped:', (error as Error).message);
+    return false;
+  } finally {
+    await probe.end();
+  }
+})();
+
+beforeAll(async () => {
+  if (!dbReady) {
     return;
   }
+  cleanupPool = new Pool({ connectionString: process.env.DATABASE_URL });
 
   const { handleAuth } = await import(`../src/auth.ts?case=${Math.random()}`);
   const { registerAuthStatusRoutes } = await import(`../src/routes/auth.ts?case=${Math.random()}`);
@@ -60,8 +69,7 @@ afterAll(async () => {
 });
 
 describe('AUTH_ENABLED end-to-end (better-auth wired and live)', () => {
-  it('/api/auth/status reports auth as enabled and active when AUTH_ENABLED=true', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('/api/auth/status reports auth as enabled and active when AUTH_ENABLED=true', async () => {
     const response = await app.inject({ method: 'GET', url: '/api/auth/status' });
     expect(response.statusCode).toBe(200);
     const body = response.json();
@@ -71,8 +79,7 @@ describe('AUTH_ENABLED end-to-end (better-auth wired and live)', () => {
     expect(body.methods).toContain('email+password');
   });
 
-  it('signs up a new user and returns a session token + cookie', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('signs up a new user and returns a session token + cookie', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/auth/sign-up/email',
@@ -90,8 +97,7 @@ describe('AUTH_ENABLED end-to-end (better-auth wired and live)', () => {
     createdUserIds.push(body.user.id);
   });
 
-  it('rejects sign-up with a duplicate email', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('rejects sign-up with a duplicate email', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/auth/sign-up/email',
@@ -101,8 +107,7 @@ describe('AUTH_ENABLED end-to-end (better-auth wired and live)', () => {
     expect(response.statusCode).toBeGreaterThanOrEqual(400);
   });
 
-  it('signs in with correct credentials and issues a real session', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('signs in with correct credentials and issues a real session', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/auth/sign-in/email',
@@ -131,8 +136,7 @@ describe('AUTH_ENABLED end-to-end (better-auth wired and live)', () => {
     expect(sessionBody.session.userId).toBe(body.user.id);
   });
 
-  it('rejects sign-in with an incorrect password', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('rejects sign-in with an incorrect password', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/auth/sign-in/email',
@@ -142,8 +146,7 @@ describe('AUTH_ENABLED end-to-end (better-auth wired and live)', () => {
     expect(response.statusCode).toBe(401);
   });
 
-  it('returns no session for get-session without a cookie', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('returns no session for get-session without a cookie', async () => {
     const response = await app.inject({ method: 'GET', url: '/api/auth/get-session' });
     expect(response.statusCode).toBe(200);
     expect(response.body).toBe('null');

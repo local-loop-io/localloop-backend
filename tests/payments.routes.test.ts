@@ -117,7 +117,7 @@ describe('Payments lab boundary (intake-only, SPEC-COMPLIANCE)', () => {
     let insertCount = 0;
     const app = Fastify({ logger: false });
     await registerPaymentRoutes(app, {
-      insertPaymentIntent: async (input) => {
+      insertPaymentIntent: async (_input) => {
         insertCount += 1;
         return { id: 1, status: 'received', created_at: new Date().toISOString() };
       },
