@@ -1,3 +1,4 @@
+import type { PoolClient } from 'pg';
 import { pool } from './db/pool';
 import { canonicalHash } from './crypto/canonical';
 import { CoreDpError } from './errors';
@@ -30,12 +31,19 @@ export const IDEMPOTENCY_RETENTION_MS = 1000 * 60 * 60 * 24; // 24 hours
  * invariants, producing two *different* HTTP responses (e.g. 201 for one, 409/400
  * for the other) for what the client believes is a single retried request —
  * defeating the purpose of the Idempotency-Key contract.
+ *
+ * The advisory lock is a *session* lock, so the client holding it stays
+ * checked out for the whole call. That same client is handed to `handler` so
+ * the underlying create can run its transaction on it (see
+ * `withTransaction`'s `existing` parameter) instead of waiting for a second
+ * pool slot; without this, `DB_POOL_SIZE` concurrent keyed writes deadlock
+ * until the connection timeout and fail with 500s.
  */
 export async function withIdempotency(
   route: string,
   key: string | undefined,
   requestBody: unknown,
-  handler: () => Promise<CachedResponse>,
+  handler: (client?: PoolClient) => Promise<CachedResponse>,
 ): Promise<CachedResponse> {
   if (!key) {
     return handler();
@@ -65,13 +73,12 @@ export async function withIdempotency(
         return { status: existing.response_status, body: existing.response_body };
       }
 
-      const result = await handler();
+      const result = await handler(lockClient);
 
       await lockClient.query(
         `INSERT INTO loop_idempotency_keys (key, route, request_hash_sha256, response_status, response_body, created_at)
          VALUES ($1,$2,$3,$4,$5,NOW())
-         ON CONFLICT (key) DO UPDATE SET
-           route = EXCLUDED.route,
+         ON CONFLICT (key, route) DO UPDATE SET
            request_hash_sha256 = EXCLUDED.request_hash_sha256,
            response_status = EXCLUDED.response_status,
            response_body = EXCLUDED.response_body,

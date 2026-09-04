@@ -22,12 +22,20 @@ export interface Queryable {
 }
 
 /**
- * Run `fn` inside a single transaction on a dedicated client.
- * Commits on success, rolls back on any throw, and always releases the client.
+ * Run `fn` inside a single transaction.
+ * Commits on success, rolls back on any throw. When `existing` is omitted a
+ * client is checked out from the pool and always released afterwards; when a
+ * caller already holds a client (e.g. `withIdempotency`, which keeps one for
+ * its advisory lock) that client is reused so a single request never needs two
+ * pool slots — with `DB_POOL_SIZE` concurrent keyed writes, holding one slot
+ * per request while waiting for a second would exhaust the pool.
  * Mirrors the BEGIN/COMMIT/ROLLBACK pattern used by the migration runner.
  */
-export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
-  const client = await pool.connect();
+export async function withTransaction<T>(
+  fn: (client: PoolClient) => Promise<T>,
+  existing?: PoolClient,
+): Promise<T> {
+  const client = existing ?? await pool.connect();
   try {
     await client.query('BEGIN');
     const result = await fn(client);
@@ -37,6 +45,8 @@ export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>)
     await client.query('ROLLBACK');
     throw error;
   } finally {
-    client.release();
+    if (!existing) {
+      client.release();
+    }
   }
 }

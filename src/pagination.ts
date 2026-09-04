@@ -7,8 +7,17 @@ import { CoreDpError } from './errors';
  * alphabet, so no further escaping is needed.
  */
 export function encodeCursor(parts: Record<string, string | number>): string {
-  const json = JSON.stringify(parts);
-  return `cur_${Buffer.from(json, 'utf8').toString('base64url')}`;
+  // The contract requires at least 16 characters after the prefix. Every
+  // cursor this service emits today is far longer, but pad defensively so a
+  // small payload can never produce a cursor the request schema rejects. The
+  // padding is trailing whitespace on the JSON side, which JSON.parse ignores.
+  let json = JSON.stringify(parts);
+  let encoded = Buffer.from(json, 'utf8').toString('base64url');
+  while (encoded.length < 16) {
+    json += ' ';
+    encoded = Buffer.from(json, 'utf8').toString('base64url');
+  }
+  return `cur_${encoded}`;
 }
 
 export function decodeCursor<T = Record<string, string | number>>(cursor: string): T {

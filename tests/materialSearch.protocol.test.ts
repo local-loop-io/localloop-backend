@@ -1,11 +1,11 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { afterAll, describe, expect, it } from 'bun:test';
+import { probeDatabase } from './dbReady';
 import Fastify from 'fastify';
 import { registerLoopProtocolParsers } from '../src/protocol';
 import { registerLoopSchemas } from '../src/schemas/loopSchemas';
 import { registerLoopRoutes } from '../src/routes/loop';
 import { fakeInsertLoopEvidence } from './testEvidence';
 import { pool } from '../src/db/pool';
-import { runMigrations } from '../src/db/migrate';
 import {
   createLoopMaterial,
   searchLoopMaterialsProtocol,
@@ -117,6 +117,11 @@ describe('POST /api/v1/material/search (protocol contract)', () => {
     // Core-DP response shape (entity_type/results/ordering/consistency)
     expect(payload.entity_type).toBe('material');
     expect(payload.ordering.primary).toBe('updated_at_asc');
+    // Each page is one SELECT with a keyset cursor — no snapshot is held across
+    // pages, so the node reports the weaker guarantee honestly.
+    expect(payload.consistency.mode).toBe('eventual');
+    expect(typeof payload.consistency.as_of).toBe('string');
+    expect(payload.consistency.snapshot_id).toBeUndefined();
   });
 });
 
@@ -124,7 +129,7 @@ describe('POST /api/v1/material/search (protocol contract)', () => {
 // Auto-skips when Postgres is unreachable, same convention as loop.search.test.
 
 const NODE_LOCATION = { lat: 48.1351, lon: 11.582 }; // spec's Munich example
-let dbReady = false;
+const dbReady = await probeDatabase('materialSearch.protocol');
 const createdIds: string[] = [];
 
 const hex = '0123456789ABCDEF';
@@ -145,15 +150,6 @@ function buildMaterial(overrides: Partial<LoopMaterialPayload> = {}): LoopMateri
   };
 }
 
-beforeAll(async () => {
-  try {
-    await runMigrations();
-    dbReady = true;
-  } catch (error) {
-    console.warn('[materialSearch.protocol] Postgres unavailable — skipping DB tests:', (error as Error).message);
-    dbReady = false;
-  }
-});
 
 afterAll(async () => {
   if (dbReady) {
@@ -164,8 +160,7 @@ afterAll(async () => {
 });
 
 describe('searchLoopMaterialsProtocol (DB)', () => {
-  it('filters by exact category and trailing-glob category', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('filters by exact category and trailing-glob category', async () => {
     const cat = `proto-cat-${suffix()}`;
     await createLoopMaterial(buildMaterial({ category: cat }));
     await createLoopMaterial(buildMaterial({ category: `${cat}-extra` }));
@@ -179,8 +174,7 @@ describe('searchLoopMaterialsProtocol (DB)', () => {
     expect(glob.total).toBe(glob.results.length);
   });
 
-  it('filters by min_quantity', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('filters by min_quantity', async () => {
     const cat = `proto-qty-${suffix()}`;
     await createLoopMaterial(buildMaterial({ category: cat, quantity: { value: 600, unit: 'kg' } }));
     await createLoopMaterial(buildMaterial({ category: cat, quantity: { value: 100, unit: 'kg' } }));
@@ -190,8 +184,7 @@ describe('searchLoopMaterialsProtocol (DB)', () => {
     expect((result.results[0].quantity as { value: number }).value).toBe(600);
   });
 
-  it('filters by radius_km around the node location and excludes location-less records', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('filters by radius_km around the node location and excludes location-less records', async () => {
     const cat = `proto-geo-${suffix()}`;
     const near = buildMaterial({
       category: cat,

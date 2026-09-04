@@ -1,3 +1,4 @@
+import type { PoolClient } from 'pg';
 import { pool, withTransaction, type Queryable } from './pool';
 import { config } from '../config';
 import { canonicalHash } from '../crypto/canonical';
@@ -7,11 +8,16 @@ import { insertLoopEvidence, type EvidenceEventType } from './evidence';
 
 /**
  * Thrown by the transactional create* operations when a state-machine rule is
- * violated. Routes map `not_found` -> 404 and `invalid_state` -> 400.
+ * violated. Routes map `not_found` -> 404, `conflict` -> 409 (the resource the
+ * request wants to allocate is already taken: a reserved offer, a match that
+ * already has a live transfer) and `invalid_state` -> 400 (the request itself
+ * is not a valid transition, e.g. matching a withdrawn offer).
  */
+export type LoopStateErrorKind = 'not_found' | 'invalid_state' | 'conflict';
+
 export class LoopStateError extends Error {
-  readonly kind: 'not_found' | 'invalid_state';
-  constructor(kind: 'not_found' | 'invalid_state', message: string) {
+  readonly kind: LoopStateErrorKind;
+  constructor(kind: LoopStateErrorKind, message: string) {
     super(message);
     this.name = 'LoopStateError';
     this.kind = kind;
@@ -241,7 +247,7 @@ function buildLoopEvent(
 // transition in a single transaction. The returned `event` must be broadcast by
 // the caller AFTER the promise resolves (i.e. after COMMIT), never before.
 
-export async function createLoopMaterial(payload: LoopMaterialPayload): Promise<LoopCreateResult> {
+export async function createLoopMaterial(payload: LoopMaterialPayload, db?: PoolClient): Promise<LoopCreateResult> {
   return withTransaction(async (client) => {
     const created = await insertLoopMaterial(payload, client);
     const event = buildLoopEvent('material.created', 'material', created.id, payload, created.created_at);
@@ -254,10 +260,10 @@ export async function createLoopMaterial(payload: LoopMaterialPayload): Promise<
       client,
     );
     return { id: created.id, created_at: created.created_at, event };
-  });
+  }, db);
 }
 
-export async function createLoopProduct(payload: LoopProductPayload): Promise<LoopCreateResult> {
+export async function createLoopProduct(payload: LoopProductPayload, db?: PoolClient): Promise<LoopCreateResult> {
   return withTransaction(async (client) => {
     const created = await insertLoopProduct(payload, client);
     const event = buildLoopEvent('product.created', 'product', created.id, payload, created.created_at);
@@ -270,10 +276,10 @@ export async function createLoopProduct(payload: LoopProductPayload): Promise<Lo
       client,
     );
     return { id: created.id, created_at: created.created_at, event };
-  });
+  }, db);
 }
 
-export async function createLoopOffer(payload: LoopOfferPayload): Promise<LoopCreateResult> {
+export async function createLoopOffer(payload: LoopOfferPayload, db?: PoolClient): Promise<LoopCreateResult> {
   return withTransaction(async (client) => {
     // Mass-balance sanity: an offer cannot promise more than its source material holds.
     if (payload.material_id) {
@@ -300,10 +306,10 @@ export async function createLoopOffer(payload: LoopOfferPayload): Promise<LoopCr
       client,
     );
     return { id: created.id, created_at: created.created_at, event };
-  });
+  }, db);
 }
 
-export async function createLoopMatch(payload: LoopMatchPayload): Promise<LoopCreateResult> {
+export async function createLoopMatch(payload: LoopMatchPayload, db?: PoolClient): Promise<LoopCreateResult> {
   return withTransaction(async (client) => {
     // Lock the offer row so concurrent matches serialize; re-read the committed status.
     const { rows } = await client.query(
@@ -313,6 +319,10 @@ export async function createLoopMatch(payload: LoopMatchPayload): Promise<LoopCr
     const offer = rows[0] as { status: string } | undefined;
     if (!offer) {
       throw new LoopStateError('not_found', 'Unknown offer_id');
+    }
+    if (offer.status === 'reserved') {
+      // Another match already holds this offer: a resource conflict, not a malformed request.
+      throw new LoopStateError('conflict', 'Offer is already reserved by another match');
     }
     if (offer.status !== 'open') {
       throw new LoopStateError('invalid_state', `Offer is not open (status=${offer.status})`);
@@ -336,7 +346,7 @@ export async function createLoopMatch(payload: LoopMatchPayload): Promise<LoopCr
       client,
     );
     return { id: created.id, created_at: created.created_at, event };
-  });
+  }, db);
 }
 
 /**
@@ -366,7 +376,7 @@ function transferEvidenceEventType(status: string): EvidenceEventType {
   return 'transfer-dispatched';
 }
 
-export async function createLoopTransfer(payload: LoopTransferPayload): Promise<LoopCreateResult> {
+export async function createLoopTransfer(payload: LoopTransferPayload, db?: PoolClient): Promise<LoopCreateResult> {
   return withTransaction(async (client) => {
     const { rows } = await client.query(
       'SELECT status FROM loop_matches WHERE id = $1 FOR UPDATE',
@@ -386,13 +396,14 @@ export async function createLoopTransfer(payload: LoopTransferPayload): Promise<
     // as a raw 23505 instead of a clean state error. The FOR UPDATE lock above
     // already serializes concurrent attempts for this match_id, so this check
     // is race-free for the same reason the offer/match checks elsewhere in this
-    // file are.
+    // file are. It is a `conflict` (409), matching what the unique index used
+    // to produce, not an `invalid_state` (400).
     const { rows: activeTransferRows } = await client.query(
       "SELECT 1 FROM loop_transfers WHERE match_id = $1 AND status <> 'cancelled'",
       [payload.match_id],
     );
     if (activeTransferRows.length > 0) {
-      throw new LoopStateError('invalid_state', 'Match already has an active transfer');
+      throw new LoopStateError('conflict', 'Match already has an active transfer');
     }
 
     const created = await insertLoopTransfer(payload, client);
@@ -406,7 +417,17 @@ export async function createLoopTransfer(payload: LoopTransferPayload): Promise<
       client,
     );
     return { id: created.id, created_at: created.created_at, event };
-  });
+  }, db);
+}
+
+/**
+ * Clamp a list-route `limit` into [1, 100]. The route schemas already reject
+ * non-integers and values below 1 with 400; this keeps the SQL safe for direct
+ * callers and silently caps oversized requests instead of rejecting them.
+ */
+export function clampListLimit(limit: number | undefined, fallback = 20, max = 100): number {
+  const value = Number.isFinite(limit as number) ? Math.trunc(limit as number) : fallback;
+  return Math.min(Math.max(value, 1), max);
 }
 
 export async function listLoopEvents(limit = 50) {
@@ -437,7 +458,7 @@ export async function getLoopMaterialById(id: string) {
 }
 
 export async function listLoopMaterials(opts: { limit?: number; category?: string } = {}) {
-  const limit = Math.min(opts.limit ?? 20, 100);
+  const limit = clampListLimit(opts.limit);
   if (opts.category) {
     const { rows } = await pool.query(
       'SELECT id, category, quantity_value, quantity_unit, origin_city, current_city, available_from, expires_at, quality, payload, created_at FROM loop_materials WHERE category = $1 ORDER BY created_at DESC LIMIT $2',
@@ -469,7 +490,7 @@ export async function getLoopProductById(id: string) {
 }
 
 export async function listLoopProducts(opts: { limit?: number; category?: string } = {}) {
-  const limit = Math.min(opts.limit ?? 20, 100);
+  const limit = clampListLimit(opts.limit);
   if (opts.category) {
     const { rows } = await pool.query(
       'SELECT id, product_category, name, condition, quantity_value, quantity_unit, origin_city, current_city, available_from, expires_at, payload, created_at FROM loop_products WHERE product_category = $1 ORDER BY created_at DESC LIMIT $2',
@@ -501,7 +522,7 @@ export async function getLoopOfferById(id: string) {
 }
 
 export async function listLoopOffers(opts: { limit?: number; status?: string } = {}) {
-  const limit = Math.min(opts.limit ?? 20, 100);
+  const limit = clampListLimit(opts.limit);
   if (opts.status) {
     const { rows } = await pool.query(
       'SELECT id, material_id, product_id, from_city, to_city, status, quantity_value, quantity_unit, available_until, terms, payload, created_at FROM loop_offers WHERE status = $1 ORDER BY created_at DESC LIMIT $2',
@@ -533,7 +554,7 @@ export async function getLoopMatchById(id: string) {
 }
 
 export async function listLoopMatches(opts: { limit?: number } = {}) {
-  const limit = Math.min(opts.limit ?? 20, 100);
+  const limit = clampListLimit(opts.limit);
   const { rows } = await pool.query(
     'SELECT id, material_id, product_id, offer_id, from_city, to_city, status, matched_at, payload, created_at FROM loop_matches ORDER BY created_at DESC LIMIT $1',
     [limit],
@@ -550,7 +571,7 @@ export async function getLoopTransferById(id: string) {
 }
 
 export async function listLoopTransfers(opts: { limit?: number } = {}) {
-  const limit = Math.min(opts.limit ?? 20, 100);
+  const limit = clampListLimit(opts.limit);
   const { rows } = await pool.query(
     'SELECT id, material_id, product_id, match_id, status, handoff_at, received_at, payload, created_at FROM loop_transfers ORDER BY created_at DESC LIMIT $1',
     [limit],
@@ -666,16 +687,19 @@ async function runEntitySearch(entityConfig: EntitySearchConfig, opts: LoopSearc
   if (filters.updated_since) {
     push('updated_at >= ?', filters.updated_since);
   }
-  // Cursor continuation uses EXTRACT(EPOCH ...) rather than a JS Date/ISO-string
-  // round trip: `timestamptz` has microsecond precision but JS Date only keeps
-  // milliseconds, so two rows within the same millisecond (easily hit when
-  // several rows are inserted back-to-back in a test or a burst of writes)
-  // would collapse to an equal, truncated cursor value and re-match on the
-  // next page. A double-precision epoch-seconds value round-trips exactly.
+  // The cursor carries updated_at as epoch seconds (double) rather than a JS
+  // Date/ISO-string round trip: `timestamptz` has microsecond precision but JS
+  // Date only keeps milliseconds, so two rows within the same millisecond
+  // (easily hit when several rows are inserted back-to-back) would collapse to
+  // an equal, truncated cursor value and re-match on the next page. The
+  // predicate converts the cursor back with to_timestamp() and compares the
+  // (updated_at, id) row value directly, so idx_loop_*_search (updated_at, id)
+  // from migration 012 can serve the continuation; wrapping the column in
+  // EXTRACT(EPOCH ...) made every page after the first a full scan.
   if (cursor) {
     const decoded = decodeCursor<{ u: number; i: string }>(cursor);
     values.push(decoded.u, decoded.i);
-    conditions.push(`(EXTRACT(EPOCH FROM updated_at), id) > ($${values.length - 1}::double precision, $${values.length})`);
+    conditions.push(`(updated_at, id) > (to_timestamp($${values.length - 1}::double precision), $${values.length})`);
   }
 
   const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -776,7 +800,7 @@ export function transactionIdentity(payload: LoopTransactionPayload): { id: stri
   return { id: payload.transaction_id as string, status: payload.status as string };
 }
 
-export async function createLoopTransaction(payload: LoopTransactionPayload): Promise<LoopCreateResult> {
+export async function createLoopTransaction(payload: LoopTransactionPayload, db?: PoolClient): Promise<LoopCreateResult> {
   return withTransaction(async (client) => {
     const { id, status } = transactionIdentity(payload);
     const { rows } = await client.query(
@@ -792,7 +816,7 @@ export async function createLoopTransaction(payload: LoopTransactionPayload): Pr
       client,
     );
     return { id: created.id, created_at: created.created_at, event };
-  });
+  }, db);
 }
 
 export async function getLoopTransactionById(id: string): Promise<LoopTransactionRow | undefined> {

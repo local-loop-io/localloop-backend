@@ -23,14 +23,19 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_loop_transfers_active_match
   WHERE status <> 'cancelled';
 
 -- Constrain status domains at the DB level (defence in depth alongside schema validation).
+-- DROP ... IF EXISTS first so the file stays re-runnable (e.g. a restored database whose
+-- schema_migrations rows were lost).
+ALTER TABLE loop_offers DROP CONSTRAINT IF EXISTS chk_loop_offers_status;
 ALTER TABLE loop_offers
   ADD CONSTRAINT chk_loop_offers_status
   CHECK (status IN ('open', 'reserved', 'withdrawn'));
 
+ALTER TABLE loop_matches DROP CONSTRAINT IF EXISTS chk_loop_matches_status;
 ALTER TABLE loop_matches
   ADD CONSTRAINT chk_loop_matches_status
   CHECK (status IN ('proposed', 'accepted', 'rejected', 'expired'));
 
+ALTER TABLE loop_transfers DROP CONSTRAINT IF EXISTS chk_loop_transfers_status;
 ALTER TABLE loop_transfers
   ADD CONSTRAINT chk_loop_transfers_status
   CHECK (status IN ('scheduled', 'in_transit', 'completed', 'cancelled'));

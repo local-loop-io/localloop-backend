@@ -1,24 +1,15 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { afterAll, describe, expect, it } from 'bun:test';
+import { probeDatabase } from './dbReady';
 import { pool } from '../src/db/pool';
-import { runMigrations } from '../src/db/migrate';
 import { withIdempotency, IDEMPOTENCY_RETENTION_MS } from '../src/idempotency';
 import { CoreDpError } from '../src/errors';
 
-let dbReady = false;
+const dbReady = await probeDatabase('idempotency');
 const createdKeys: string[] = [];
 
 const hex = '0123456789ABCDEF';
 const suffix = () => Array.from({ length: 8 }, () => hex[Math.floor(Math.random() * 16)]).join('');
 
-beforeAll(async () => {
-  try {
-    await runMigrations();
-    dbReady = true;
-  } catch (error) {
-    console.warn('[idempotency] Postgres unavailable — skipping idempotency tests:', (error as Error).message);
-    dbReady = false;
-  }
-});
 
 afterAll(async () => {
   if (dbReady) {
@@ -29,8 +20,7 @@ afterAll(async () => {
 });
 
 describe('REST idempotency (Idempotency-Key)', () => {
-  it('runs the handler once and replays the cached response for a repeated key+body', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('runs the handler once and replays the cached response for a repeated key+body', async () => {
     const key = `idem-test-${suffix()}`;
     createdKeys.push(key);
     let calls = 0;
@@ -48,8 +38,7 @@ describe('REST idempotency (Idempotency-Key)', () => {
     expect(first.body).toEqual({ id: 'created-once' });
   });
 
-  it('throws a conflict CoreDpError when the same key is reused with a different body', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('throws a conflict CoreDpError when the same key is reused with a different body', async () => {
     const key = `idem-conflict-${suffix()}`;
     createdKeys.push(key);
     const handler = async () => ({ status: 201 as const, body: { id: 'x' } });
@@ -66,8 +55,7 @@ describe('REST idempotency (Idempotency-Key)', () => {
     expect((error as CoreDpError).code).toBe('conflict');
   });
 
-  it('treats a cache row past the retention window as expired, not a conflict', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('treats a cache row past the retention window as expired, not a conflict', async () => {
     const key = `idem-expired-${suffix()}`;
     createdKeys.push(key);
 
@@ -93,6 +81,51 @@ describe('REST idempotency (Idempotency-Key)', () => {
 
     expect(calls).toBe(1);
     expect(result.body).toEqual({ id: 'fresh' });
+  });
+
+  it.skipIf(!dbReady)('scopes cache rows per route so one key on two routes never replays the wrong response', async () => {
+    const key = `idem-routes-${suffix()}`;
+    createdKeys.push(key);
+    let aCalls = 0;
+    let bCalls = 0;
+    const handlerA = async () => { aCalls += 1; return { status: 201 as const, body: { id: 'from-a' } }; };
+    const handlerB = async () => { bCalls += 1; return { status: 201 as const, body: { id: 'from-b' } }; };
+
+    const a1 = await withIdempotency('route.a', key, { a: 1 }, handlerA);
+    const b1 = await withIdempotency('route.b', key, { b: 1 }, handlerB);
+    // Before migration 018 the second route overwrote the first route's row,
+    // so this replay re-ran handlerA and returned a fresh (different) response.
+    const a2 = await withIdempotency('route.a', key, { a: 1 }, handlerA);
+
+    expect(aCalls).toBe(1);
+    expect(bCalls).toBe(1);
+    expect(a1.body).toEqual({ id: 'from-a' });
+    expect(b1.body).toEqual({ id: 'from-b' });
+    expect(a2).toEqual(a1);
+  });
+
+  it.skipIf(!dbReady)('does not exhaust the pool under more concurrent keyed writes than DB_POOL_SIZE', async () => {
+    // Each keyed request holds one client for its advisory lock; the handler
+    // must reuse that client for its own transaction instead of waiting for a
+    // second slot, otherwise DB_POOL_SIZE concurrent requests deadlock until
+    // the connection timeout.
+    const { config } = await import('../src/config');
+    const { withTransaction } = await import('../src/db/pool');
+    const attempts = config.dbPoolSize + 2;
+    const keys = Array.from({ length: attempts }, () => `idem-pool-${suffix()}`);
+    createdKeys.push(...keys);
+
+    const results = await Promise.all(keys.map((key) =>
+      withIdempotency('pool.route', key, { key }, async (client) =>
+        withTransaction(async (tx) => {
+          await tx.query('SELECT pg_sleep(0.05)');
+          return { status: 201 as const, body: { key } };
+        }, client),
+      ),
+    ));
+
+    expect(results).toHaveLength(attempts);
+    expect(results.map((r) => (r.body as { key: string }).key).sort()).toEqual([...keys].sort());
   });
 
   it('passes through directly (runs every time) when no key is supplied', async () => {

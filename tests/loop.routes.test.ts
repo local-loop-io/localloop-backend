@@ -515,11 +515,79 @@ describe('loop routes', () => {
   });
 
   it('maps a duplicate transfer to 409', async () => {
+    // createLoopTransfer detects the duplicate before the unique index does and
+    // throws a `conflict` state error (see src/db/loop.ts); the route must keep
+    // answering 409 CONFLICT, not 400, for that path.
     const { app, deps } = buildApp();
-    await registerLoopRoutes(app, { ...deps, createLoopTransfer: async () => { throw conflictError(); } });
+    await registerLoopRoutes(app, {
+      ...deps,
+      createLoopTransfer: async () => {
+        throw new LoopStateError('conflict', 'Match already has an active transfer');
+      },
+    });
 
     const response = await app.inject({ method: 'POST', url: '/api/v1/transfer', payload: transferPayload });
     expect(response.statusCode).toBe(409);
+    expect(response.json().error.code).toBe('CONFLICT');
+  });
+
+  it('maps a match against an already-reserved offer to 409', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, {
+      ...deps,
+      createLoopMatch: async () => {
+        throw new LoopStateError('conflict', 'Offer is already reserved by another match');
+      },
+    });
+
+    const response = await app.inject({ method: 'POST', url: '/api/v1/match', payload: matchPayload });
+    expect(response.statusCode).toBe(409);
+    expect(response.json().error.code).toBe('CONFLICT');
+  });
+
+  it('maps a foreign-key violation to 400 INVALID_REQUEST, not 409', async () => {
+    const { app, deps } = buildApp();
+    const fkError = new Error('insert or update violates foreign key constraint');
+    (fkError as Error & { code?: string }).code = '23503';
+    await registerLoopRoutes(app, { ...deps, createLoopOffer: async () => { throw fkError; } });
+
+    const response = await app.inject({ method: 'POST', url: '/api/v1/offer', payload: offerPayload });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toEqual({ code: 'INVALID_REQUEST', message: 'Referenced resource does not exist' });
+  });
+
+  it('rejects list limits below 1 or non-integer with 400 and accepts valid ones', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, deps);
+
+    // (The §8.3 envelope for schema rejections comes from buildServer's global
+    // error handler, which this bare test app does not install — the status is
+    // what matters here; tests/specErrorEnvelope.test.ts covers the body.)
+    for (const bad of ['0', '-1', 'abc', '1.5']) {
+      const response = await app.inject({ method: 'GET', url: `/api/v1/material?limit=${bad}` });
+      expect(response.statusCode).toBe(400);
+    }
+    const ok = await app.inject({ method: 'GET', url: '/api/v1/material?limit=5' });
+    expect(ok.statusCode).toBe(200);
+    const events = await app.inject({ method: 'GET', url: '/api/v1/events?limit=-3' });
+    expect(events.statusCode).toBe(400);
+  });
+
+  it('maps a duplicate material-status event to 409 and a missing material to 404', async () => {
+    const { app, deps } = buildApp();
+    await registerLoopRoutes(app, { ...deps, insertLoopEvent: async () => { throw conflictError(); } });
+
+    const duplicate = await app.inject({ method: 'POST', url: '/api/v1/material-status', payload: materialStatusPayload });
+    expect(duplicate.statusCode).toBe(409);
+    expect(duplicate.json().error.code).toBe('CONFLICT');
+
+    const { app: app2, deps: deps2 } = buildApp();
+    await registerLoopRoutes(app2, {
+      ...deps2,
+      insertLoopEvent: async () => { throw new LoopStateError('not_found', 'Unknown material_id'); },
+    });
+    const missing = await app2.inject({ method: 'POST', url: '/api/v1/material-status', payload: materialStatusPayload });
+    expect(missing.statusCode).toBe(404);
   });
 
   it('maps an over-quantity offer to 400', async () => {

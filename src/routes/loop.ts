@@ -1,5 +1,4 @@
 import { setNoStore } from '../httpCache';
-import { randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../config';
 import {
@@ -10,6 +9,7 @@ import {
   createLoopTransfer,
   insertLoopEvent,
   listLoopEvents,
+  clampListLimit,
   getLoopMaterial,
   getLoopMaterialById,
   listLoopMaterials,
@@ -55,8 +55,9 @@ const createResponseSchema = {
   },
 };
 
-// Write-route 409s can carry either the §8.3 envelope (unique/FK conflicts via
-// sendWriteConflict) or the Core-DP error body (Idempotency-Key conflicts via
+// Write-route 409s can carry either the §8.3 envelope (duplicate ids via
+// sendPgWriteError, reserved offers / already-transferred matches via
+// sendStateError) or the Core-DP error body (Idempotency-Key conflicts via
 // withIdempotency), so that status cannot use a strict single-envelope schema.
 const mixedWriteErrorResponseSchema = { type: 'object', additionalProperties: true };
 
@@ -194,22 +195,34 @@ const defaultDeps: LoopDeps = {
   broadcastLoopEvent,
 };
 
-function sendWriteConflict(error: unknown, reply: FastifyReply) {
+/**
+ * Map Postgres integrity errors raised by a write to the §8.3 envelope.
+ * 23505 (unique_violation) is a genuine conflict; 23503 (foreign_key_violation)
+ * means the request referenced a row that does not exist, which is a client
+ * input error — the same class the routes' own pre-checks answer with 400.
+ */
+function sendPgWriteError(error: unknown, reply: FastifyReply) {
   const pgError = error as DbLikeError;
   if (pgError?.code === '23505') {
     sendSpecError(reply, 'CONFLICT', 'Resource already exists');
     return true;
   }
   if (pgError?.code === '23503') {
-    sendSpecError(reply, 'CONFLICT', 'Related resource was not found');
+    sendSpecError(reply, 'INVALID_REQUEST', 'Referenced resource does not exist');
     return true;
   }
   return false;
 }
 
+const STATE_ERROR_CODES = {
+  not_found: 'NOT_FOUND',
+  conflict: 'CONFLICT',
+  invalid_state: 'INVALID_REQUEST',
+} as const;
+
 function sendStateError(error: unknown, reply: FastifyReply) {
   if (error instanceof LoopStateError) {
-    sendSpecError(reply, error.kind === 'not_found' ? 'NOT_FOUND' : 'INVALID_REQUEST', error.message);
+    sendSpecError(reply, STATE_ERROR_CODES[error.kind], error.message);
     return true;
   }
   return false;
@@ -243,8 +256,8 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     const idempotencyKey = request.headers['idempotency-key'] as string | undefined;
     let outcome: { status: 201; body: { id: string; created_at: string } };
     try {
-      outcome = await withIdempotency('material.create', idempotencyKey, payload, async () => {
-        const created = await deps.createLoopMaterial(payload);
+      outcome = await withIdempotency('material.create', idempotencyKey, payload, async (client) => {
+        const created = await deps.createLoopMaterial(payload, client);
         deps.broadcastLoopEvent(created.event);
         incrementMetric('loop_material_created');
         incrementMetric('loop_event_emitted');
@@ -256,7 +269,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
         sendCoreDpError(reply, error);
         return;
       }
-      if (sendWriteConflict(error, reply)) {
+      if (sendPgWriteError(error, reply)) {
         return;
       }
       if (sendStateError(error, reply)) {
@@ -285,8 +298,8 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     const idempotencyKey = request.headers['idempotency-key'] as string | undefined;
     let outcome: { status: 201; body: { id: string; created_at: string } };
     try {
-      outcome = await withIdempotency('product.create', idempotencyKey, payload, async () => {
-        const created = await deps.createLoopProduct(payload);
+      outcome = await withIdempotency('product.create', idempotencyKey, payload, async (client) => {
+        const created = await deps.createLoopProduct(payload, client);
         deps.broadcastLoopEvent(created.event);
         incrementMetric('loop_product_created');
         incrementMetric('loop_event_emitted');
@@ -298,7 +311,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
         sendCoreDpError(reply, error);
         return;
       }
-      if (sendWriteConflict(error, reply)) {
+      if (sendPgWriteError(error, reply)) {
         return;
       }
       if (sendStateError(error, reply)) {
@@ -342,8 +355,8 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     const idempotencyKey = request.headers['idempotency-key'] as string | undefined;
     let outcome: { status: 201; body: { id: string; created_at: string } };
     try {
-      outcome = await withIdempotency('offer.create', idempotencyKey, payload, async () => {
-        const created = await deps.createLoopOffer(payload);
+      outcome = await withIdempotency('offer.create', idempotencyKey, payload, async (client) => {
+        const created = await deps.createLoopOffer(payload, client);
         deps.broadcastLoopEvent(created.event);
         incrementMetric('loop_offer_created');
         incrementMetric('loop_event_emitted');
@@ -355,7 +368,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
         sendCoreDpError(reply, error);
         return;
       }
-      if (sendWriteConflict(error, reply)) {
+      if (sendPgWriteError(error, reply)) {
         return;
       }
       if (sendStateError(error, reply)) {
@@ -403,15 +416,15 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     const subjectId = payload.material_id || payload.product_id;
     const offerSubjectId = offer.material_id || offer.product_id;
     if (subjectId && offerSubjectId && offerSubjectId !== subjectId) {
-      sendSpecError(reply, 'INVALID_REQUEST', 'Offer does not match subject');
+      sendSpecError(reply, 'INVALID_REQUEST', 'Offer does not belong to the given material/product');
       return;
     }
 
     const idempotencyKey = request.headers['idempotency-key'] as string | undefined;
     let outcome: { status: 201; body: { id: string; created_at: string } };
     try {
-      outcome = await withIdempotency('match.create', idempotencyKey, payload, async () => {
-        const created = await deps.createLoopMatch(payload);
+      outcome = await withIdempotency('match.create', idempotencyKey, payload, async (client) => {
+        const created = await deps.createLoopMatch(payload, client);
         deps.broadcastLoopEvent(created.event);
         incrementMetric('loop_match_created');
         incrementMetric('loop_event_emitted');
@@ -423,7 +436,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
         sendCoreDpError(reply, error);
         return;
       }
-      if (sendWriteConflict(error, reply)) {
+      if (sendPgWriteError(error, reply)) {
         return;
       }
       if (sendStateError(error, reply)) {
@@ -471,15 +484,15 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     const subjectId = payload.material_id || payload.product_id;
     const matchSubjectId = match.material_id || match.product_id;
     if (subjectId && matchSubjectId && matchSubjectId !== subjectId) {
-      sendSpecError(reply, 'INVALID_REQUEST', 'Match does not match subject');
+      sendSpecError(reply, 'INVALID_REQUEST', 'Match does not belong to the given material/product');
       return;
     }
 
     const idempotencyKey = request.headers['idempotency-key'] as string | undefined;
     let outcome: { status: 201; body: { id: string; created_at: string } };
     try {
-      outcome = await withIdempotency('transfer.create', idempotencyKey, payload, async () => {
-        const created = await deps.createLoopTransfer(payload);
+      outcome = await withIdempotency('transfer.create', idempotencyKey, payload, async (client) => {
+        const created = await deps.createLoopTransfer(payload, client);
         deps.broadcastLoopEvent(created.event);
         incrementMetric('loop_transfer_created');
         incrementMetric('loop_event_emitted');
@@ -491,7 +504,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
         sendCoreDpError(reply, error);
         return;
       }
-      if (sendWriteConflict(error, reply)) {
+      if (sendPgWriteError(error, reply)) {
         return;
       }
       if (sendStateError(error, reply)) {
@@ -509,7 +522,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       consumes: ['application/json', loopContentType],
       security: apiKeySecurity,
       body: { $ref: `${loopSchemaIds.materialStatus}#` },
-      response: { 201: createResponseSchema, 400: specErrorResponseSchema },
+      response: { 201: createResponseSchema, 400: specErrorResponseSchema, 409: mixedWriteErrorResponseSchema },
     },
   }, async (request, reply) => {
     if (!requireApiKey(request, reply)) {
@@ -530,28 +543,50 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       data: payload,
     };
 
-    const created = await deps.insertLoopEvent({
-      event_type: eventPayload.type,
-      entity_type: eventPayload.entity,
-      entity_id: eventPayload.entity_id,
-      payload: eventPayload,
-    });
+    // Same Idempotency-Key contract and error mapping as the sibling write
+    // routes: without it a retried status update appended duplicate loop_events
+    // and duplicate (append-only, undeletable) loop_evidence rows.
+    const idempotencyKey = request.headers['idempotency-key'] as string | undefined;
+    let outcome: { status: 201; body: { id: string; created_at: string } };
+    try {
+      outcome = await withIdempotency('material.status_update', idempotencyKey, payload, async () => {
+        const created = await deps.insertLoopEvent({
+          event_type: eventPayload.type,
+          entity_type: eventPayload.entity,
+          entity_id: eventPayload.entity_id,
+          payload: eventPayload,
+        });
 
-    await deps.insertLoopEvidence({
-      subject: { type: 'material', id: payload.material_id },
-      eventType: 'status-updated',
-      data: payload,
-    });
+        await deps.insertLoopEvidence({
+          subject: { type: 'material', id: payload.material_id },
+          eventType: 'status-updated',
+          data: payload,
+        });
 
-    deps.broadcastLoopEvent({
-      ...eventPayload,
-      created_at: created.created_at,
-    });
-    incrementMetric('loop_material_status_updated');
-    incrementMetric('loop_event_emitted');
-    request.log.info({ materialId: payload.material_id, status: payload.status }, 'Loop material status updated');
+        deps.broadcastLoopEvent({
+          ...eventPayload,
+          created_at: created.created_at,
+        });
+        incrementMetric('loop_material_status_updated');
+        incrementMetric('loop_event_emitted');
+        request.log.info({ materialId: payload.material_id, status: payload.status }, 'Loop material status updated');
+        return { status: 201, body: { id: payload.id, created_at: created.created_at } };
+      }) as { status: 201; body: { id: string; created_at: string } };
+    } catch (error) {
+      if (error instanceof CoreDpError) {
+        sendCoreDpError(reply, error);
+        return;
+      }
+      if (sendPgWriteError(error, reply)) {
+        return;
+      }
+      if (sendStateError(error, reply)) {
+        return;
+      }
+      throw error;
+    }
 
-    reply.code(201).send({ id: payload.id, created_at: created.created_at });
+    reply.code(outcome.status).send(outcome.body);
   });
 
   app.get('/api/v1/events', {
@@ -559,7 +594,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       querystring: {
         type: 'object',
         properties: {
-          limit: { type: 'number' },
+          limit: { type: 'integer', minimum: 1 },
         },
       },
       response: {
@@ -567,8 +602,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       },
     },
   }, async (request) => {
-    const rawLimit = Number((request.query as { limit?: string }).limit);
-    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 200) : 50;
+    const limit = clampListLimit((request.query as { limit?: number }).limit, 50, 200);
     const results = await deps.listLoopEvents(limit);
     return { results };
   });
@@ -577,10 +611,13 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
     registerLoopStream(request, reply);
   });
 
+  // `limit` below 1 is rejected here (400); values above the cap are clamped by
+  // the db helpers (clampListLimit) rather than rejected, so lab clients that
+  // ask for "everything" keep working.
   const listQuerySchema = {
     type: 'object',
     properties: {
-      limit: { type: 'number' },
+      limit: { type: 'integer', minimum: 1 },
       category: { type: 'string' },
       status: { type: 'string' },
     },
@@ -836,7 +873,7 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       ...(body.min_quantity !== undefined ? { min_quantity: body.min_quantity } : {}),
     };
 
-    let result;
+    let result: Awaited<ReturnType<typeof deps.searchLoopMaterialsProtocol>>;
     try {
       result = await deps.searchLoopMaterialsProtocol(filters, config.node.location);
     } catch (error) {
@@ -916,13 +953,18 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
       results: result.results,
       ordering: { primary: 'updated_at_asc', tie_break: 'id_asc' },
       ...(result.next_cursor ? { next_cursor: result.next_cursor } : {}),
-      consistency: { mode: 'snapshot', snapshot_id: `snap_${randomBytes(8).toString('hex')}` },
+      // Each page is a single SELECT with a keyset cursor; there is no snapshot
+      // held across pages, so the honest answer is `eventual` regardless of the
+      // mode the caller asked for (a downgrade the response field exists to
+      // signal). A fabricated snapshot_id would claim isolation we don't have.
+      consistency: { mode: 'eventual', as_of: new Date().toISOString() },
       provenance: { queried_nodes: [config.node.id] },
     });
   }
 
+  // Search is read-only; it uses the default (read) rate limit, not the much
+  // tighter write limit — lab UIs issue several searches in parallel.
   app.post('/api/v1/material/search', {
-    config: { rateLimit: writeRateLimit },
     schema: {
       consumes: ['application/json', loopContentType],
       body: materialSearchBodySchema,
@@ -950,7 +992,6 @@ export async function registerLoopRoutes(app: FastifyInstance, deps: LoopDeps = 
   });
 
   app.post('/api/v1/product/search', {
-    config: { rateLimit: writeRateLimit },
     schema: { body: searchRequestSchema, response: { 200: searchResponseSchema } },
   }, async (request, reply) => {
     await handleLoopSearch('product', deps.searchLoopProducts, request, reply);

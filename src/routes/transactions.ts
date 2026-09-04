@@ -98,8 +98,8 @@ export async function registerTransactionRoutes(app: FastifyInstance, deps: Tran
 
     let outcome: { status: 201; body: Record<string, unknown> };
     try {
-      outcome = await withIdempotency('transaction.create', idempotencyKey, payload, async () => {
-        const created = await deps.createLoopTransaction(payload);
+      outcome = await withIdempotency('transaction.create', idempotencyKey, payload, async (client) => {
+        const created = await deps.createLoopTransaction(payload, client);
         deps.broadcastLoopEvent(created.event);
         incrementMetric('loop_transaction_created');
         incrementMetric('loop_event_emitted');

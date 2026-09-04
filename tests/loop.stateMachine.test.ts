@@ -1,6 +1,6 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { afterAll, describe, expect, it } from 'bun:test';
+import { probeDatabase } from './dbReady';
 import { pool } from '../src/db/pool';
-import { runMigrations } from '../src/db/migrate';
 import {
   createLoopMaterial,
   createLoopOffer,
@@ -19,7 +19,7 @@ import {
 // so the mocked route suite still runs everywhere. To run them locally:
 //   docker compose up -d && bun test tests/loop.stateMachine.test.ts
 
-let dbReady = false;
+const dbReady = await probeDatabase('loop.stateMachine');
 const createdMaterials: string[] = [];
 
 const hex = '0123456789ABCDEF';
@@ -77,18 +77,6 @@ function buildTransfer(materialId: string, matchId: string, status = 'completed'
   };
 }
 
-beforeAll(async () => {
-  try {
-    await runMigrations();
-    dbReady = true;
-  } catch (error) {
-    console.warn(
-      '[loop.stateMachine] Postgres unavailable — skipping DB-backed state-machine tests:',
-      (error as Error).message,
-    );
-    dbReady = false;
-  }
-});
 
 afterAll(async () => {
   if (dbReady) {
@@ -104,8 +92,7 @@ afterAll(async () => {
 });
 
 describe('loop state machine (db-backed)', () => {
-  it('reserves the offer when an active match is created', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('reserves the offer when an active match is created', async () => {
     const material = buildMaterial();
     await createLoopMaterial(material);
     const offer = buildOffer(material.id);
@@ -117,8 +104,7 @@ describe('loop state machine (db-backed)', () => {
     expect(reloaded?.status).toBe('reserved');
   });
 
-  it('rejects a second match on an already-reserved offer', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('rejects a second match on an already-reserved offer as a conflict', async () => {
     const material = buildMaterial();
     await createLoopMaterial(material);
     const offer = buildOffer(material.id);
@@ -133,11 +119,11 @@ describe('loop state machine (db-backed)', () => {
       error = e;
     }
     expect(error).toBeInstanceOf(LoopStateError);
-    expect((error as LoopStateError).kind).toBe('invalid_state');
+    // Someone else holds the offer: a 409-class conflict, not a malformed request.
+    expect((error as LoopStateError).kind).toBe('conflict');
   });
 
-  it('rejects matching a withdrawn offer', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('rejects matching a withdrawn offer', async () => {
     const material = buildMaterial();
     await createLoopMaterial(material);
     const offer = buildOffer(material.id, 80, 'withdrawn');
@@ -153,8 +139,7 @@ describe('loop state machine (db-backed)', () => {
     expect((error as LoopStateError).kind).toBe('invalid_state');
   });
 
-  it('rejects a second transfer on the same match', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('rejects a second transfer on the same match', async () => {
     const material = buildMaterial();
     await createLoopMaterial(material);
     const offer = buildOffer(material.id);
@@ -171,15 +156,15 @@ describe('loop state machine (db-backed)', () => {
       error = e;
     }
     // An explicit pre-insert check (guarded by the same FOR UPDATE lock used
-    // for the match/offer state checks above) now catches this before it can
-    // reach the uq_loop_transfers_active_match unique index, so callers get a
-    // clean invalid_state error instead of a raw 23505.
+    // for the match/offer state checks above) catches this before it can reach
+    // the uq_loop_transfers_active_match unique index, so callers get a clean
+    // `conflict` state error (409, same status the raw 23505 used to produce)
+    // instead of a database error.
     expect(error).toBeInstanceOf(LoopStateError);
-    expect((error as LoopStateError).kind).toBe('invalid_state');
+    expect((error as LoopStateError).kind).toBe('conflict');
   });
 
-  it('lets exactly one of two concurrent transfers win for the same match', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('lets exactly one of two concurrent transfers win for the same match', async () => {
     const material = buildMaterial();
     await createLoopMaterial(material);
     const offer = buildOffer(material.id);
@@ -197,11 +182,10 @@ describe('loop state machine (db-backed)', () => {
     expect(fulfilled.length).toBe(1);
     expect(rejected.length).toBe(1);
     expect(rejected[0]!.reason).toBeInstanceOf(LoopStateError);
-    expect((rejected[0]!.reason as LoopStateError).kind).toBe('invalid_state');
+    expect((rejected[0]!.reason as LoopStateError).kind).toBe('conflict');
   });
 
-  it('rejects an offer whose quantity exceeds the material', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('rejects an offer whose quantity exceeds the material', async () => {
     const material = buildMaterial(100);
     await createLoopMaterial(material);
 
@@ -215,8 +199,7 @@ describe('loop state machine (db-backed)', () => {
     expect((error as LoopStateError).kind).toBe('invalid_state');
   });
 
-  it('lets exactly one of two concurrent matches win', async () => {
-    if (!dbReady) return;
+  it.skipIf(!dbReady)('lets exactly one of two concurrent matches win', async () => {
     const material = buildMaterial();
     await createLoopMaterial(material);
     const offer = buildOffer(material.id);
@@ -228,9 +211,11 @@ describe('loop state machine (db-backed)', () => {
     ]);
 
     const fulfilled = results.filter((r) => r.status === 'fulfilled');
-    const rejected = results.filter((r) => r.status === 'rejected');
+    const rejected = results.filter((r) => r.status === 'rejected') as PromiseRejectedResult[];
     expect(fulfilled.length).toBe(1);
     expect(rejected.length).toBe(1);
+    expect(rejected[0]!.reason).toBeInstanceOf(LoopStateError);
+    expect((rejected[0]!.reason as LoopStateError).kind).toBe('conflict');
 
     const reloaded = await getLoopOfferById(offer.id);
     expect(reloaded?.status).toBe('reserved');
