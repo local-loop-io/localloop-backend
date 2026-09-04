@@ -4,6 +4,7 @@
   "title": "MaterialStatusUpdate",
   "description": "Material status update schema — LOOP v0.2.0",
   "type": "object",
+  "additionalProperties": true,
   "required": [
     "@context",
     "@type",

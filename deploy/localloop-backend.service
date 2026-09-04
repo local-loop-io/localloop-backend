@@ -1,7 +1,9 @@
 [Unit]
 Description=localLOOP Backend API (legacy bare-metal alternative -- see note below)
-After=network.target postgresql.service redis.service
-Wants=postgresql.service redis.service
+# Postgres and Valkey run as Docker containers (docker-compose.yml); there are
+# no host-level postgresql/redis units to order against.
+After=network.target docker.service
+Wants=docker.service
 
 # NOTE (2026-08-15): the actual, current deployment method for this project
 # is Docker Compose (docker-compose.yml, `docker compose up -d --build api`)
@@ -16,8 +18,8 @@ Wants=postgresql.service redis.service
 
 [Service]
 Type=simple
-# Paths should be customized to match your deployment.
-# Example: /opt/localloop-backend or /home/localloop/localloop-backend
+# /opt/localloop-backend is a placeholder: deploy/setup.sh rewrites it to
+# INSTALL_DIR when installing the unit.
 WorkingDirectory=/opt/localloop-backend
 EnvironmentFile=/opt/localloop-backend/.env
 ExecStart=/usr/local/bin/bun run /opt/localloop-backend/src/index.ts

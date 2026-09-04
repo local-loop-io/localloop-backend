@@ -27,7 +27,7 @@ jobs:
         with:
           bun-version: 'latest'
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
         working-directory: localloop-backend
       - name: Generate Prisma client
         run: bun run prisma:generate

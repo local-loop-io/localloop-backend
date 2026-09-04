@@ -4,6 +4,7 @@
   "title": "Transfer",
   "description": "Transfer schema — LOOP v0.2.0",
   "type": "object",
+  "additionalProperties": true,
   "required": [
     "@context",
     "@type",

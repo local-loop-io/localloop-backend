@@ -26,6 +26,19 @@ require_file() {
 require_command docker
 require_file "$COMPOSE_FILE"
 
+# The compose redis (Valkey) service always runs with --requirepass, so the
+# SAVE below must authenticate; unauthenticated it returns NOAUTH with exit
+# status 0 and the copied dump.rdb is silently whatever the last automatic
+# save wrote. REDIS_PASSWORD comes from the project .env (the same file the
+# compose stack reads), unless already exported by the caller.
+if [[ -z "${REDIS_PASSWORD:-}" && -f "$PROJECT_DIR/.env" ]]; then
+  REDIS_PASSWORD="$(grep -E '^REDIS_PASSWORD=' "$PROJECT_DIR/.env" | tail -n1 | cut -d= -f2- | tr -d "\"'")"
+fi
+if [[ -z "${REDIS_PASSWORD:-}" ]]; then
+  echo "REDIS_PASSWORD is not set (export it or define it in $PROJECT_DIR/.env)" >&2
+  exit 1
+fi
+
 mkdir -p "$RUN_DIR/postgres" "$RUN_DIR/redis" "$RUN_DIR/seaweedfs" "$RUN_DIR/manifests"
 
 echo "Creating backup at $RUN_DIR"
@@ -36,7 +49,11 @@ docker compose -f "$COMPOSE_FILE" exec -T postgres sh -lc \
   'PGPASSWORD="$POSTGRES_PASSWORD" pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' \
   > "$RUN_DIR/postgres/localloop.dump"
 
-docker compose -f "$COMPOSE_FILE" exec -T redis redis-cli SAVE >/dev/null
+save_result="$(docker compose -f "$COMPOSE_FILE" exec -T redis redis-cli --no-auth-warning -a "$REDIS_PASSWORD" SAVE)"
+if [[ "$save_result" != "OK" ]]; then
+  echo "Redis SAVE failed: $save_result" >&2
+  exit 1
+fi
 cp "$PROJECT_DIR/data/redis/dump.rdb" "$RUN_DIR/redis/dump.rdb"
 
 tar -czf "$RUN_DIR/seaweedfs/seaweedfs-data.tar.gz" -C "$PROJECT_DIR" data/seaweedfs
@@ -50,6 +67,15 @@ printf '%s\n' \
 
 ln -sfn "$RUN_DIR" "$BACKUP_ROOT/latest"
 
-find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d ! -name "$STAMP" -mtime +"$RETENTION_DAYS" -exec rm -rf {} +
+# Retention: never delete the run `latest` points at, even if it is older than
+# RETENTION_DAYS (e.g. after a long gap in runs), so the symlink cannot dangle.
+latest_target="$(readlink -f "$BACKUP_ROOT/latest" 2>/dev/null || true)"
+find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d ! -name "$STAMP" -mtime +"$RETENTION_DAYS" -print0 |
+  while IFS= read -r -d '' dir; do
+    if [[ -n "$latest_target" && "$(readlink -f "$dir")" == "$latest_target" ]]; then
+      continue
+    fi
+    rm -rf "$dir"
+  done
 
 echo "Backup complete: $RUN_DIR"

@@ -20,10 +20,11 @@
 // not assume e.g. `prisma.loopMaterial.*` is wired to anything — it isn't
 // called anywhere in src/ today.
 //
-// Conversely, 4 real tables added by src/db/migrations/013-015 have no
-// Prisma model at all and are managed purely via SQL migrations + `pool`:
-// loop_evidence, loop_idempotency_keys, loop_signal_config,
-// loop_transactions. That split is intentional, not an oversight.
+// Conversely, 8 real tables have no Prisma model at all and are managed purely
+// via SQL migrations + `pool` (or, for auth, by better-auth): loop_evidence,
+// loop_idempotency_keys, loop_signal_config, loop_transactions (migrations
+// 013-015) and the better-auth tables user, session, account, verification
+// (migration 017). That split is intentional, not an oversight.
 // ============================================================================
 
 generator client {
@@ -110,6 +111,7 @@ model LoopMaterial {
   quality       Decimal?
   payload       Json     @db.JsonB
   createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @map("updated_at")
 
   offers    LoopOffer[]
   matches   LoopMatch[]
@@ -131,6 +133,7 @@ model LoopProduct {
   expiresAt       DateTime? @map("expires_at")
   payload         Json     @db.JsonB
   createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @map("updated_at")
 
   offers    LoopOffer[]
   matches   LoopMatch[]

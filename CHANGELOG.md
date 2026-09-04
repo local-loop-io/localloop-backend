@@ -7,22 +7,125 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Backups:** `deploy/backup.sh` issued `redis-cli SAVE` without authenticating
+  against the compose Valkey service (which always runs with `--requirepass`);
+  the command returned `NOAUTH` with exit status 0, so the copied `dump.rdb`
+  was silently whatever the last automatic save had written. The script now
+  authenticates, fails loudly if `SAVE` does not answer `OK`, and never deletes
+  the run the `latest` symlink points at during retention cleanup.
+- **Idempotency:** `loop_idempotency_keys` was keyed on `key` alone while
+  lookups filtered on `(key, route)`, so reusing one `Idempotency-Key` on two
+  routes overwrote the first route's cached response and a legitimate retry
+  re-ran its handler (migration `018_loop_idempotency_route_scope.sql`).
+  `withIdempotency` also held a pool client for its advisory lock while the
+  handler waited for a second client, so `DB_POOL_SIZE` concurrent keyed writes
+  stalled until the connection timeout; the lock client is now handed to the
+  handler and reused for its transaction.
+- **State machine:** a transfer for a match that already has an active transfer,
+  and a match against an already-reserved offer, are `409 CONFLICT` again
+  (0.6.1 had turned the transfer case into `400 INVALID_REQUEST`; the test that
+  covered it stubbed a raw `23505` and could not catch the regression).
+- **Foreign-key violations** on write routes returned `409 CONFLICT` with the
+  message "Related resource was not found"; they are `400 INVALID_REQUEST`.
+- **SSE streams** (`/api/v1/stream`, `/api/interest/stream`) call
+  `reply.hijack()`, guard every write so a dead subscriber socket no longer
+  turns the write request that triggered the broadcast into a `500`, and clean
+  up on response-side `close`/`error` as well as request close.
+- **Route encapsulation:** route groups are registered as encapsulated plugins,
+  so the `Cache-Control: no-store` hooks they add no longer run globally (seven
+  copies per request, including on `/openapi.json`).
+- `trustProxy: 1` instead of `true`: only the single reverse-proxy hop is
+  trusted, so a client can no longer choose its own `request.ip` via
+  `X-Forwarded-For` and sidestep the per-IP rate limits.
+- List routes rejected nothing: `GET /api/v1/material?limit=-1` reached
+  `LIMIT -1` and answered `500`. `limit` must now be an integer ≥ 1 (values
+  above the cap are clamped), on the loop list routes, `/api/v1/events`,
+  `/api/interest`, and `/api/cities`.
+- `POST /api/v1/material-status` was the only write route without
+  `Idempotency-Key` support or database-error mapping; a retried update
+  appended duplicate `loop_events` and duplicate append-only evidence rows.
+- Core-DP search responses claimed `consistency.mode: snapshot` with a random
+  `snapshot_id` although each page is an independent query; they now report
+  `eventual` with `as_of`. Search routes use the read rate limit instead of the
+  20-per-window write limit.
+- `REFRESH MATERIALIZED VIEW interests_search` runs `CONCURRENTLY`, so
+  `GET /api/interest?search=` is no longer blocked for the duration of every
+  `POST /api/interest`.
+- Migration runner: a session advisory lock serialises concurrent runners
+  (compose `api` with `RUN_MIGRATIONS=true` racing `bun run migrate`); the
+  constraint statements in migrations 011 and 016 are re-runnable.
+- Shutdown: re-entrancy guard, 10 s force-exit, and the BullMQ connection,
+  Prisma client, and better-auth pool are closed (the auth pool is no longer
+  created at all when `AUTH_ENABLED=false`).
+- §9.2: a missing or blank `X-Timestamp` is `400 INVALID_REQUEST` (malformed
+  request); only a well-formed but stale timestamp is `401`.
+- Health/metrics/node-info and the OpenAPI document derive their version from
+  one `src/version.ts`; the OpenAPI `info.version` was a hard-coded, stale
+  `0.2.0-lab` (the spec baseline is now `info.x-protocol-version`).
+- `deploy/healthcheck-alert.sh` built its webhook payload by string
+  interpolation (invalid JSON whenever the embedded `/health` body contained
+  quotes) and treated the degraded `503` as "unreachable"; `deploy/setup.sh`
+  did not copy `storage-proxy/` or `scripts/`, chmod'ed the source tree instead
+  of the install, and installed units pointing at three different paths — the
+  units now carry one placeholder path that `setup.sh` rewrites to
+  `INSTALL_DIR`. `deploy/nginx.conf` disables buffering for the SSE routes.
+- `.env.example` used Docker-internal hostnames (`postgres`, `redis`,
+  `minio-proxy`) and an unauthenticated `REDIS_URL`, so following the README
+  quickstart on the host overrode working defaults with unreachable ones;
+  `.env.docker.example` referenced the retired `minio-proxy` service name
+  (`storage-proxy`).
+- `cities`: `radiusKm` guard matched its own error message (values below 1 are
+  rejected); `payments`: AJV and Zod validators agree on `amount ≥ 0.01` and a
+  3-letter `currency`.
+- Tests: the ~30 DB/Redis-backed cases that silently *passed* when no service
+  was reachable (`if (!dbReady) return;`) are declared with `it.skipIf(...)` and
+  show up as skipped. New coverage: per-route idempotency scoping, pool
+  exhaustion under concurrent keyed writes, concurrent migration runners,
+  `trustProxy` hop handling, SSE dead-socket handling, list-limit validation,
+  duplicate/reserved conflicts on the real state-error path.
+
+### Changed
+- `docs/SPEC-COMPLIANCE.md` gains the `POST /api/v1/offer|match|transfer`
+  rows (listed in loop-protocol v0.5.1's §8.1/`openapi.json`), records the
+  intentional Core-DP error-body exception for the search contract and
+  evidence routes (the previous text claimed every lab surface used the §8.3
+  envelope), and uses "locked lab scenario" wording in line with the claims
+  policy. README documents the actual stack (Valkey, SeaweedFS), the
+  host/container split of the two env examples, the eight tables without a
+  Prisma model, and the evidence/payments/auth routes it omitted.
+- Biome (`bun run lint`) added as the linter; CI runs it, installs with
+  `--frozen-lockfile`, uses the same pinned Valkey image as `docker-compose.yml`
+  (the old comment claimed parity while pinning Redis), and runs
+  `check:schemas` (tolerant of the missing sibling checkout only via
+  `SCHEMA_SYNC_ALLOW_MISSING=1`).
+- `scripts/sync-schemas.ts` drift-checks `material-status.schema.json` (it was
+  validated against but never compared) and self-checks the base schema
+  directory the way it already did for Core-DP; `scripts/check-protocol-parity.sh`
+  (unexecutable, unreferenced, diverging list) removed; `bun run check:domains`
+  added.
+- Dockerfile on `oven/bun:1.4.0`, `--frozen-lockfile`, no `.env.example` copy.
+- `prisma/schema.prisma` declares the `updated_at` columns migration 012 added;
+  `prisma.config.ts` no longer points at a non-existent `prisma/migrations`.
+- New indexes for the Core-DP search filters (`origin_city`, prefix
+  `text_pattern_ops` on category/id) and a cursor predicate that can use the
+  `(updated_at, id)` index (migration `019_loop_search_indexes.sql`).
+
+### Removed
+- `@aws-sdk/client-s3` dependency and `src/storage/s3.ts` (no importers; the
+  `MINIO_*` configuration and its production secret check remain in place for
+  when object storage is wired in).
+- CHANGELOG: releases 0.5.0 and 0.6.0 had no sections of their own — every entry
+  sat under `[0.6.1]` with repeated headings; split by release, with the
+  per-agent-cycle duplicates consolidated.
+
 ## [0.6.1] - 2026-08-21
 
 ### Fixed
 - Duplicate active LOOP transfers now return a clean state error instead of
   creating conflicting transfer state.
 
-### Fixed
-- `deploy/localloop-backend-backup.service` and `deploy/localloop-backend.service`
-  hardcoded `/opt/localloop-backend`, which was never actually this project's real
-  deployment path — same bug already fixed in the health-check timer service.
-  Also found and stopped a hand-customized copy of `localloop-backend.service`
-  running live against a stale, 8-month-old checkout with an outdated DB
-  password, crash-looping every ~15s for 35+ hours (harmless in practice —
-  Docker exclusively held the app's port the entire time — but wasteful).
-  `localloop-backend.service` is now documented as the legacy bare-metal
-  alternative to the actual, current Docker Compose deployment.
+## [0.6.0] - 2026-08-15
 
 ### Added
 - `AUTH_ENABLED` (better-auth) end-to-end coverage: provisioned the missing
@@ -44,6 +147,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   webhook if `ALERT_WEBHOOK_URL` is set.
 
 ### Fixed
+- `deploy/localloop-backend-backup.service` and `deploy/localloop-backend.service`
+  hardcoded `/opt/localloop-backend`, which was never actually this project's real
+  deployment path — same bug already fixed in the health-check timer service.
+  Also found and stopped a hand-customized copy of `localloop-backend.service`
+  running live against a stale, 8-month-old checkout with an outdated DB
+  password, crash-looping every ~15s for 35+ hours (harmless in practice —
+  Docker exclusively held the app's port the entire time — but wasteful).
+  `localloop-backend.service` is now documented as the legacy bare-metal
+  alternative to the actual, current Docker Compose deployment.
 - `deploy/backup.sh` referenced the retired `minio` service/`data/minio`
   path (renamed to `seaweedfs` in `docker-compose.yml` at some prior point)
   — under `set -euo pipefail` this aborted the entire nightly backup run
@@ -54,146 +166,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Fixed and re-verified end to end (real run, scratch `BACKUP_ROOT`, exited 0
   with correctly sized dumps for all three stores).
 
+## [0.5.0] - 2026-08-14
+
 ### Added
 - `status-updated` evidence event type: `POST /api/v1/material-status` now also writes
   to the append-only `loop_evidence` log (migration `016_loop_evidence_status_updated.sql`),
   closing a gap where status changes reached only the mutable `loop_events` SSE feed. See
   `loop-protocol/docs/retention-and-evidence-guidance.md`.
+- Shared `httpCache` helpers for public short cache and no-store (agent cycle 016).
+- `GET /health` includes package `version` for deploy forensics (agent cycle 010).
+- `GET /health` now reports a `redis` probe (`ok` | `error` | `skipped`) alongside
+  the existing database check. Either probe failure yields HTTP 503 / `degraded`
+  so Traefik and Docker healthchecks surface Redis outages (agent cycle 001).
+
+### Changed
+- loop routes set no-store (agent cycle 031).
+- payments routes set no-store (agent cycle 030).
+- federate routes set no-store (agent cycle 029).
+- Federation routes set no-store (agent cycle 025).
+- Evidence routes set no-store (agent cycle 024).
+- Transaction routes set no-store (agent cycle 023).
+- City routes call `setNoStore` (agent cycle 021; retries cycle 014).
+- `GET /api/v1/signals` uses short public cache (30s) (agent cycle 018).
+- `GET /api/v1/node/info` uses short public cache (30s) (agent cycle 017).
+- Interest routes set `Cache-Control: no-store` (agent cycle 015).
+- City routes set `Cache-Control: no-store` (agent cycle 014).
+- Dockerfile copies `src` with `--chown=app:app` and avoids a second full-tree `chown` after source copy (agent cycle 013).
+- `/api/auth/status` sends `Cache-Control: no-store` (agent cycle 012).
+- `/api/privacy` and `/api/metrics` send `Cache-Control: no-store` (agent cycle 011).
+- README documents Redis probe and `Cache-Control: no-store` on `/health` (agent cycle 008).
+- `GET /api/metrics` always lists known metric keys at zero so dashboards do not
+  treat a quiet node as missing metrics (agent cycle 006).
+- `GET /health` sends `Cache-Control: no-store` so proxies never cache readiness (agent cycle 005).
 
 ### Fixed
 - Replaced source-string "theater" cache/metrics tests with handler inject tests
   that assert real `Cache-Control` response headers and live metrics counters
   (agent residual: honest tests).
-
-### Fixed
 - Metrics expose package `version`; remove broken nodeInfo cache source test that
   asserted the wrong route file (residual after agent cycles 001-100).
-
-### Fixed
 - Metrics key regression guard (agent cycle 100).
-
-### Fixed
 - Metrics key regression guard (agent cycle 096).
-
-### Fixed
 - Metrics key regression guard (agent cycle 092).
-
-### Fixed
 - Metrics key regression guard (agent cycle 088).
-
-### Fixed
 - Metrics key regression guard (agent cycle 084).
-
-### Fixed
 - Metrics key regression guard (agent cycle 080).
-
-### Fixed
 - Metrics key regression guard (agent cycle 076).
-
-### Fixed
 - Metrics key regression guard (agent cycle 072).
-
-### Fixed
 - Metrics key regression guard (agent cycle 068).
-
-### Fixed
 - Metrics key regression guard (agent cycle 064).
-
-### Fixed
 - Metrics key regression guard (agent cycle 060).
-
-### Fixed
 - Metrics key regression guard (agent cycle 056).
-
-### Fixed
 - Metrics key regression guard (agent cycle 052).
-
-### Fixed
 - Metrics key regression guard (agent cycle 048).
-
-### Fixed
 - Metrics key regression guard (agent cycle 044).
-
-### Changed
-- loop routes set no-store (agent cycle 031).
-
-### Changed
-- payments routes set no-store (agent cycle 030).
-
-### Changed
-- federate routes set no-store (agent cycle 029).
-
-### Changed
-- Federation routes set no-store (agent cycle 025).
-
-### Changed
-- Evidence routes set no-store (agent cycle 024).
-
-### Changed
-- Transaction routes set no-store (agent cycle 023).
-
-### Changed
-- City routes call `setNoStore` (agent cycle 021; retries cycle 014).
-
-### Changed
-- `GET /api/v1/signals` uses short public cache (30s) (agent cycle 018).
-
-### Changed
-- `GET /api/v1/node/info` uses short public cache (30s) (agent cycle 017).
-
-### Added
-- Shared `httpCache` helpers for public short cache and no-store (agent cycle 016).
-
-### Changed
-- Interest routes set `Cache-Control: no-store` (agent cycle 015).
-
-### Changed
-- City routes set `Cache-Control: no-store` (agent cycle 014).
-
-### Changed
-- Dockerfile copies `src` with `--chown=app:app` and avoids a second full-tree `chown` after source copy (agent cycle 013).
-
-### Changed
-- `/api/auth/status` sends `Cache-Control: no-store` (agent cycle 012).
-
-### Changed
-- `/api/privacy` and `/api/metrics` send `Cache-Control: no-store` (agent cycle 011).
-
-### Added
-- `GET /health` includes package `version` for deploy forensics (agent cycle 010).
-
-### Fixed
 - CORS `allowedHeaders` includes `Idempotency-Key` so browser clients can send
   write idempotency headers without preflight failure (agent cycle 009).
-
-### Changed
-- README documents Redis probe and `Cache-Control: no-store` on `/health` (agent cycle 008).
-
-### Fixed
 - Metrics response schema now allows numeric additionalProperties so Fastify
   serialization no longer strips counter keys to `{}` (agent cycle 007).
-
-### Changed
-- `GET /api/metrics` always lists known metric keys at zero so dashboards do not
-  treat a quiet node as missing metrics (agent cycle 006).
-
-### Changed
-- `GET /health` sends `Cache-Control: no-store` so proxies never cache readiness (agent cycle 005).
-
-### Fixed
 - Privacy regression test types compile under `tsc --noEmit` (`consentPublic`
   required on insertInterest fixture; agent cycle 004).
-
-### Fixed
 - Interest search (`GET /api/interest?search=`) now redacts `email` from the live
   `share_email` flag instead of the materialized view snapshot, so revoking
   email sharing is effective immediately without waiting for a view refresh
   (agent cycle 003).
-
-### Added
-- `GET /health` now reports a `redis` probe (`ok` | `error` | `skipped`) alongside
-  the existing database check. Either probe failure yields HTTP 503 / `degraded`
-  so Traefik and Docker healthchecks surface Redis outages (agent cycle 001).
 
 ## [0.4.4] - 2026-07-20
 
@@ -362,7 +398,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgraded Contributor Covenant to v3.0
 - Replaced personal contact with org identity (dev@mycel-ai.de)
 
-
 ## [0.2.2] - 2025-12-19
 
 ### Added
@@ -371,15 +406,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Interest and city data access now go through Prisma (raw SQL for PostGIS/search).
 
-
 ## [0.2.1] - 2025-12-19
 
 ### Added
 - City GIS filters (bbox/near/radius) and GeoJSON FeatureCollection endpoint.
 - Route-level validation for city query parameters.
 
-
 ## [0.2.0] - 2025-12-19
+
+> Historical note: this entry carries a date one day before `[0.1.1]` below; the
+> dates are kept as originally recorded rather than rewritten.
 
 ### Added
 - Bun + Fastify API stack with Postgres, Redis, MinIO scaffolding.
@@ -392,7 +428,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated Docker Compose to include Postgres 18.1, Redis, and MinIO.
 - Updated systemd service to run the Bun server.
 
-
 ## [0.1.1] - 2025-12-20
 
 ### Added
@@ -401,7 +436,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lab demo scripts (seed + simulate + one-command runner).
 - Privacy notice endpoint and in-memory metrics snapshot.
 
-[Unreleased]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.4...HEAD
+[Unreleased]: https://github.com/local-loop-io/localloop-backend/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/local-loop-io/localloop-backend/compare/v0.6.0...v0.6.1
+[0.6.0]: https://github.com/local-loop-io/localloop-backend/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.4...v0.5.0
 [0.4.4]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/local-loop-io/localloop-backend/compare/v0.4.1...v0.4.2

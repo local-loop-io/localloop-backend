@@ -18,6 +18,7 @@ const BASE_SCHEMAS = [
   'offer.schema.json',
   'match.schema.json',
   'transfer.schema.json',
+  'material-status.schema.json',
   'transaction.schema.json',
   'loopsignal.schema.json',
   'node-info.schema.json',
@@ -37,19 +38,43 @@ const CORE_DP_SCHEMAS = [
   'epcis-mapping.schema.json',
 ];
 
+// Canonical base schemas that are deliberately NOT copied into the backend:
+// loopcoin is reserved/unimplemented (see loop-protocol/schemas/README.md).
+const BASE_SCHEMAS_NOT_COPIED = ['loopcoin.schema.json'];
+
 type Mode = 'sync' | 'check';
 
 function run(mode: Mode): boolean {
   if (!existsSync(SOURCE_BASE)) {
-    // Mirrors scripts/check-protocol-parity.sh: without the sibling protocol
-    // checkout (e.g. backend-only CI) there is nothing to compare against.
-    // The full gate runs in .github/workflows/protocol-parity.yml, which
-    // checks out all three repos.
-    console.log('[sync-schemas] SKIP: loop-protocol sibling checkout unavailable.');
-    return true;
+    // Without the sibling protocol checkout (e.g. backend-only CI) there is
+    // nothing to compare against. The full gate runs in
+    // .github/workflows/protocol-parity.yml, which checks out all three repos.
+    // Only report success when the caller explicitly allows the skip, so a
+    // misconfigured local checkout cannot pass the gate vacuously.
+    if (process.env.SCHEMA_SYNC_ALLOW_MISSING === '1') {
+      console.log('[sync-schemas] SKIP: loop-protocol sibling checkout unavailable (SCHEMA_SYNC_ALLOW_MISSING=1).');
+      return true;
+    }
+    console.error(`[sync-schemas] loop-protocol sibling checkout not found at ${SOURCE_BASE}. Clone it next to this repo, or set SCHEMA_SYNC_ALLOW_MISSING=1 to skip.`);
+    return false;
   }
 
   let drift = false;
+
+  // Self-check for the base schema directory (same reason as the core-dp one
+  // below): material-status.schema.json was missing from BASE_SCHEMAS and so
+  // was never drift-checked even though the backend validates against it.
+  const actualBaseFiles = readdirSync(SOURCE_BASE).filter((name) => name.endsWith('.schema.json'));
+  const baseMissingFromManifest = actualBaseFiles.filter((name) => !BASE_SCHEMAS.includes(name) && !BASE_SCHEMAS_NOT_COPIED.includes(name));
+  const baseMissingFromDisk = BASE_SCHEMAS.filter((name) => !actualBaseFiles.includes(name));
+  for (const name of baseMissingFromManifest) {
+    console.error(`[sync-schemas] MANIFEST DRIFT: ${name} exists in loop-protocol/schemas/ but is missing from BASE_SCHEMAS (or BASE_SCHEMAS_NOT_COPIED) in scripts/sync-schemas.ts`);
+    drift = true;
+  }
+  for (const name of baseMissingFromDisk) {
+    console.error(`[sync-schemas] MANIFEST DRIFT: ${name} is listed in BASE_SCHEMAS but no longer exists in loop-protocol/schemas/`);
+    drift = true;
+  }
 
   // Self-check: catch a future new file landing in loop-protocol's core-dp
   // schemas directory that CORE_DP_SCHEMAS hasn't been told about yet — the

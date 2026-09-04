@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.8
+FROM oven/bun:1.4.0
 
 WORKDIR /app
 
@@ -7,12 +7,11 @@ RUN useradd -m -u 10001 app
 COPY package.json bun.lock ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
-RUN bun install --production
+RUN bun install --production --frozen-lockfile
 RUN bun run prisma:generate
 RUN chown -R app:app /app
 
 COPY --chown=app:app src ./src
-COPY --chown=app:app .env.example ./
 
 USER app
 

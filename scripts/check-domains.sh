@@ -14,7 +14,7 @@ banned=(
 pattern=$(IFS='|'; echo "${banned[*]//./\\.}")
 
 # The trailing "." matters: with no path argument and a non-TTY stdin (any
-# non-interactive caller, e.g. `npm run check:domains` in CI or a pipeline),
+# non-interactive caller, e.g. `bun run check:domains` in CI or a pipeline),
 # ripgrep searches stdin instead of the working tree and reports a vacuous pass.
 if command -v rg >/dev/null 2>&1; then
   if rg -n "(${pattern})" --hidden --glob '!node_modules/**' --glob '!.git/**' --glob '!dist/**' --glob '!scripts/check-domains.sh' --glob '!DOMAIN-POLICY.md' . ; then

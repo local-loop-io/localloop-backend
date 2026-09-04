@@ -25,9 +25,9 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       redis:
-        # Same pinned image as docker-compose.yml's redis service, started
-        # with --requirepass to match its authenticated-Redis credential scheme.
-        image: redis@sha256:3aaec283e6e593bde528077d60280ac1589887067a39273348860837c9346d7e
+        # Same pinned Valkey image as docker-compose.yml's redis service, started
+        # with --requirepass to match its authenticated credential scheme.
+        image: valkey/valkey@sha256:a038175878d66b9d274fbf8be73c0305e93798b83917647f167e18cef3c71eec
         command: --requirepass localloop_ci_redis_password
         ports:
           - 6381:6379
@@ -48,12 +48,18 @@ jobs:
         with:
           bun-version: 'latest'
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
       - name: Audit dependencies
         run: bun audit
       - name: Generate Prisma client
         run: bun run prisma:generate
       - name: Run typecheck
         run: bun run typecheck
+      - name: Lint
+        run: bun run lint
+      - name: Schema copies match loop-protocol (skipped without sibling checkout)
+        run: bun run check:schemas
+        env:
+          SCHEMA_SYNC_ALLOW_MISSING: '1'
       - name: Run tests
         run: bun run test

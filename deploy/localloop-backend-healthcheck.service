@@ -4,16 +4,11 @@ After=docker.service network.target
 
 [Service]
 Type=oneshot
-# Path reflects this project's actual (only) deployment host -- verified
-# 2026-08-14 that /opt/localloop-backend, used by the sibling backup
-# service and the main-app service template, was never actually the real
-# install path here (the live app runs via docker-compose from this exact
-# directory; a separate, stale, crash-looping systemd unit was found
-# pointed at /root/code/... instead). Edit both this path and the
-# ReadOnlyPaths= line below together if this ever moves.
-WorkingDirectory=/home/alphin/code/local-loop-io/localloop-backend
-EnvironmentFile=-/home/alphin/code/local-loop-io/localloop-backend/.env
-ExecStart=/home/alphin/code/local-loop-io/localloop-backend/deploy/healthcheck-alert.sh
+# /opt/localloop-backend is a placeholder: deploy/setup.sh rewrites every
+# occurrence in this file to INSTALL_DIR when installing the unit.
+WorkingDirectory=/opt/localloop-backend
+EnvironmentFile=-/opt/localloop-backend/.env
+ExecStart=/opt/localloop-backend/deploy/healthcheck-alert.sh
 User=root
 Group=root
 NoNewPrivileges=yes

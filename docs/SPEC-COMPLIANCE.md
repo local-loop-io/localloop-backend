@@ -8,7 +8,9 @@ contract), §9.2 (node-to-node headers), and §8.3 (error envelope).
 Lab demo only — compliance here means "the protocol's required surface works
 end-to-end against the running lab node", not production readiness.
 
-## Endpoint matrix (v0.4.0)
+## Endpoint matrix
+
+Checked against loop-protocol **v0.5.1** (SPECIFICATION.md v0.2.0 baseline, `openapi.json` with 14 paths) on 2026-09-04; version tags in the Notes column record the backend release that first implemented or fixed a row.
 
 | Spec endpoint | Requirement | Status | Notes |
 | --- | --- | --- | --- |
@@ -17,6 +19,9 @@ end-to-end against the running lab node", not production readiness.
 | `POST /api/v1/material/search` | MUST (§8.1) | ✅ Implemented | Dual contract: protocol shape `{category, radius_km, min_quantity, max_loop_cost}` → `{results, total}` and additive Core-DP shape (`limit` + filters + cursor). `max_loop_cost` rejected with `400 INVALID_REQUEST` (LoopCost needs offer pricing; MaterialDNA carries none). `radius_km` measured from the node's published location (PostGIS). |
 | `POST /api/v1/product` | MUST (§8.1, v0.2.0) | ✅ Implemented | Canonical product-dna schema validation |
 | `GET /api/v1/product/{id}` | MUST (§8.1, v0.2.0) | ✅ Implemented | Returns the stored canonical ProductDNA document over `application/ld+json` (fixed v0.4.4); canonical-schema validated in `tests/specResponses.test.ts` |
+| `POST /api/v1/offer` | MUST (§8.1, §3.5 flow) | ✅ Implemented | Canonical offer schema; quantity bounded by the subject material (400 `INVALID_REQUEST`); `Idempotency-Key` honoured; duplicate id → 409 (v0.6.2: listed in §8.1/`openapi.json` since loop-protocol v0.5.1) |
+| `POST /api/v1/match` | MUST (§8.1, §3.5 flow) | ✅ Implemented | Canonical match schema; offer must be `open` and is moved to `reserved`; an already-reserved offer → 409 `CONFLICT`, withdrawn → 400; `Idempotency-Key` honoured |
+| `POST /api/v1/transfer` | MUST (§8.1, §3.5 flow) | ✅ Implemented | Canonical transfer schema; match must be `accepted`; a match that already has a non-cancelled transfer → 409 `CONFLICT` (v0.6.1 briefly answered 400; fixed v0.6.2); `Idempotency-Key` honoured |
 | `POST /api/v1/product/search` | Core-DP (openapi tag) | ✅ Implemented | Additive lab profile endpoint |
 | `GET /api/v1/node/info` | MUST (§8.1) | ✅ Implemented | Validates against canonical node-info schema (location, capability enum enforced via config warning) |
 | `GET /api/v1/signals` | MUST (§8.1) | ✅ Implemented (v0.4.0) | LoopSignalConfig from `loop_signal_config` table; seeded per §6.1 example |
@@ -53,14 +58,15 @@ in `src/routes/federate.ts`).
 This is not a compliance gap for the lab demo: conformance checks route
 presence and timestamp behavior, not production-grade node authentication.
 
-**Pilot-scope note (2026-08-14):** the locked pilot use case
+**Locked lab-scenario note (2026-08-14):** the locked scenario used for
+city-outreach conversations
 (`loop-protocol/docs/governance/pilot-readiness/PILOT-USE-CASE.md`, municipal
-reuse-depot flow) runs against a single lab node and does not use
-`/api/v1/federate/*` at all — confirmed by direct read of
-`scripts/simulate-lab.ts`'s municipal-reuse block, which posts every leg to
-one `baseUrl`. Wiring `X-Node-Signature` cryptographic verification into the
-federation HTTP layer is therefore explicitly out of scope for this pilot,
-not silently deferred. The underlying Ed25519 machinery already exists and is
+reuse-depot flow — a lab demo, not a public pilot or deployment) runs against a
+single lab node and does not use `/api/v1/federate/*` at all — confirmed by
+direct read of `scripts/simulate-lab.ts`'s municipal-reuse block, which posts
+every leg to one `baseUrl`. Wiring `X-Node-Signature` cryptographic
+verification into the federation HTTP layer is therefore explicitly out of
+scope for that scenario, not silently deferred. The underlying Ed25519 machinery already exists and is
 tested (`src/envelope.ts`, `tests/envelope.test.ts`, Core-DP conformance
 vectors) and remains available to wire in if a second real federated node
 enters scope later.
@@ -197,7 +203,8 @@ management or trust.
 | Surface | Status |
 | --- | --- |
 | New protocol endpoints (signals, transaction, federate/*, protocol-mode search) | ✅ `{error: {code, message, details?}}` with canonical codes |
-| Pre-existing lab routes (loop CRUD, interest, cities, payments, evidence) | ✅ Migrated to the §8.3 envelope. HTTP statuses unchanged; statuses outside the canonical six map to the nearest canonical code (429 → `INVALID_REQUEST`, 503 → `INTERNAL_ERROR`) via `specErrorCodeForStatus`. Mixed write-route 409s can still carry the Core-DP error body (Idempotency-Key conflicts) |
+| Pre-existing lab routes (loop CRUD, interest, cities, payments) | ✅ Migrated to the §8.3 envelope. HTTP statuses unchanged; statuses outside the canonical six map to the nearest canonical code (429 → `INVALID_REQUEST`, 503 → `INTERNAL_ERROR`) via `specErrorCodeForStatus`. Mixed write-route 409s can still carry the Core-DP error body (Idempotency-Key conflicts) |
+| Core-DP profile surfaces: Core-DP search contract (`limit`-shaped bodies on `/api/v1/material/search`, `/api/v1/product/search`) and `/api/v1/evidence*` read routes | ⚠️ Intentional exception: domain errors use the Core-DP error body `{code, message, retryable, correlation_id}` (`profiles/core-dp/schemas/error.schema.json`, `src/errors.ts`), which that profile's contract requires. Their API-key/auth-guard rejections still use the §8.3 envelope |
 | Fastify schema-validation rejections (400) | ✅ Global error handler emits `INVALID_REQUEST` envelope with `details.validation`; global 404 handler emits `NOT_FOUND` envelope |
 
 ## §3.6 lifecycle invariants
@@ -207,7 +214,7 @@ management or trust.
 | Match requires open Offer; matching reserves the Offer | ✅ DB-enforced (state machine + partial unique indexes, migration 011) |
 | One active Match per Offer | ✅ DB-enforced |
 | Transfer requires accepted Match | ✅ DB-enforced |
-| One live Transfer per Match | ✅ DB-enforced |
+| One live Transfer per Match | ✅ DB-enforced (partial unique index) and pre-checked under the match row lock → 409 `CONFLICT` |
 | Offer quantity bounded by subject material | ✅ DB-enforced |
 | Transaction status values | ✅ DB CHECK constraint (migration 015); transition enforcement is lab-scope (create/read only) |
 
