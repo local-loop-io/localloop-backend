@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import Fastify from 'fastify';
 import { registerMetricsRoutes } from '../src/routes/metrics';
+import { VERSION } from '../src/version';
 
 describe('metrics version', () => {
   it('includes package version', async () => {
@@ -9,7 +10,6 @@ describe('metrics version', () => {
     const res = await app.inject({ method: 'GET', url: '/api/metrics' });
     expect(res.statusCode).toBe(200);
     const body = res.json();
-    expect(typeof body.version).toBe('string');
-    expect(body.version.length).toBeGreaterThan(0);
+    expect(body.version).toBe(VERSION);
   });
 });

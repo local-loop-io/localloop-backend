@@ -93,13 +93,13 @@ const parseNear = (value: string | undefined, radiusKm: number) => {
   if (!value) return { ok: true as const, value: null };
   const parts = value.split(',').map((part) => Number(part.trim()));
   if (parts.length !== 2 || parts.some((part) => !Number.isFinite(part))) {
-    return { ok: false as const, error: 'near must be \"lon,lat\".' };
+    return { ok: false as const, error: 'near must be "lon,lat".' };
   }
   const [lon, lat] = parts;
   if (!isValidLon(lon) || !isValidLat(lat)) {
     return { ok: false as const, error: 'near coordinates must be valid lon/lat values.' };
   }
-  if (radiusKm <= 0 || radiusKm > MAX_RADIUS_KM) {
+  if (radiusKm < 1 || radiusKm > MAX_RADIUS_KM) {
     return { ok: false as const, error: `radiusKm must be between 1 and ${MAX_RADIUS_KM}.` };
   }
   return { ok: true as const, value: { lon, lat, radiusKm } };
@@ -111,8 +111,11 @@ const parseFilters = (query: Record<string, string | undefined>) => {
     return { ok: false as const, error: 'limit must be a number.' };
   }
 
-  const limit = rawLimit && rawLimit > 0
-    ? Math.min(rawLimit, config.publicLimit)
+  if (rawLimit !== null && rawLimit < 1) {
+    return { ok: false as const, error: 'limit must be at least 1.' };
+  }
+  const limit = rawLimit !== null
+    ? Math.min(Math.trunc(rawLimit), config.publicLimit)
     : config.publicLimit;
 
   const radiusValue = parseNumber(query.radiusKm);

@@ -32,11 +32,7 @@ const getQueue = () => {
   return queue;
 };
 
-export function enqueueInterest(payload: unknown) {
-  if (!config.redisUrl) {
-    return Promise.resolve();
-  }
-
+export function enqueueInterest(payload: unknown): Promise<unknown> {
   return getQueue().add('interest:created', payload, {
     attempts: 3,
     backoff: { type: 'exponential', delay: 2000 },
@@ -78,6 +74,23 @@ export function createInterestJobHandler(deps: QueueDeps = defaultDeps) {
 
     return { status: 'logged' };
   };
+}
+
+/**
+ * Close the shared BullMQ queue and its Redis connection (shutdown path).
+ * Safe to call when nothing was ever opened.
+ */
+export async function closeQueue() {
+  const openQueue = queue;
+  const openConnection = connection;
+  queue = null;
+  connection = null;
+  if (openQueue) {
+    await openQueue.close();
+  }
+  if (openConnection) {
+    await openConnection.quit().catch(() => openConnection.disconnect());
+  }
 }
 
 export function startWorkers() {

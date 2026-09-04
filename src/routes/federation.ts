@@ -6,7 +6,7 @@ import { getLocalNode, listNodes, resolveNodeApiEndpoint, upsertNode, type NodeR
 import { requireApiKey } from '../security/apiKey';
 import { federationSchemaIds, registerFederationSchemas } from '../schemas/federationSchemas';
 import { loopContentType } from '../protocol';
-import packageInfo from '../../package.json';
+import { VERSION } from '../version';
 
 const listResponseSchema = {
   type: 'object',
@@ -93,7 +93,7 @@ export async function registerFederationRoutes(app: FastifyInstance, deps: Feder
       schema_version: '0.2.0',
       id: local.node_id,
       name: local.name,
-      version: packageInfo.version,
+      version: VERSION,
       location: config.node.location,
       endpoint: resolveNodeApiEndpoint(config.publicBaseUrl),
       capabilities: local.capabilities,

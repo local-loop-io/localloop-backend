@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const optionalTrimmed = (schema: z.ZodString) =>
+const optionalTrimmed = (schema: z.ZodType<string>) =>
   z.preprocess((value) => {
     if (value === undefined || value === null) return undefined;
     if (typeof value !== 'string') return value;
@@ -14,12 +14,12 @@ export const interestSchema = z.object({
   role: optionalTrimmed(z.string().max(80)),
   country: optionalTrimmed(z.string().max(80)),
   city: optionalTrimmed(z.string().max(80)),
-  website: optionalTrimmed(z.string().url().max(200)),
-  email: optionalTrimmed(z.string().email().max(120)),
+  website: optionalTrimmed(z.url().max(200)),
+  email: optionalTrimmed(z.email().max(120)),
   message: optionalTrimmed(z.string().max(500)),
   shareEmail: z.boolean().optional().default(false),
   consentPublic: z.literal(true),
-  honey: optionalTrimmed(z.string().max(100)).optional(),
+  honey: optionalTrimmed(z.string().max(100)),
 });
 
 export type InterestInput = z.infer<typeof interestSchema>;
@@ -41,9 +41,9 @@ export function validateInterest(payload: unknown) {
 export const paymentIntentSchema = z.object({
   name: z.string().trim().min(2).max(80),
   organization: optionalTrimmed(z.string().max(120)),
-  email: optionalTrimmed(z.string().email().max(120)),
-  amount: z.number().positive(),
-  currency: z.string().trim().min(3).max(3).transform((value) => value.toUpperCase()),
+  email: optionalTrimmed(z.email().max(120)),
+  amount: z.number().min(0.01),
+  currency: z.string().trim().regex(/^[A-Za-z]{3}$/, 'currency must be a 3-letter ISO 4217 code').transform((value) => value.toUpperCase()),
   note: optionalTrimmed(z.string().max(280)),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });

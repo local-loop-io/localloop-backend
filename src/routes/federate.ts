@@ -84,8 +84,11 @@ function requireNodeHeaders(request: FastifyRequest, reply: FastifyReply): boole
     sendSpecError(reply, 'UNAUTHORIZED', 'Node-to-node requests require X-Node-ID and X-Node-Signature headers');
     return false;
   }
+  // A missing or malformed X-Timestamp is a malformed request (400); only a
+  // well-formed but stale one is an authentication failure (401), since the
+  // freshness window is the replay-protection part of §9.2.
   if (typeof timestamp !== 'string' || timestamp.trim() === '') {
-    sendSpecError(reply, 'UNAUTHORIZED', 'Node-to-node requests require an X-Timestamp header');
+    sendSpecError(reply, 'INVALID_REQUEST', 'Node-to-node requests require an X-Timestamp header');
     return false;
   }
   const parsed = Date.parse(timestamp);

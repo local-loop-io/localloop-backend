@@ -1,16 +1,7 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { VERSION } from './version';
+
 const counters = new Map<string, number>();
 
-function readPackageVersion(): string {
-  try {
-    const pkg = JSON.parse(readFileSync(join(import.meta.dir, '..', 'package.json'), 'utf8')) as { version?: string };
-    return pkg.version ?? '0.0.0';
-  } catch {
-    return '0.0.0';
-  }
-}
-const PACKAGE_VERSION = readPackageVersion();
 
 const startedAt = new Date();
 
@@ -61,6 +52,6 @@ export function getMetricsSnapshot() {
     startedAt: startedAt.toISOString(),
     uptimeSeconds,
     metrics,
-    version: PACKAGE_VERSION,
+    version: VERSION,
   };
 }

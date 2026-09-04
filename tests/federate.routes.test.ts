@@ -232,6 +232,8 @@ describe('§9.2 empty X-Node-ID rejection (SPEC-COMPLIANCE §9.2)', () => {
   });
 });
 
+// A missing/blank X-Timestamp is a malformed request (400); only a well-formed
+// but stale timestamp is an authentication failure (401) — see requireNodeHeaders.
 describe('§9.2 empty X-Timestamp rejection (SPEC-COMPLIANCE §9.2)', () => {
   it('rejects empty X-Timestamp on announce with §8.3 envelope', async () => {
     const { app, deps } = buildApp();
@@ -243,9 +245,9 @@ describe('§9.2 empty X-Timestamp rejection (SPEC-COMPLIANCE §9.2)', () => {
       headers: { ...nodeHeaders(), 'x-timestamp': '' },
       payload: announcementPayload,
     });
-    expect(response.statusCode).toBe(401);
+    expect(response.statusCode).toBe(400);
     const body = response.json();
-    expect(body.error.code).toBe('UNAUTHORIZED');
+    expect(body.error.code).toBe('INVALID_REQUEST');
     expect(body.error.message).toMatch(/X-Timestamp header/i);
   });
 
@@ -259,9 +261,9 @@ describe('§9.2 empty X-Timestamp rejection (SPEC-COMPLIANCE §9.2)', () => {
       headers: { ...nodeHeaders(), 'x-timestamp': '   ' },
       payload: announcementPayload,
     });
-    expect(response.statusCode).toBe(401);
+    expect(response.statusCode).toBe(400);
     const body = response.json();
-    expect(body.error.code).toBe('UNAUTHORIZED');
+    expect(body.error.code).toBe('INVALID_REQUEST');
     expect(body.error.message).toMatch(/X-Timestamp header/i);
   });
 
@@ -275,9 +277,9 @@ describe('§9.2 empty X-Timestamp rejection (SPEC-COMPLIANCE §9.2)', () => {
       headers: { ...nodeHeaders(), 'x-timestamp': '' },
       payload: offerPayload,
     });
-    expect(response.statusCode).toBe(401);
+    expect(response.statusCode).toBe(400);
     const body = response.json();
-    expect(body.error.code).toBe('UNAUTHORIZED');
+    expect(body.error.code).toBe('INVALID_REQUEST');
     expect(body.error.message).toMatch(/X-Timestamp header/i);
   });
 
@@ -291,9 +293,9 @@ describe('§9.2 empty X-Timestamp rejection (SPEC-COMPLIANCE §9.2)', () => {
       headers: { ...nodeHeaders(), 'x-timestamp': '   ' },
       payload: offerPayload,
     });
-    expect(response.statusCode).toBe(401);
+    expect(response.statusCode).toBe(400);
     const body = response.json();
-    expect(body.error.code).toBe('UNAUTHORIZED');
+    expect(body.error.code).toBe('INVALID_REQUEST');
     expect(body.error.message).toMatch(/X-Timestamp header/i);
   });
 });

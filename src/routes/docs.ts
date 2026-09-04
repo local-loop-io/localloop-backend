@@ -2,13 +2,13 @@ import type { FastifyInstance } from 'fastify';
 import { setPublicShortCache } from '../httpCache';
 
 export async function registerDocsRoutes(app: FastifyInstance) {
-  app.get('/openapi.json', async (request, reply) => {
+  app.get('/openapi.json', async (_request, reply) => {
     setPublicShortCache(reply, 30);
     const doc = app.swagger();
     reply.send(doc);
   });
 
-  app.get('/docs', async (request, reply) => {
+  app.get('/docs', async (_request, reply) => {
     setPublicShortCache(reply, 30);
     reply.type('text/html').send(`<!doctype html>
 <html>

@@ -3,10 +3,16 @@ import type { FastifyReply } from 'fastify';
 /**
  * Error envelope required by SPECIFICATION §8.3:
  * `{ "error": { "code", "message", "details?" } }` with the canonical code set.
- * All lab API surfaces use this envelope — protocol endpoints (signals,
+ * Lab API surfaces use this envelope — protocol endpoints (signals,
  * transaction, federate/*, protocol-mode search) via sendSpecError, and
  * pre-existing lab routes plus framework-level rejections via
  * sendSpecErrorForStatus (which preserves their pre-existing HTTP statuses).
+ * Two deliberate exceptions carry the Core-DP profile's own flat error body
+ * (`{code, message, retryable, correlation_id}`, src/errors.ts) instead,
+ * because that profile's schemas require it: Core-DP search contract errors
+ * (`limit`-shaped bodies on /api/v1/material/search, /api/v1/product/search)
+ * and the /api/v1/evidence* read routes. Their auth-guard rejections still use
+ * this §8.3 envelope. See docs/SPEC-COMPLIANCE.md "§8.3 error envelope".
  */
 export const SPEC_ERROR_CODES = [
   'INVALID_REQUEST',

@@ -1,10 +1,9 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import IORedis from 'ioredis';
 import { config } from '../config';
 import { setNoStore } from '../httpCache';
 import { pool } from '../db/pool';
+import { VERSION } from '../version';
 
 export type RedisHealth = 'ok' | 'error' | 'skipped';
 
@@ -25,12 +24,11 @@ export async function defaultCheckDb(): Promise<'ok' | 'error'> {
 /**
  * Probe Redis with a short-lived client so the health handler does not share
  * the BullMQ connection (or leave a long-lived socket open per request).
+ * `REDIS_URL` always has a value (src/config.ts defaults it), so the probe
+ * always runs; `'skipped'` remains a valid reported state for deployments that
+ * inject a custom `checkRedis`.
  */
 export async function defaultCheckRedis(): Promise<RedisHealth> {
-  if (!config.redisUrl) {
-    return 'skipped';
-  }
-
   const client = new IORedis(config.redisUrl, {
     maxRetriesPerRequest: 1,
     connectTimeout: 2000,
@@ -48,17 +46,6 @@ export async function defaultCheckRedis(): Promise<RedisHealth> {
     client.disconnect();
   }
 }
-
-function readPackageVersion(): string {
-  try {
-    const pkg = JSON.parse(readFileSync(join(import.meta.dir, '..', '..', 'package.json'), 'utf8')) as { version?: string };
-    return pkg.version ?? '0.0.0';
-  } catch {
-    return '0.0.0';
-  }
-}
-
-const PACKAGE_VERSION = readPackageVersion();
 
 const defaultDeps: HealthDeps = {
   checkDb: defaultCheckDb,
@@ -103,7 +90,7 @@ export async function registerHealthRoutes(
       uptime: process.uptime(),
       db: dbStatus,
       redis: redisStatus,
-      version: PACKAGE_VERSION,
+      version: VERSION,
     };
 
     setNoStore(reply);

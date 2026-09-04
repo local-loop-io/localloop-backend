@@ -5,7 +5,7 @@ const booleanFromEnv = (value: string | undefined, fallback: boolean) => {
   return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
 };
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = (process.env.NODE_ENV ?? '').toLowerCase() === 'production';
 
 // Validate that required secrets are set in production
 const validateProductionSecrets = () => {
@@ -112,7 +112,7 @@ const hasWeakUrlPassword = (url: string) => {
 };
 
 const ensureSecureProductionConfig = () => {
-  if (parsed.NODE_ENV.toLowerCase() !== 'production') return;
+  if (!isProduction) return;
 
   if (isWeakSecret(parsed.MINIO_SECRET_KEY)) {
     throw new Error('Insecure MINIO_SECRET_KEY for production');

@@ -14,7 +14,7 @@ const intentBodySchema = {
     organization: { type: 'string', maxLength: 120 },
     email: { type: 'string', maxLength: 120 },
     amount: { type: 'number', minimum: 0.01 },
-    currency: { type: 'string', minLength: 3, maxLength: 3 },
+    currency: { type: 'string', pattern: '^[A-Za-z]{3}$' },
     note: { type: 'string', maxLength: 280 },
     metadata: { type: 'object' },
   },

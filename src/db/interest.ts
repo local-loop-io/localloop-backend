@@ -46,7 +46,11 @@ const mapInterestRow = (row: InterestRow): InterestRecord => ({
 });
 
 export async function refreshInterestSearch() {
-  await prisma.$executeRaw`REFRESH MATERIALIZED VIEW interests_search`;
+  // CONCURRENTLY keeps readers of GET /api/interest?search= unblocked while the
+  // view rebuilds (a plain REFRESH takes an ACCESS EXCLUSIVE lock for the whole
+  // rebuild). Requires the unique index created in 003_search.sql, and must run
+  // outside a transaction block — $executeRaw is autocommit, do not wrap it.
+  await prisma.$executeRaw`REFRESH MATERIALIZED VIEW CONCURRENTLY interests_search`;
 }
 
 export async function insertInterest(input: InterestInput) {

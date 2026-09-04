@@ -92,7 +92,7 @@ export async function registerInterestRoutes(app: FastifyInstance, deps: Interes
       querystring: {
         type: 'object',
         properties: {
-          limit: { type: 'number' },
+          limit: { type: 'integer', minimum: 1 },
           search: { type: 'string' },
         },
       },
@@ -101,9 +101,9 @@ export async function registerInterestRoutes(app: FastifyInstance, deps: Interes
       },
     },
   }, async (request) => {
-    const rawLimit = Number((request.query as { limit?: string }).limit);
-    const limit = Number.isFinite(rawLimit) && rawLimit > 0
-      ? Math.min(rawLimit, config.publicLimit)
+    const rawLimit = (request.query as { limit?: number }).limit;
+    const limit = typeof rawLimit === 'number' && Number.isFinite(rawLimit)
+      ? Math.min(Math.trunc(rawLimit), config.publicLimit)
       : config.publicLimit;
     const search = (request.query as { search?: string }).search?.trim();
 

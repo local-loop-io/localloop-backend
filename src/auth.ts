@@ -9,13 +9,23 @@ if (config.auth.enabled && !config.auth.secret) {
   console.warn('Auth enabled but BETTER_AUTH_SECRET is missing. Auth will be disabled.');
 }
 
-const authPool = new Pool({
-  connectionString: config.databaseUrl,
-  max: 5,
-  ssl: config.databaseSsl ? { rejectUnauthorized: true } : undefined,
-});
+// better-auth needs its own pg Pool. Only create it when auth is actually on:
+// with AUTH_ENABLED=false (the default) a module-level pool would still open up
+// to 5 idle Postgres connections that nothing uses and nothing closes.
+const authPool = authEnabled
+  ? new Pool({
+      connectionString: config.databaseUrl,
+      max: 5,
+      ssl: config.databaseSsl ? { rejectUnauthorized: true } : undefined,
+    })
+  : null;
 
-export const auth = authEnabled
+/** Close the auth pool during shutdown; a no-op when auth is disabled. */
+export async function closeAuthPool() {
+  await authPool?.end();
+}
+
+export const auth = authEnabled && authPool
   ? betterAuth({
       database: authPool,
       baseURL: config.publicBaseUrl,

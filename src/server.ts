@@ -21,13 +21,16 @@ import { registerMetricsRoutes } from './routes/metrics';
 import { registerPrivacyRoutes } from './routes/privacy';
 import { registerFederationRoutes } from './routes/federation';
 import { registerAuthStatusRoutes } from './routes/auth';
-import { handleAuth } from './auth';
-import { startWorkers } from './queue';
+import { handleAuth, closeAuthPool } from './auth';
+import { startWorkers, closeQueue } from './queue';
 import { pool } from './db/pool';
 import { registerLoopSchemas } from './schemas/loopSchemas';
 import { registerFederationSchemas } from './schemas/federationSchemas';
 import { registerLoopProtocolParsers } from './protocol';
 import { sendSpecError, sendSpecErrorForStatus } from './specErrors';
+import { VERSION, PROTOCOL_VERSION } from './version';
+import { setNoStore } from './httpCache';
+import { prisma } from './db/prisma';
 
 type BuildOptions = {
   logger?: boolean;
@@ -36,7 +39,12 @@ type BuildOptions = {
 export async function buildServer(options: BuildOptions = {}) {
   const app = Fastify({
     logger: options.logger ?? true,
-    trustProxy: true,
+    // Exactly one reverse-proxy hop (Traefik in Docker, or the legacy
+    // deploy/nginx.conf) sits in front of this process, and its address inside
+    // the compose network is not stable, so trust one hop rather than every
+    // X-Forwarded-For value a client cares to send — with `true`, any caller
+    // could pick its own request.ip and sidestep the per-IP rate limits.
+    trustProxy: 1,
     bodyLimit: config.bodyLimit,
     connectionTimeout: config.requestTimeoutMs,
   });
@@ -67,7 +75,9 @@ export async function buildServer(options: BuildOptions = {}) {
       info: {
         title: 'localLOOP Lab API',
         description: 'Live lab-only backend surface for interest capture, city data, and controlled interoperability demos. This artifact is not the normative LOOP protocol reference.',
-        version: '0.2.0-lab',
+        version: VERSION,
+        // OpenAPI vendor extension: the LOOP spec baseline this node implements.
+        ...({ 'x-protocol-version': PROTOCOL_VERSION } as Record<string, string>),
       },
       components: {
         securitySchemes: {
@@ -89,26 +99,11 @@ export async function buildServer(options: BuildOptions = {}) {
   registerLoopSchemas(app);
   registerFederationSchemas(app);
 
-  await registerHealthRoutes(app);
-  await registerInterestRoutes(app);
-  await registerCityRoutes(app);
-  await registerPaymentRoutes(app);
-  await registerLoopRoutes(app);
-  await registerSignalsRoutes(app);
-  await registerTransactionRoutes(app);
-  await registerFederateRoutes(app);
-  await registerEvidenceRoutes(app);
-  await registerFederationRoutes(app);
-  await registerAuthStatusRoutes(app);
-  await registerMetricsRoutes(app);
-  await registerPrivacyRoutes(app);
-  await registerDocsRoutes(app);
-
-  app.all('/api/auth/*', async (request, reply) => {
-    await handleAuth(request, reply);
-  });
-
-  app.setNotFoundHandler((request, reply) => {
+  // Error/404 handlers must be installed before the route groups below are
+  // registered: `await app.register()` loads each child context immediately,
+  // and a child copies the root's handlers at that moment, so anything set on
+  // the root afterwards would not apply inside the groups.
+  app.setNotFoundHandler((_request, reply) => {
     sendSpecError(reply, 'NOT_FOUND', 'Not found');
   });
 
@@ -130,6 +125,39 @@ export async function buildServer(options: BuildOptions = {}) {
     sendSpecError(reply, 'INTERNAL_ERROR', 'Internal server error');
   });
 
+  // Each route group is registered in its own encapsulated plugin context so
+  // the hooks a group adds (e.g. the `onRequest` -> Cache-Control: no-store
+  // hook in the loop/evidence/payments/... modules) apply to that group only.
+  // Registering them on the root instance made every such hook global — seven
+  // copies of setNoStore ran on every request, including /openapi.json.
+  // Schemas, content-type parsers, and the swagger/rate-limit plugins are
+  // registered on the root above and are inherited by these children.
+  for (const registerRoutes of [
+    registerHealthRoutes,
+    registerInterestRoutes,
+    registerCityRoutes,
+    registerPaymentRoutes,
+    registerLoopRoutes,
+    registerSignalsRoutes,
+    registerTransactionRoutes,
+    registerFederateRoutes,
+    registerEvidenceRoutes,
+    registerFederationRoutes,
+    registerAuthStatusRoutes,
+    registerMetricsRoutes,
+    registerPrivacyRoutes,
+    registerDocsRoutes,
+  ]) {
+    await app.register(async (instance) => {
+      await registerRoutes(instance);
+    });
+  }
+
+  app.all('/api/auth/*', async (request, reply) => {
+    setNoStore(reply);
+    await handleAuth(request, reply);
+  });
+
   return app;
 }
 
@@ -143,17 +171,40 @@ export async function startServer() {
   const app = await buildServer();
   const worker = startWorkers();
 
-  const shutdown = async () => {
-    await app.close();
-    await pool.end();
-    if (worker) {
-      await worker.close();
+  let shuttingDown = false;
+  const shutdown = async (signal: NodeJS.Signals) => {
+    // A second signal while draining must not re-enter (and `process.on` with an
+    // async handler would otherwise also leave any rejection unhandled).
+    if (shuttingDown) {
+      return;
     }
-    process.exit(0);
+    shuttingDown = true;
+    app.log.info({ signal }, 'Shutting down');
+    const forceExit = setTimeout(() => {
+      console.error('Shutdown timed out; exiting');
+      process.exit(1);
+    }, 10_000);
+    forceExit.unref();
+
+    try {
+      await app.close();
+      if (worker) {
+        // Workers use the pool, so they must stop before the database goes away.
+        await worker.close();
+      }
+      await closeQueue();
+      await prisma.$disconnect();
+      await closeAuthPool();
+      await pool.end();
+      process.exit(0);
+    } catch (error) {
+      console.error('Shutdown failed', error);
+      process.exit(1);
+    }
   };
 
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+  process.once('SIGINT', () => void shutdown('SIGINT'));
+  process.once('SIGTERM', () => void shutdown('SIGTERM'));
 
   await app.listen({ port: config.port, host: '0.0.0.0' });
 }

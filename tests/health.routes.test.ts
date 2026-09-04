@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import Fastify from 'fastify';
 import { registerHealthRoutes, type HealthDeps } from '../src/routes/health';
+import { VERSION } from '../src/version';
 
 async function injectHealth(deps: HealthDeps) {
   const app = Fastify({ logger: false });
@@ -22,8 +23,7 @@ describe('GET /health', () => {
     expect(typeof body.time).toBe('string');
     expect(typeof body.uptime).toBe('number');
     expect(response.headers['cache-control']).toBe('no-store');
-    expect(typeof body.version).toBe('string');
-    expect(body.version.length).toBeGreaterThan(0);
+    expect(body.version).toBe(VERSION);
   });
 
   it('treats redis skipped as healthy when db is ok', async () => {

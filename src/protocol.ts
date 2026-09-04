@@ -6,7 +6,7 @@ export function registerLoopProtocolParsers(app: FastifyInstance) {
   app.addContentTypeParser(
     /^application\/ld\+json(?:\s*;.*)?$/i,
     { parseAs: 'string' },
-    (request, body, done) => {
+    (_request, body, done) => {
       try {
         done(null, JSON.parse(body as string));
       } catch {

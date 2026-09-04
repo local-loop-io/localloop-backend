@@ -11,14 +11,14 @@ const handshakeRequestSchema: SchemaDef = {
   $id: `${BASE}/handshake-request.schema.json`,
   $schema: 'http://json-schema.org/draft-07/schema#',
   title: 'HandshakeRequest',
-  ...defs['HandshakeRequest'],
+  ...defs.HandshakeRequest,
 };
 
 const handshakeResponseSchema: SchemaDef = {
   $id: `${BASE}/handshake-response.schema.json`,
   $schema: 'http://json-schema.org/draft-07/schema#',
   title: 'HandshakeResponse',
-  ...defs['HandshakeResponse'],
+  ...defs.HandshakeResponse,
 };
 
 export const federationSchemaIds = {
