@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-09-05
+
 ### Changed
 - **Valkey 9.0** for the queue/cache service (compose and CI pinned by digest),
   started and health-checked via `valkey-server`/`valkey-cli`; `deploy/backup.sh`
@@ -479,7 +481,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lab demo scripts (seed + simulate + one-command runner).
 - Privacy notice endpoint and in-memory metrics snapshot.
 
-[Unreleased]: https://github.com/local-loop-io/localloop-backend/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/local-loop-io/localloop-backend/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/local-loop-io/localloop-backend/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/local-loop-io/localloop-backend/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/local-loop-io/localloop-backend/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/local-loop-io/localloop-backend/compare/v0.6.0...v0.6.1
