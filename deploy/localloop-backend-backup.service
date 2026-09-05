@@ -10,8 +10,10 @@ Type=oneshot
 # from) when installing the unit, so all three units agree on one path.
 WorkingDirectory=/opt/localloop-backend
 EnvironmentFile=-/opt/localloop-backend/.env
-# ProtectSystem=strict requires ReadWritePaths targets to exist before ExecStart.
-ExecStartPre=/bin/mkdir -p /opt/localloop-backend/backups
+# ProtectSystem=strict requires ReadWritePaths targets to exist before the mount
+# namespace is set up, which happens before ExecStartPre; the '+' prefix runs
+# this step outside the sandbox so the directory exists in time.
+ExecStartPre=+/bin/mkdir -p /opt/localloop-backend/backups
 ExecStart=/opt/localloop-backend/deploy/backup.sh
 User=root
 Group=root
