@@ -32,7 +32,9 @@ const fail = (msg: string) => {
 };
 
 // --- Check A: backend schema copies ------------------------------------------
-{
+if (!existsSync(PROTOCOL_ROOT)) {
+  skip('schema-copy check requires loop-protocol sibling checkout');
+} else {
   const result = Bun.spawnSync(['bun', 'run', join(BACKEND_ROOT, 'scripts', 'sync-schemas.ts'), '--check']);
   process.stderr.write(result.stderr);
   process.stdout.write(result.stdout);
