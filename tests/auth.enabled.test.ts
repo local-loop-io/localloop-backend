@@ -27,6 +27,15 @@ const password = 'CorrectHorseBatteryStaple1!';
 // AUTH_ENABLED was once wired in code with no schema ever provisioned, so
 // sign-up would have failed on a missing relation.
 const dbReady = await (async () => {
+  // Apply migrations first so a fresh scratch database has the better-auth
+  // schema before the presence check (files run in isolated processes, so
+  // another suite may not have migrated yet). Imported dynamically *after* the
+  // env assignments above: the helper pulls in ../src/config, which caches the
+  // environment it first sees (see the note at the top of this file).
+  const { probeDatabase } = await import('./dbReady');
+  if (!(await probeDatabase('auth.enabled'))) {
+    return false;
+  }
   const probe = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 3000 });
   try {
     await probe.query('SELECT 1 FROM "user" LIMIT 1');

@@ -41,10 +41,12 @@ export async function buildServer(options: BuildOptions = {}) {
     logger: options.logger ?? true,
     // Exactly one reverse-proxy hop (Traefik in Docker, or the legacy
     // deploy/nginx.conf) sits in front of this process, and its address inside
-    // the compose network is not stable, so trust one hop rather than every
-    // X-Forwarded-For value a client cares to send — with `true`, any caller
-    // could pick its own request.ip and sidestep the per-IP rate limits.
-    trustProxy: 1,
+    // the compose network is not stable, so trust only the immediate peer
+    // (hop 0) rather than every X-Forwarded-For value a client cares to send —
+    // with `true`, any caller could pick its own request.ip and sidestep the
+    // per-IP rate limits. (Fastify >= 5.12.1 dropped the numeric hop-count
+    // form, GHSA-3m5p-2c4r-xxw2; the trust function is the supported way.)
+    trustProxy: (_address: string, hop: number) => hop === 0,
     bodyLimit: config.bodyLimit,
     connectionTimeout: config.requestTimeoutMs,
   });

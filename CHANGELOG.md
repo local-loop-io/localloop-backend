@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-09-05
+
+### Security
+- Dependency audit (`bun audit`, which gates CI) was red: `fastify` 5.12.0
+  (GHSA-w2qp-rph6-63g4 schema-coercion bypass; GHSA-3m5p-2c4r-xxw2
+  X-Forwarded-* spoofing under hop-count `trustProxy`), `fast-uri` 4.1.2 (four
+  host-confusion/SSRF advisories), `mysql2` 3.15.3 via better-auth/prisma
+  (credential downgrade, decompression DoS) and `deepmerge-ts` 7.1.5 via
+  `@prisma/config` (stack exhaustion). Now `fastify` ^5.12.3 with overrides
+  `fast-uri` ^4.1.3, `mysql2` ^3.24.3, `deepmerge-ts` ^8.0.2; audit is clean.
+- Because Fastify 5.12.1+ removed the numeric hop-count `trustProxy` form as
+  part of that fix (a number now fails closed and is rejected by the types),
+  the 0.6.2 setting `trustProxy: 1` is replaced by the equivalent trust
+  function that trusts only the immediate proxy peer; the regression test
+  covering `request.ip` selection still passes.
+
+### Fixed
+- `tests/auth.enabled.test.ts` probed for the better-auth schema before any
+  migration had run on a fresh database and therefore skipped itself; it now
+  migrates first (importing the probe after its env setup so the config module
+  is not cached early).
+
 ## [0.6.2] - 2026-09-04
 
 ### Fixed
@@ -37,7 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Route encapsulation:** route groups are registered as encapsulated plugins,
   so the `Cache-Control: no-store` hooks they add no longer run globally (seven
   copies per request, including on `/openapi.json`).
-- `trustProxy: 1` instead of `true`: only the single reverse-proxy hop is
+- `trustProxy` trusts only the immediate proxy hop instead of `true`: only the single reverse-proxy hop is
   trusted, so a client can no longer choose its own `request.ip` via
   `X-Forwarded-For` and sidestep the per-IP rate limits.
 - List routes rejected nothing: `GET /api/v1/material?limit=-1` reached
@@ -438,7 +460,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lab demo scripts (seed + simulate + one-command runner).
 - Privacy notice endpoint and in-memory metrics snapshot.
 
-[Unreleased]: https://github.com/local-loop-io/localloop-backend/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/local-loop-io/localloop-backend/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/local-loop-io/localloop-backend/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/local-loop-io/localloop-backend/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/local-loop-io/localloop-backend/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/local-loop-io/localloop-backend/compare/v0.5.0...v0.6.0
