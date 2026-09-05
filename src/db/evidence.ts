@@ -4,7 +4,7 @@ import { config } from '../config';
 import { canonicalHash } from '../crypto/canonical';
 import { encodeCursor, decodeCursor } from '../pagination';
 
-export type EvidenceSubjectType = 'material' | 'product' | 'offer' | 'match' | 'transfer' | 'envelope';
+export type EvidenceSubjectType = 'material' | 'product' | 'offer' | 'match' | 'transfer' | 'envelope' | 'transaction';
 
 export type EvidenceEventType =
   | 'registered' | 'read' | 'searched'

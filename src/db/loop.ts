@@ -815,6 +815,12 @@ export async function createLoopTransaction(payload: LoopTransactionPayload, db?
       { event_type: 'transaction.created', entity_type: 'transaction', entity_id: created.id, payload: event },
       client,
     );
+    // Transactions were the only create path without an append-only evidence
+    // entry; the evidence schema gained the `transaction` subject type for it.
+    await insertLoopEvidence(
+      { subject: { type: 'transaction', id: created.id }, eventType: 'registered', data: payload },
+      client,
+    );
     return { id: created.id, created_at: created.created_at, event };
   }, db);
 }

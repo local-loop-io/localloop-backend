@@ -19,10 +19,15 @@ const MIGRATION_LOCK_KEY = 0x6c6f6f70;
  * Migrations are plain `.sql` files in ./migrations applied in filename order
  * and recorded by filename in `schema_migrations`. The runner does not checksum
  * file contents, so already-applied files may be edited (e.g. to make a statement
- * re-runnable) without re-triggering them. Keep numeric prefixes unique — the
- * duplicate `004_` pair predates this rule and is kept only because renaming an
- * applied file would re-run it.
+ * re-runnable) without re-triggering them. Keep prefixes unique. A file may be
+ * renamed by adding its old name to RENAMED_MIGRATIONS: databases that recorded
+ * the old name have the row rewritten to the new name before the unapplied set
+ * is computed, so the renamed file is never re-run.
  */
+const RENAMED_MIGRATIONS: Record<string, string> = {
+  // Two files shared the 004_ prefix; the second one now sorts unambiguously.
+  '004_interest_demo.sql': '004b_interest_demo.sql',
+};
 export async function runMigrations() {
   const client = await pool.connect();
   try {
@@ -34,6 +39,13 @@ export async function runMigrations() {
           applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
       `);
+
+      for (const [previous, current] of Object.entries(RENAMED_MIGRATIONS)) {
+        await client.query(
+          'UPDATE schema_migrations SET version = $2 WHERE version = $1 AND NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version = $2)',
+          [previous, current],
+        );
+      }
 
       const { rows } = await client.query('SELECT version FROM schema_migrations');
       const applied = new Set(rows.map((row) => row.version));

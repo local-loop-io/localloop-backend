@@ -17,7 +17,7 @@ describe('production config security checks', () => {
       loadConfig({
         NODE_ENV: 'production',
         DATABASE_URL: 'postgresql://localloop:change-me@localhost:55432/localloop',
-        MINIO_SECRET_KEY: 'strong-minio-secret',
+        STORAGE_SECRET_KEY: 'strong-storage-secret',
       }),
     ).rejects.toThrow('Insecure database password in DATABASE_URL for production');
   });
@@ -27,7 +27,7 @@ describe('production config security checks', () => {
       loadConfig({
         NODE_ENV: 'production',
         DATABASE_URL: 'postgresql://localloop:@localhost:55432/localloop',
-        MINIO_SECRET_KEY: 'strong-minio-secret',
+        STORAGE_SECRET_KEY: 'strong-storage-secret',
       }),
     ).rejects.toThrow('Insecure database password in DATABASE_URL for production');
   });
@@ -37,7 +37,7 @@ describe('production config security checks', () => {
       loadConfig({
         NODE_ENV: 'production',
         DATABASE_URL: 'not-a-valid-database-url',
-        MINIO_SECRET_KEY: 'strong-minio-secret',
+        STORAGE_SECRET_KEY: 'strong-storage-secret',
       }),
     ).rejects.toThrow('Insecure database password in DATABASE_URL for production');
   });
@@ -47,7 +47,7 @@ describe('production config security checks', () => {
       loadConfig({
         NODE_ENV: 'production',
         DATABASE_URL: 'postgresql://localloop:VeryStrongPass123!@localhost:55432/localloop',
-        MINIO_SECRET_KEY: 'strong-minio-secret',
+        STORAGE_SECRET_KEY: 'strong-storage-secret',
         REDIS_URL: 'redis://localhost:6381',
       }),
     ).rejects.toThrow('Insecure REDIS_URL for production');
@@ -58,21 +58,21 @@ describe('production config security checks', () => {
       loadConfig({
         NODE_ENV: 'production',
         DATABASE_URL: 'postgresql://localloop:12345678@localhost:55432/localloop',
-        MINIO_SECRET_KEY: 'strong-minio-secret',
+        STORAGE_SECRET_KEY: 'strong-storage-secret',
         REDIS_URL: 'redis://:StrongRedisPass456!@localhost:6381',
       }),
     ).rejects.toThrow('Insecure database password in DATABASE_URL for production');
   });
 
-  it('rejects a short MINIO_SECRET_KEY in production', async () => {
+  it('rejects a short STORAGE_SECRET_KEY in production', async () => {
     await expect(
       loadConfig({
         NODE_ENV: 'production',
         DATABASE_URL: 'postgresql://localloop:VeryStrongPass123!@localhost:55432/localloop',
-        MINIO_SECRET_KEY: 'short1',
+        STORAGE_SECRET_KEY: 'short1',
         REDIS_URL: 'redis://:StrongRedisPass456!@localhost:6381',
       }),
-    ).rejects.toThrow('Insecure MINIO_SECRET_KEY for production');
+    ).rejects.toThrow('Insecure STORAGE_SECRET_KEY for production');
   });
 
   it('rejects a weak BETTER_AUTH_SECRET in production when auth is enabled', async () => {
@@ -80,7 +80,7 @@ describe('production config security checks', () => {
       loadConfig({
         NODE_ENV: 'production',
         DATABASE_URL: 'postgresql://localloop:VeryStrongPass123!@localhost:55432/localloop',
-        MINIO_SECRET_KEY: 'strong-minio-secret',
+        STORAGE_SECRET_KEY: 'strong-storage-secret',
         REDIS_URL: 'redis://:StrongRedisPass456!@localhost:6381',
         AUTH_ENABLED: 'true',
         BETTER_AUTH_SECRET: 'short1',
@@ -93,7 +93,7 @@ describe('production config security checks', () => {
       loadConfig({
         NODE_ENV: 'production',
         DATABASE_URL: 'postgresql://localloop:VeryStrongPass123!@localhost:55432/localloop',
-        MINIO_SECRET_KEY: 'strong-minio-secret',
+        STORAGE_SECRET_KEY: 'strong-storage-secret',
         REDIS_URL: 'redis://:StrongRedisPass456!@localhost:6381',
         API_KEY_ENABLED: 'true',
         API_KEY: 'short1',
@@ -105,7 +105,7 @@ describe('production config security checks', () => {
     const module = await loadConfig({
       NODE_ENV: 'production',
       DATABASE_URL: 'postgresql://localloop:VeryStrongPass123!@localhost:55432/localloop',
-      MINIO_SECRET_KEY: 'strong-minio-secret',
+      STORAGE_SECRET_KEY: 'strong-storage-secret',
       REDIS_URL: 'redis://:StrongRedisPass456!@localhost:6381',
     });
 
@@ -116,7 +116,7 @@ describe('production config security checks', () => {
     const module = await loadConfig({
       NODE_ENV: 'staging',
       DATABASE_URL: 'postgresql://localloop:change-me@localhost:55432/localloop',
-      MINIO_SECRET_KEY: 'change-me',
+      STORAGE_SECRET_KEY: 'change-me',
     });
 
     expect(module.config.databaseUrl).toContain('change-me');

@@ -79,10 +79,12 @@ services:
           memory: 128M
         reservations:
           memory: 64M
-    image: valkey/valkey@sha256:a038175878d66b9d274fbf8be73c0305e93798b83917647f167e18cef3c71eec
+    # Valkey 9.0 (pinned by digest). Invoked by its own binary names; the
+    # redis-* compatibility symlinks are not relied on.
+    image: valkey/valkey:9.0@sha256:4f90bb4e87e4df88e48404cc80930a90e21721ba9442d5a5859aedc1472b005d
     security_opt:
       - no-new-privileges:true
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"]
+    command: ["valkey-server", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"]
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     ports:
@@ -92,7 +94,7 @@ services:
     restart: unless-stopped
     logging: *default-logging
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      test: ["CMD-SHELL", "valkey-cli --no-auth-warning -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -106,7 +108,7 @@ services:
         reservations:
           memory: 64M
     # "mini" mode bundles master+volume+filer+S3 gateway in one process,
-    # matching the single-node minio deployment it replaces. No root
+    # matching the single-node MinIO deployment it replaced. No root
     # credentials needed for this mode (S3 API is unauthenticated by
     # default) - nothing in the app currently calls this service at all.
     image: chrislusf/seaweedfs:4.40@sha256:52194fba4fecd0083c842158b3a902ba6e04a63619b2b0efcd08007bdb6a4602

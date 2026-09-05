@@ -1,11 +1,12 @@
 import { afterAll, describe, expect, it } from 'bun:test';
 import { probeDatabase } from './dbReady';
 import { pool } from '../src/db/pool';
-import { createLoopMaterial, type LoopMaterialPayload } from '../src/db/loop';
+import { createLoopMaterial, createLoopTransaction, type LoopMaterialPayload, type LoopTransactionPayload } from '../src/db/loop';
 import { insertLoopEvidence, getLoopEvidenceByEventId, listLoopEvidence } from '../src/db/evidence';
 
 const dbReady = await probeDatabase('evidence');
 const createdMaterials: string[] = [];
+const createdTransactions: string[] = [];
 
 const hex = '0123456789ABCDEF';
 const suffix = () => Array.from({ length: 8 }, () => hex[Math.floor(Math.random() * 16)]).join('');
@@ -27,6 +28,9 @@ function buildMaterial(): LoopMaterialPayload {
 
 afterAll(async () => {
   if (dbReady) {
+    for (const id of createdTransactions) {
+      await pool.query('DELETE FROM loop_transactions WHERE id = $1', [id]);
+    }
     for (const id of createdMaterials) {
       await pool.query('DELETE FROM loop_materials WHERE id = $1', [id]);
     }
@@ -48,6 +52,31 @@ describe('Core-DP append-only evidence log', () => {
     expect(entry.immutable.payload_hash_sha256).toBe(entry.payload_hash_sha256);
     expect(entry.retention.exportable).toBe(true);
     expect(entry.retention.redaction_status).toBe('none');
+  });
+
+  it.skipIf(!dbReady)('records a registered evidence entry for a transaction (migration 020)', async () => {
+    const material = buildMaterial();
+    await createLoopMaterial(material);
+    const id = `TXN-EVIDENCE-${suffix()}`;
+    createdTransactions.push(id);
+    const payload = {
+      '@context': 'https://localloop.urbnia.com/projects/loop-protocol/contexts/loop-v0.2.0.jsonld',
+      '@type': 'MaterialTransaction',
+      schema_version: '0.2.0',
+      id,
+      material: material.id,
+      seller: 'munich.loop',
+      buyer: 'berlin.loop',
+      offer: { base_price: 120, loop_cost: 156, breakdown: { export_penalty: 24, import_penalty: 0, distance_cost: 12 } },
+      timestamp: '2026-07-19T16:00:00Z',
+    } as unknown as LoopTransactionPayload;
+
+    await createLoopTransaction(payload);
+
+    const entries = await listLoopEvidence({ subjectType: 'transaction', subjectId: id, limit: 10 });
+    expect(entries.results.length).toBe(1);
+    expect(entries.results[0]!.event_type).toBe('registered');
+    expect(entries.results[0]!.subject).toEqual({ type: 'transaction', id });
   });
 
   it.skipIf(!dbReady)('records a status-updated evidence entry for material status changes (migration 016)', async () => {

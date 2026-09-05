@@ -49,7 +49,7 @@ docker compose -f "$COMPOSE_FILE" exec -T postgres sh -lc \
   'PGPASSWORD="$POSTGRES_PASSWORD" pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' \
   > "$RUN_DIR/postgres/localloop.dump"
 
-save_result="$(docker compose -f "$COMPOSE_FILE" exec -T redis redis-cli --no-auth-warning -a "$REDIS_PASSWORD" SAVE)"
+save_result="$(docker compose -f "$COMPOSE_FILE" exec -T redis valkey-cli --no-auth-warning -a "$REDIS_PASSWORD" SAVE)"
 if [[ "$save_result" != "OK" ]]; then
   echo "Redis SAVE failed: $save_result" >&2
   exit 1

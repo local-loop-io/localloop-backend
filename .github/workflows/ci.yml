@@ -27,12 +27,12 @@ jobs:
       redis:
         # Same pinned Valkey image as docker-compose.yml's redis service, started
         # with --requirepass to match its authenticated credential scheme.
-        image: valkey/valkey@sha256:a038175878d66b9d274fbf8be73c0305e93798b83917647f167e18cef3c71eec
+        image: valkey/valkey:9.0@sha256:4f90bb4e87e4df88e48404cc80930a90e21721ba9442d5a5859aedc1472b005d
         command: --requirepass localloop_ci_redis_password
         ports:
           - 6381:6379
         options: >-
-          --health-cmd "redis-cli --no-auth-warning -a localloop_ci_redis_password ping"
+          --health-cmd "valkey-cli --no-auth-warning -a localloop_ci_redis_password ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Valkey 9.0** for the queue/cache service (compose and CI pinned by digest),
+  started and health-checked via `valkey-server`/`valkey-cli`; `deploy/backup.sh`
+  uses `valkey-cli` too. The service name (`redis`) and `REDIS_URL`/`REDIS_PASSWORD`
+  keep their names so existing environments are unaffected.
+- Object-storage configuration is `STORAGE_ENDPOINT`/`STORAGE_PORT`/
+  `STORAGE_ACCESS_KEY`/`STORAGE_SECRET_KEY`/`STORAGE_BUCKET`/`STORAGE_USE_SSL`
+  (`config.storage`), matching the SeaweedFS deployment; the former `MINIO_*`
+  names are still read as a fallback with a deprecation warning. Production
+  requires `STORAGE_SECRET_KEY` (or the legacy name).
+- `POST /api/v1/transaction` writes a `registered` entry to the append-only
+  evidence log (subject type `transaction`, added to the Core-DP evidence
+  schema in loop-protocol 0.5.2; migration `020_loop_evidence_transaction_subject.sql`
+  widens the CHECK constraint). It was the only lifecycle write without one.
+- Migration files have unique prefixes again: `004_interest_demo.sql` is
+  `004b_interest_demo.sql`. The runner rewrites the recorded version for
+  renamed files (`RENAMED_MIGRATIONS`) before computing the unapplied set, so
+  databases that recorded the old name do not re-run it.
+
 ## [0.6.3] - 2026-09-05
 
 ### Security

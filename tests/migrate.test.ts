@@ -15,8 +15,10 @@ describe('migration runner', () => {
     await Promise.all([runMigrations(), runMigrations()]);
 
     const files = readdirSync(join(import.meta.dir, '..', 'src', 'db', 'migrations')).filter((f) => f.endsWith('.sql'));
-    const { rows } = await pool.query('SELECT version FROM schema_migrations ORDER BY version');
-    expect(rows.map((row) => row.version)).toEqual(files.sort());
+    // Compare as sets sorted in JS: the database collation orders '004b_' and
+    // '004_' differently from byte order.
+    const { rows } = await pool.query('SELECT version FROM schema_migrations');
+    expect(rows.map((row) => row.version as string).sort()).toEqual([...files].sort());
   });
 
   it.skipIf(!dbReady)('scopes idempotency cache rows to (key, route) after migration 018', async () => {

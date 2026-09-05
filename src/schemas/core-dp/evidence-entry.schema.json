@@ -30,7 +30,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["material", "product", "offer", "match", "transfer", "envelope"]
+          "enum": ["material", "product", "offer", "match", "transfer", "envelope", "transaction"]
         },
         "id": { "type": "string", "minLength": 1 }
       }

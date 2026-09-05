@@ -7,9 +7,32 @@ const booleanFromEnv = (value: string | undefined, fallback: boolean) => {
 
 const isProduction = (process.env.NODE_ENV ?? '').toLowerCase() === 'production';
 
+// Object storage moved from MinIO to SeaweedFS (S3-compatible, behind the
+// compose `storage-proxy`). The configuration is named STORAGE_*; the former
+// MINIO_* names are still read as a fallback so an existing .env keeps working,
+// and a startup warning points at the rename.
+const STORAGE_ENV_FALLBACKS: Record<string, string> = {
+  STORAGE_ENDPOINT: 'MINIO_ENDPOINT',
+  STORAGE_PORT: 'MINIO_PORT',
+  STORAGE_ACCESS_KEY: 'MINIO_ACCESS_KEY',
+  STORAGE_SECRET_KEY: 'MINIO_SECRET_KEY',
+  STORAGE_BUCKET: 'MINIO_BUCKET',
+  STORAGE_USE_SSL: 'MINIO_USE_SSL',
+};
+const legacyStorageKeys: string[] = [];
+for (const [current, legacy] of Object.entries(STORAGE_ENV_FALLBACKS)) {
+  if (process.env[current] === undefined && process.env[legacy] !== undefined) {
+    process.env[current] = process.env[legacy];
+    legacyStorageKeys.push(legacy);
+  }
+}
+if (legacyStorageKeys.length > 0) {
+  console.warn(`[config] ${legacyStorageKeys.join(', ')} are deprecated; rename to ${legacyStorageKeys.map((k) => k.replace('MINIO_', 'STORAGE_')).join(', ')}.`);
+}
+
 // Validate that required secrets are set in production
 const validateProductionSecrets = () => {
-  const requiredSecrets = ['DATABASE_URL', 'MINIO_SECRET_KEY'];
+  const requiredSecrets = ['DATABASE_URL', 'STORAGE_SECRET_KEY'];
   const missing = requiredSecrets.filter((key) => !process.env[key]);
   if (isProduction && missing.length > 0) {
     throw new Error(
@@ -46,14 +69,14 @@ const envSchema = z.object({
   RUN_MIGRATIONS: z.string().optional(),
   SEARCH_REFRESH_ON_WRITE: z.string().optional(),
   REDIS_URL: z.string().default('redis://localhost:6381'),
-  MINIO_ENDPOINT: z.string().default('localhost'),
-  MINIO_PORT: z.coerce.number().default(9200),
-  MINIO_ACCESS_KEY: z.string().default('localloop'),
-  MINIO_SECRET_KEY: isProduction
-    ? z.string().min(1, 'MINIO_SECRET_KEY is required in production')
+  STORAGE_ENDPOINT: z.string().default('localhost'),
+  STORAGE_PORT: z.coerce.number().default(9200),
+  STORAGE_ACCESS_KEY: z.string().default('localloop'),
+  STORAGE_SECRET_KEY: isProduction
+    ? z.string().min(1, 'STORAGE_SECRET_KEY is required in production')
     : z.string().default('localloop_dev_secret'),
-  MINIO_BUCKET: z.string().default('localloop-assets'),
-  MINIO_USE_SSL: z.string().optional(),
+  STORAGE_BUCKET: z.string().default('localloop-assets'),
+  STORAGE_USE_SSL: z.string().optional(),
   PUBLIC_BASE_URL: z.string().default('https://loop-api.urbnia.com'),
   NODE_ID: z.string().default('lab-hub.loop'),
   NODE_NAME: z.string().default('localLOOP Lab Hub'),
@@ -114,8 +137,8 @@ const hasWeakUrlPassword = (url: string) => {
 const ensureSecureProductionConfig = () => {
   if (!isProduction) return;
 
-  if (isWeakSecret(parsed.MINIO_SECRET_KEY)) {
-    throw new Error('Insecure MINIO_SECRET_KEY for production');
+  if (isWeakSecret(parsed.STORAGE_SECRET_KEY)) {
+    throw new Error('Insecure STORAGE_SECRET_KEY for production');
   }
   if (hasWeakDatabasePassword(parsed.DATABASE_URL)) {
     throw new Error('Insecure database password in DATABASE_URL for production');
@@ -189,13 +212,14 @@ export const config = {
   runMigrations: booleanFromEnv(parsed.RUN_MIGRATIONS, true),
   refreshSearchOnWrite: booleanFromEnv(parsed.SEARCH_REFRESH_ON_WRITE, true),
   redisUrl: parsed.REDIS_URL,
-  minio: {
-    endpoint: parsed.MINIO_ENDPOINT,
-    port: parsed.MINIO_PORT,
-    accessKey: parsed.MINIO_ACCESS_KEY,
-    secretKey: parsed.MINIO_SECRET_KEY,
-    bucket: parsed.MINIO_BUCKET,
-    useSSL: booleanFromEnv(parsed.MINIO_USE_SSL, false),
+  /** SeaweedFS S3 gateway (via the compose storage-proxy). No route uses it yet. */
+  storage: {
+    endpoint: parsed.STORAGE_ENDPOINT,
+    port: parsed.STORAGE_PORT,
+    accessKey: parsed.STORAGE_ACCESS_KEY,
+    secretKey: parsed.STORAGE_SECRET_KEY,
+    bucket: parsed.STORAGE_BUCKET,
+    useSSL: booleanFromEnv(parsed.STORAGE_USE_SSL, false),
   },
   publicBaseUrl: parsed.PUBLIC_BASE_URL,
   auth: {

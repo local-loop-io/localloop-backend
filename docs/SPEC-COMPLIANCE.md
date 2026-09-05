@@ -167,16 +167,15 @@ to demonstrate an append-only audit trail behind the existing write
 routes, not to be a standalone records-management product with
 redaction/export tooling.
 
-The MinIO/S3 client (`src/storage/s3.ts`, `s3Client`) is fully
-provisioned — `docker-compose.yml`'s `seaweedfs`/`storage-proxy`
-services (an S3-compatible SeaweedFS gateway, formerly MinIO) expose
-the same proxied S3 endpoint, the `@aws-sdk/client-s3` dependency,
-and `MINIO_*` config are all live — but `s3Client` has zero importers
-anywhere in `src/`, `scripts/`, or `tests/`. It is not wired to any
-route today. The most likely
-future use is attachments or an evidence export/archive feature, but
-whether to build that (or decommission the MinIO service instead) is
-a product decision, not something this note resolves.
+Object storage is provisioned but unused: `docker-compose.yml`'s `seaweedfs`
+and `storage-proxy` services expose an S3-compatible SeaweedFS gateway
+(formerly MinIO), configured through `STORAGE_*` (the former `MINIO_*` names
+are still read as a deprecated fallback), and production config still
+requires a non-weak `STORAGE_SECRET_KEY`. No route, script, or test talks to
+it — the unused S3 client (`src/storage/s3.ts`) and `@aws-sdk/client-s3`
+dependency were removed in 0.6.2. The most likely future use is attachments
+or an evidence export/archive; whether to build that (or decommission the
+storage services) is an open product decision, not a compliance gap.
 
 ### Federation registry lab boundary
 

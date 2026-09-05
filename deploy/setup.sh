@@ -47,14 +47,14 @@ elif [[ -f "src/index.ts" ]]; then
         cp .env.example "$INSTALL_DIR/.env"
         echo ""
         echo "IMPORTANT: Edit $INSTALL_DIR/.env with your production configuration!"
-        echo "Required: DATABASE_URL, MINIO_SECRET_KEY, BETTER_AUTH_SECRET (if auth enabled)"
+        echo "Required: DATABASE_URL, STORAGE_SECRET_KEY, BETTER_AUTH_SECRET (if auth enabled)"
     fi
 
     if [[ ! -f "$INSTALL_DIR/.env.docker" ]]; then
         cp .env.docker.example "$INSTALL_DIR/.env.docker"
         echo ""
         echo "IMPORTANT: Edit $INSTALL_DIR/.env.docker before enabling Docker-based operations!"
-        echo "Required: POSTGRES_PASSWORD, MINIO_SECRET_KEY, DATABASE_URL"
+        echo "Required: POSTGRES_PASSWORD, STORAGE_SECRET_KEY, DATABASE_URL"
     fi
 fi
 

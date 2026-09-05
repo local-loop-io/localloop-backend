@@ -10,7 +10,7 @@ import { CoreDpError, sendCoreDpError, toCoreDpError } from '../errors';
 import { requireApiKey } from '../security/apiKey';
 
 const EVIDENCE_SUBJECT_TYPES: readonly EvidenceSubjectType[] = [
-  'material', 'product', 'offer', 'match', 'transfer', 'envelope',
+  'material', 'product', 'offer', 'match', 'transfer', 'envelope', 'transaction',
 ];
 
 const EVIDENCE_EVENT_TYPES: readonly EvidenceEventType[] = [
